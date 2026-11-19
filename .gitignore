@@ -1,0 +1,76 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+dist/
+build/
+.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Flutter & Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+*.lock
+!apps/mobile/pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+**/android/.gradle
+**/android/captures/
+**/android/gradleBuild/
+**/android/**/build/
+**/android/app/build/
+**/android/local.properties
+**/android/GeneratedPluginRegistrant.java
+*.keystore
+*.jks
+
+# iOS / macOS
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/profile
+**/ios/debug
+**/ios/release
+
+# Coverage and testing
+coverage/
+*.lcov
+.nyc_output
+
+# IDEs and Editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-project
+*.sublime-workspace
+*.iml
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
