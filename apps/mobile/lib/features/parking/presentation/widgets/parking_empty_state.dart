@@ -11,12 +11,18 @@ class ParkingEmptyState extends StatelessWidget {
         'No parking facilities were found within your current search area. Try refreshing or searching from a different location.',
     this.onRetry,
     this.onClearFilters,
+    this.onIncreaseRadius,
+    this.increaseRadiusLabel = 'Increase Radius',
+    this.onResetSearchArea,
   });
 
   final String title;
   final String message;
   final VoidCallback? onRetry;
   final VoidCallback? onClearFilters;
+  final VoidCallback? onIncreaseRadius;
+  final String increaseRadiusLabel;
+  final VoidCallback? onResetSearchArea;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +31,7 @@ class ParkingEmptyState extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 36.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -40,7 +46,9 @@ class ParkingEmptyState extends StatelessWidget {
               child: Icon(
                 onClearFilters != null
                     ? Icons.filter_alt_off_rounded
-                    : Icons.local_parking_rounded,
+                    : (onIncreaseRadius != null
+                        ? Icons.radar_rounded
+                        : Icons.local_parking_rounded),
                 size: 32,
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
               ),
@@ -65,10 +73,12 @@ class ParkingEmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisSize: MainAxisSize.min,
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
               children: [
-                if (onClearFilters != null) ...[
+                if (onClearFilters != null)
                   FilledButton.icon(
                     icon: const Icon(Icons.clear_all_rounded, size: 18),
                     label: const Text('Clear Filters'),
@@ -79,8 +89,34 @@ class ParkingEmptyState extends StatelessWidget {
                     ),
                     onPressed: onClearFilters,
                   ),
-                  if (onRetry != null) const SizedBox(width: 10),
-                ],
+                if (onIncreaseRadius != null)
+                  FilledButton.icon(
+                    icon: const Icon(Icons.zoom_out_map_rounded, size: 18),
+                    label: Text(increaseRadiusLabel),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: onClearFilters != null
+                          ? colorScheme.secondaryContainer
+                          : colorScheme.primary,
+                      foregroundColor: onClearFilters != null
+                          ? colorScheme.onSecondaryContainer
+                          : colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      ),
+                    ),
+                    onPressed: onIncreaseRadius,
+                  ),
+                if (onResetSearchArea != null)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.my_location_rounded, size: 16),
+                    label: const Text('Near my location'),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      ),
+                    ),
+                    onPressed: onResetSearchArea,
+                  ),
                 if (onRetry != null)
                   FilledButton.tonalIcon(
                     icon: const Icon(Icons.refresh_rounded, size: 18),

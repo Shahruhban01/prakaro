@@ -54,6 +54,9 @@ class FakeParkingRepository implements ParkingRepository {
   final List<ParkingLocation>? results;
   final Exception? errorToThrow;
   int callCount = 0;
+  int? lastRadius;
+  double? lastLatitude;
+  double? lastLongitude;
 
   @override
   Future<List<ParkingLocation>> getNearbyParking({
@@ -62,6 +65,9 @@ class FakeParkingRepository implements ParkingRepository {
     int? radius,
   }) async {
     callCount++;
+    lastLatitude = latitude;
+    lastLongitude = longitude;
+    lastRadius = radius;
     if (errorToThrow != null) {
       throw errorToThrow!;
     }
@@ -708,6 +714,281 @@ void main() {
       final publicState = state.copyWith(publicAccessFilter: true);
       expect(publicState.filteredLocations.isEmpty, true);
       expect(publicState.isFilterEmpty, true);
+    });
+  });
+
+  group('14. Milestone 07: Search radius controls & smarter discovery', () {
+    test('1. Default radius is 3000 meters and supported radii include 1000, 3000, 5000', () {
+      const state = ParkingMapState();
+      expect(state.radiusMeters, 3000);
+      expect(state.searchRadiusKm, 3);
+      expect(ParkingMapState.supportedRadiiMeters, [1000, 3000, 5000]);
+      expect(ParkingMapState.defaultRadiusMeters, 3000);
+    });
+
+    test('2. Selecting 1 km sends radius=1000 to backend', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      expect(fakeRepo.lastRadius, 3000);
+
+      await notifier.setRadius(1000);
+      expect(container.read(parkingMapProvider).radiusMeters, 1000);
+      expect(container.read(parkingMapProvider).searchRadiusKm, 1);
+      expect(fakeRepo.lastRadius, 1000);
+    });
+
+    test('3. Selecting 3 km sends radius=3000 to backend', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      await notifier.setRadius(1000);
+      expect(fakeRepo.lastRadius, 1000);
+
+      await notifier.setRadius(3000);
+      expect(container.read(parkingMapProvider).radiusMeters, 3000);
+      expect(fakeRepo.lastRadius, 3000);
+    });
+
+    test('4. Selecting 5 km sends radius=5000 to backend', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+
+      await notifier.setRadius(5000);
+      expect(container.read(parkingMapProvider).radiusMeters, 5000);
+      expect(container.read(parkingMapProvider).searchRadiusKm, 5);
+      expect(fakeRepo.lastRadius, 5000);
+    });
+
+    test('5. Unchanged radius does not trigger duplicate request', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      expect(fakeRepo.callCount, 1);
+
+      // Attempting to select 3000 again when it is already 3000
+      await notifier.setRadius(3000);
+      expect(fakeRepo.callCount, 1); // No new network call
+    });
+
+    test('6. Radius persists across List/Map view mode switching', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      await notifier.setRadius(5000);
+
+      notifier.setViewMode(ParkingViewMode.map);
+      expect(container.read(parkingMapProvider).viewMode, ParkingViewMode.map);
+      expect(container.read(parkingMapProvider).radiusMeters, 5000);
+
+      notifier.setViewMode(ParkingViewMode.list);
+      expect(container.read(parkingMapProvider).viewMode, ParkingViewMode.list);
+      expect(container.read(parkingMapProvider).radiusMeters, 5000);
+    });
+
+    test('7. Active filters persist when radius changes', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+
+      notifier.setPricingFilter(PricingFilter.free);
+      notifier.toggleOpenNow();
+
+      expect(container.read(parkingMapProvider).pricingFilter, PricingFilter.free);
+      expect(container.read(parkingMapProvider).openNowFilter, true);
+
+      // Change radius
+      await notifier.setRadius(1000);
+      final afterRadius = container.read(parkingMapProvider);
+      expect(afterRadius.radiusMeters, 1000);
+      expect(afterRadius.pricingFilter, PricingFilter.free);
+      expect(afterRadius.openNowFilter, true);
+    });
+
+    test('8. Clearing filters preserves active radius selection', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      await notifier.setRadius(5000);
+
+      notifier.setPricingFilter(PricingFilter.paid);
+      notifier.togglePublicAccess();
+      expect(container.read(parkingMapProvider).activeFilterCount, 2);
+
+      notifier.clearFilters();
+      final afterClear = container.read(parkingMapProvider);
+      expect(afterClear.activeFilterCount, 0);
+      expect(afterClear.pricingFilter, PricingFilter.all);
+      expect(afterClear.radiusMeters, 5000); // Radius preserved!
+    });
+
+    test('9. Map search uses camera center and marks isCustomSearchArea true', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      expect(container.read(parkingMapProvider).isCustomSearchArea, false);
+
+      // Camera pans to new area
+      notifier.onCameraIdle(34.1200, 74.8500);
+      expect(container.read(parkingMapProvider).canSearchArea, true);
+
+      // User taps "Search this area"
+      await notifier.searchCurrentArea();
+
+      final state = container.read(parkingMapProvider);
+      expect(state.isCustomSearchArea, true);
+      expect(state.searchCenterLatitude, 34.1200);
+      expect(state.searchCenterLongitude, 74.8500);
+      expect(fakeRepo.lastLatitude, 34.1200);
+      expect(fakeRepo.lastLongitude, 74.8500);
+      expect(fakeRepo.lastRadius, 3000);
+    });
+
+    test('10. searchNearUser resets isCustomSearchArea and centers on GPS coordinates', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.0800, 74.7900)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+
+      // Pan to custom area
+      notifier.onCameraIdle(34.2000, 74.9000);
+      await notifier.searchCurrentArea();
+      expect(container.read(parkingMapProvider).isCustomSearchArea, true);
+
+      // Return near user
+      await notifier.searchNearUser();
+      final state = container.read(parkingMapProvider);
+      expect(state.isCustomSearchArea, false);
+      expect(fakeRepo.lastLatitude, 34.0800);
+      expect(fakeRepo.lastLongitude, 74.7900);
+    });
+
+    test('11. Stale responses cannot overwrite newer results', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+
+      // Fast successive calls: 1000m then immediately 5000m
+      final search1 = notifier.setRadius(1000);
+      final search2 = notifier.setRadius(5000);
+
+      await Future.wait([search1, search2]);
+
+      // Latest search request (5000) must prevail
+      expect(container.read(parkingMapProvider).radiusMeters, 5000);
+    });
+
+    test('12. canIncreaseRadius and nextRadiusMeters properties work across tiers', () {
+      const state1 = ParkingMapState(radiusMeters: 1000);
+      expect(state1.canIncreaseRadius, true);
+      expect(state1.nextRadiusMeters, 3000);
+
+      const state3 = ParkingMapState(radiusMeters: 3000);
+      expect(state3.canIncreaseRadius, true);
+      expect(state3.nextRadiusMeters, 5000);
+
+      const state5 = ParkingMapState(radiusMeters: 5000);
+      expect(state5.canIncreaseRadius, false);
+      expect(state5.nextRadiusMeters, 5000);
     });
   });
 }

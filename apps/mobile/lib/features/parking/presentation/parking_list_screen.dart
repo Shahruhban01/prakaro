@@ -11,6 +11,7 @@ import 'widgets/parking_details_sheet.dart';
 import 'widgets/parking_empty_state.dart';
 import 'widgets/parking_filter_bar.dart';
 import 'widgets/parking_loading_state.dart';
+import 'widgets/parking_radius_selector.dart';
 import 'widgets/parking_view_switcher.dart';
 
 /// The default home screen view presenting nearby parking facilities in a scannable list.
@@ -40,7 +41,6 @@ class ParkingListScreen extends ConsumerWidget {
 
     final filteredItems = state.filteredLocationsWithDistance;
     final totalDiscovered = state.locations.length;
-    final radiusKm = (state.radiusMeters / 1000).toStringAsFixed(0);
 
     return Scaffold(
       appBar: AppBar(
@@ -91,7 +91,7 @@ class ParkingListScreen extends ConsumerWidget {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // 1. Compact Header, View Switcher & Smart Filters Section
+            // 1. Compact Header, View Switcher & Search Radius Section
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -108,8 +108,8 @@ class ParkingListScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Parking near you',
-                                style: theme.textTheme.titleLarge?.copyWith(
+                                state.searchContextTitle,
+                                style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.4,
                                   color: colorScheme.onSurface,
@@ -117,9 +117,7 @@ class ParkingListScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                state.userLatitude != null
-                                    ? 'Within $radiusKm km • Straight-line distance'
-                                    : 'Searching around your location',
+                                '${state.searchContextLabel} • ${state.distanceReferenceNote}',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                   letterSpacing: -0.1,
@@ -136,6 +134,45 @@ class ParkingListScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 8),
+
+                    // Radius Selector + Reset Map Area Row
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: ParkingRadiusSelector(isCompact: true),
+                        ),
+                        if (state.isCustomSearchArea) ...[
+                          const SizedBox(width: 8),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.near_me_rounded, size: 16),
+                            label: const Text('Near me'),
+                            style: FilledButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                              ),
+                            ),
+                            onPressed: () => notifier.searchNearUser(),
+                          ),
+                        ],
+                      ],
+                    ),
+
+                    // In-flight loading progress bar when facilities are already visible
+                    if (state.isLoading && state.locations.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          minHeight: 2,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -227,8 +264,12 @@ class ParkingListScreen extends ConsumerWidget {
                 hasScrollBody: false,
                 child: ParkingEmptyState(
                   title: 'No parking facilities found',
-                  message:
-                      'No parking facilities were found within your current search area. Try refreshing or searching from a different location.',
+                  message: state.canIncreaseRadius
+                      ? 'No parking facilities were found within ${state.searchRadiusKm} km. Try increasing your search radius to discover parking further out.'
+                      : 'No parking facilities were found within maximum range (5 km). Try searching a different location or refreshing.',
+                  onIncreaseRadius: state.canIncreaseRadius ? () => notifier.increaseRadius() : null,
+                  increaseRadiusLabel: 'Increase to ${state.nextRadiusMeters ~/ 1000} km',
+                  onResetSearchArea: state.isCustomSearchArea ? () => notifier.searchNearUser() : null,
                   onRetry: () => notifier.refresh(),
                 ),
               )
@@ -274,8 +315,10 @@ class ParkingListScreen extends ConsumerWidget {
       return ParkingEmptyState(
         title: 'No confirmed free parking found',
         message:
-            'None of the ${state.locations.length} facilities in this area have verified free parking in Google Places data.',
+            'None of the ${state.locations.length} facilities within ${state.searchRadiusKm} km have verified free parking in Google Places data.',
         onClearFilters: () => notifier.clearFilters(),
+        onIncreaseRadius: state.canIncreaseRadius ? () => notifier.increaseRadius() : null,
+        increaseRadiusLabel: 'Search within ${state.nextRadiusMeters ~/ 1000} km',
         onRetry: () => notifier.refresh(),
       );
     }
@@ -283,8 +326,10 @@ class ParkingListScreen extends ConsumerWidget {
       return ParkingEmptyState(
         title: 'No confirmed paid parking found',
         message:
-            'None of the ${state.locations.length} facilities in this area have verified paid parking in Google Places data.',
+            'None of the ${state.locations.length} facilities within ${state.searchRadiusKm} km have verified paid parking in Google Places data.',
         onClearFilters: () => notifier.clearFilters(),
+        onIncreaseRadius: state.canIncreaseRadius ? () => notifier.increaseRadius() : null,
+        increaseRadiusLabel: 'Search within ${state.nextRadiusMeters ~/ 1000} km',
         onRetry: () => notifier.refresh(),
       );
     }
@@ -294,6 +339,8 @@ class ParkingListScreen extends ConsumerWidget {
         message:
             'Operating hours are either unlisted or facilities are currently closed for the ${state.locations.length} nearby locations.',
         onClearFilters: () => notifier.clearFilters(),
+        onIncreaseRadius: state.canIncreaseRadius ? () => notifier.increaseRadius() : null,
+        increaseRadiusLabel: 'Search within ${state.nextRadiusMeters ~/ 1000} km',
         onRetry: () => notifier.refresh(),
       );
     }
@@ -303,14 +350,18 @@ class ParkingListScreen extends ConsumerWidget {
         message:
             'Public access classifications are not currently provided by Google Places for these facilities.',
         onClearFilters: () => notifier.clearFilters(),
+        onIncreaseRadius: state.canIncreaseRadius ? () => notifier.increaseRadius() : null,
+        increaseRadiusLabel: 'Search within ${state.nextRadiusMeters ~/ 1000} km',
         onRetry: () => notifier.refresh(),
       );
     }
 
     return ParkingEmptyState(
       title: 'No matching parking facilities',
-      message: 'No facilities match your active filters. Try clearing your filters.',
+      message: 'No facilities match your active filters. Try clearing your filters or widening your radius.',
       onClearFilters: () => notifier.clearFilters(),
+      onIncreaseRadius: state.canIncreaseRadius ? () => notifier.increaseRadius() : null,
+      increaseRadiusLabel: 'Search within ${state.nextRadiusMeters ~/ 1000} km',
       onRetry: () => notifier.refresh(),
     );
   }
@@ -363,6 +414,11 @@ class ParkingListScreen extends ConsumerWidget {
                 FilledButton.icon(
                   icon: const Icon(Icons.near_me_rounded, size: 18),
                   label: const Text('Allow Location Access'),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    ),
+                  ),
                   onPressed: () => notifier.init(force: true),
                 ),
                 const SizedBox(height: 8),
@@ -415,7 +471,7 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Turn on location services so Prakaro can display parking facilities near you.',
+                  'Turn on location services in device settings to detect nearby parking facilities.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     height: 1.35,
@@ -424,14 +480,14 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 20),
                 FilledButton.icon(
-                  icon: const Icon(Icons.location_searching_rounded, size: 18),
-                  label: const Text('Enable Location'),
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  label: const Text('Open Location Settings'),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    ),
+                  ),
                   onPressed: () => ref.read(locationServiceProvider).openLocationSettings(),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => notifier.init(force: true),
-                  child: const Text('I turned it on - Try Again'),
                 ),
               ],
             ),
@@ -444,7 +500,7 @@ class ParkingListScreen extends ConsumerWidget {
   Widget _buildBackendErrorView(
     BuildContext context,
     ParkingMapNotifier notifier,
-    String? message,
+    String? errorMessage,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
@@ -478,7 +534,8 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  message ?? 'Unable to connect to the parking discovery service. Please try again.',
+                  errorMessage ??
+                      'Parking discovery is temporarily unavailable. Please verify backend connection and try again.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     height: 1.35,
@@ -489,6 +546,11 @@ class ParkingListScreen extends ConsumerWidget {
                 FilledButton.icon(
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Retry Connection'),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    ),
+                  ),
                   onPressed: () => notifier.refresh(),
                 ),
               ],
@@ -502,7 +564,7 @@ class ParkingListScreen extends ConsumerWidget {
   Widget _buildGenericErrorView(
     BuildContext context,
     ParkingMapNotifier notifier,
-    String? message,
+    String? errorMessage,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
@@ -515,8 +577,17 @@ class ParkingListScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline_rounded, size: 36, color: colorScheme.error),
-                const SizedBox(height: 14),
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(Icons.error_outline_rounded, size: 26, color: colorScheme.error),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Something went wrong',
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -527,7 +598,7 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  message ?? 'An unexpected error occurred while loading parking locations.',
+                  errorMessage ?? 'An error occurred while finding parking. Please try again.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     height: 1.35,
@@ -535,9 +606,14 @@ class ParkingListScreen extends ConsumerWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
-                FilledButton.tonalIcon(
+                FilledButton.icon(
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Try Again'),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    ),
+                  ),
                   onPressed: () => notifier.refresh(),
                 ),
               ],

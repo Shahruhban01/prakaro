@@ -11,6 +11,7 @@ import 'package:prakaro/features/parking/presentation/widgets/parking_card.dart'
 import 'package:prakaro/features/parking/presentation/widgets/parking_details_sheet.dart';
 import 'package:prakaro/features/parking/presentation/widgets/parking_empty_state.dart';
 import 'package:prakaro/features/parking/presentation/widgets/parking_loading_state.dart';
+import 'package:prakaro/features/parking/presentation/widgets/parking_radius_selector.dart';
 import 'package:prakaro/features/parking/presentation/widgets/parking_view_switcher.dart';
 
 class MockNavigationService extends NavigationService {
@@ -712,5 +713,108 @@ void main() {
 
       expect(find.text('Price unlisted'), findsOneWidget);
     });
+  });
+
+  group('10. ParkingRadiusSelector & Milestone 07 discovery UX', () {
+    testWidgets(
+      'ParkingRadiusSelector renders 1 km, 3 km, 5 km segments and updates radius',
+      (WidgetTester tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: Scaffold(
+                body: ParkingRadiusSelector(),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('1 km'), findsOneWidget);
+        expect(find.text('3 km'), findsOneWidget);
+        expect(find.text('5 km'), findsOneWidget);
+
+        // Default radius is 3000
+        expect(container.read(parkingMapProvider).radiusMeters, 3000);
+
+        // Tap 1 km
+        await tester.tap(find.text('1 km'));
+        await tester.pump();
+        expect(container.read(parkingMapProvider).radiusMeters, 1000);
+
+        // Tap 5 km
+        await tester.tap(find.text('5 km'));
+        await tester.pump();
+        expect(container.read(parkingMapProvider).radiusMeters, 5000);
+      },
+    );
+
+    testWidgets(
+      'ParkingEmptyState renders Increase Radius action and invokes callback',
+      (WidgetTester tester) async {
+        var radiusIncreased = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ParkingEmptyState(
+                title: 'No parking facilities found',
+                message: 'Try increasing search radius.',
+                onIncreaseRadius: () {
+                  radiusIncreased = true;
+                },
+                increaseRadiusLabel: 'Increase to 5 km',
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Increase to 5 km'), findsOneWidget);
+        await tester.tap(find.text('Increase to 5 km'));
+        await tester.pump();
+        expect(radiusIncreased, true);
+      },
+    );
+
+    testWidgets(
+      'ParkingListScreen shows Selected map area context and Near me action button',
+      (WidgetTester tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+          status: ParkingMapStatus.loaded,
+          isCustomSearchArea: true,
+          searchCenterLatitude: 34.1200,
+          searchCenterLongitude: 74.8500,
+          locations: [
+            ParkingLocation(
+              id: 'p_1',
+              name: 'Dal Lake Parking',
+              latitude: 34.1210,
+              longitude: 74.8510,
+              address: 'Boulevard Ghat 1',
+              source: 'google',
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: ParkingListScreen(),
+            ),
+          ),
+        );
+
+        expect(find.text('Selected map area'), findsOneWidget);
+        expect(find.text('Near me'), findsOneWidget);
+        expect(find.text('Dal Lake Parking'), findsOneWidget);
+      },
+    );
   });
 }

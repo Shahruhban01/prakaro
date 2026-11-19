@@ -158,3 +158,42 @@ ParkingFilterBar (All, Free, Paid, Open now, Public access)
 - **No Fabricated Pricing**: If Google Places does not return verified `parkingOptions`, pricing is labeled `unknown` / `Price unlisted`. Never guessed from name or category.
 - **No Inferred Operating Hours**: If opening hours are absent, status is `unknown`. Never assumed open.
 - **No Inferred Access**: Facilities default to `accessType: unknown`. Public filter only includes confirmed public facilities.
+
+---
+
+## 6. Search Radius Controls & Smarter Discovery (Milestone 07)
+
+Milestone 07 introduces interactive radius controls, explicit search center tracking, map circle visualization, and request staleness prevention:
+
+```
+[ User Action: Select Radius (1 km, 3 km, 5 km) ]
+  │
+  ├─► Check unchanged radius: if state.radiusMeters == selected: no-op (0 API calls)
+  ├─► Increments _searchRequestId (invalidating in-flight stale responses)
+  ├─► Preserves active filters (pricing, openNow, publicAccess)
+  ├─► Executes search around active search center (searchCenterLatitude ?? userLatitude)
+  │
+  ├─► Map View: Updates subtle primary blue radius Circle overlay
+  └─► List View: Updates context subtitle ("Within 5 km of your location")
+```
+
+### Search Center Disambiguation
+
+| Concept | Riverpod Field | Purpose |
+| :--- | :--- | :--- |
+| **Device GPS Location** | `userLatitude`, `userLongitude` | Physical device location acquired via Geolocator. Used as default search center and distance reference. |
+| **Search Center** | `searchCenterLatitude`, `searchCenterLongitude` | Geographic epicenter used for the current set of discovered facilities. |
+| **Custom Area Flag** | `isCustomSearchArea` | `true` when the search was triggered via "Search this area" on a panned map; `false` when searching near device GPS. |
+| **Camera Center** | `cameraLatitude`, `cameraLongitude` | Live center of the Google Maps viewport. Used when user taps "Search this area". |
+| **Last Searched Origin** | `lastSearchedLatitude`, `lastSearchedLongitude` | Geographic coordinates anchoring the Map radius `Circle` overlay. |
+
+### Distance Calculation Semantics
+- When device GPS (`userLatitude`, `userLongitude`) is available, straight-line distances are **always calculated relative to the user's physical position**, even when viewing a custom map search area.
+- If GPS is disabled or unavailable, distances fall back to being measured relative to the `searchCenter` with an explicit `(from search center)` notation.
+- Distances are clearly documented as approximate straight-line approximations.
+
+### Request Reliability & Staleness Guard
+- Rapid successive radius adjustments (e.g., tapping 1 km and immediately 5 km) increment `_searchRequestId`.
+- If an older response resolves after a newer search was initiated, `requestId != _searchRequestId` triggers immediate safe discard of the obsolete response.
+- Pull-to-refresh retains existing facilities in state (`isRefreshing: true`) to prevent UI jumping.
+

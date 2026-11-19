@@ -66,11 +66,14 @@ class ParkingMapState {
     this.isRefreshing = false,
     this.userLatitude,
     this.userLongitude,
+    this.searchCenterLatitude,
+    this.searchCenterLongitude,
+    this.isCustomSearchArea = false,
     this.cameraLatitude,
     this.cameraLongitude,
     this.lastSearchedLatitude,
     this.lastSearchedLongitude,
-    this.radiusMeters = 3000,
+    this.radiusMeters = defaultRadiusMeters,
     this.locations = const [],
     this.selectedLocation,
     this.errorMessage,
@@ -80,11 +83,17 @@ class ParkingMapState {
     this.publicAccessFilter = false,
   });
 
+  static const List<int> supportedRadiiMeters = [1000, 3000, 5000];
+  static const int defaultRadiusMeters = 3000;
+
   final ParkingViewMode viewMode;
   final ParkingMapStatus status;
   final bool isRefreshing;
   final double? userLatitude;
   final double? userLongitude;
+  final double? searchCenterLatitude;
+  final double? searchCenterLongitude;
+  final bool isCustomSearchArea;
   final double? cameraLatitude;
   final double? cameraLongitude;
   final double? lastSearchedLatitude;
@@ -111,6 +120,34 @@ class ParkingMapState {
       (openNowFilter ? 1 : 0) +
       (publicAccessFilter ? 1 : 0);
 
+  /// Radius in kilometers as a clean integer (1, 3, 5).
+  int get searchRadiusKm => (radiusMeters / 1000).round();
+
+  /// Whether user can increase the search radius to a larger tier (< 5 km).
+  bool get canIncreaseRadius => radiusMeters < 5000;
+
+  /// Next larger supported radius in meters.
+  int get nextRadiusMeters {
+    if (radiusMeters < 3000) return 3000;
+    if (radiusMeters < 5000) return 5000;
+    return 5000;
+  }
+
+  /// Compact headline context for list header.
+  String get searchContextTitle =>
+      isCustomSearchArea ? 'Selected map area' : 'Parking near you';
+
+  /// Primary search area description badge/subtitle.
+  String get searchContextLabel => isCustomSearchArea
+      ? 'Within $searchRadiusKm km of selected map area'
+      : 'Within $searchRadiusKm km of your location';
+
+  /// Reference label explaining distance baseline.
+  String get distanceReferenceNote =>
+      (isCustomSearchArea && userLatitude == null)
+          ? 'from search center'
+          : 'straight-line';
+
   /// Returns parking locations matching active filters, sorted by ascending straight-line distance.
   List<ParkingLocationWithDistance> get filteredLocationsWithDistance {
     // 1. Filter candidate facilities
@@ -130,13 +167,17 @@ class ParkingMapState {
       return true;
     });
 
-    // 2. Attach straight-line distance
+    // 2. Attach straight-line distance: prefer user's real GPS position,
+    // otherwise fallback to search center if user GPS is not available.
+    final refLat = userLatitude ?? searchCenterLatitude;
+    final refLng = userLongitude ?? searchCenterLongitude;
+
     final list = filtered.map((loc) {
       double? dist;
-      if (userLatitude != null && userLongitude != null) {
+      if (refLat != null && refLng != null) {
         dist = Geolocator.distanceBetween(
-          userLatitude!,
-          userLongitude!,
+          refLat,
+          refLng,
           loc.latitude,
           loc.longitude,
         );
@@ -145,7 +186,7 @@ class ParkingMapState {
     }).toList();
 
     // 3. Nearest first sorting with stable tie-breaker
-    if (userLatitude != null && userLongitude != null) {
+    if (refLat != null && refLng != null) {
       list.sort((a, b) {
         if (a.distanceMeters == null && b.distanceMeters == null) {
           return a.location.id.compareTo(b.location.id);
@@ -200,6 +241,9 @@ class ParkingMapState {
     bool? isRefreshing,
     double? userLatitude,
     double? userLongitude,
+    double? searchCenterLatitude,
+    double? searchCenterLongitude,
+    bool? isCustomSearchArea,
     double? cameraLatitude,
     double? cameraLongitude,
     double? lastSearchedLatitude,
@@ -220,6 +264,9 @@ class ParkingMapState {
       isRefreshing: isRefreshing ?? this.isRefreshing,
       userLatitude: userLatitude ?? this.userLatitude,
       userLongitude: userLongitude ?? this.userLongitude,
+      searchCenterLatitude: searchCenterLatitude ?? this.searchCenterLatitude,
+      searchCenterLongitude: searchCenterLongitude ?? this.searchCenterLongitude,
+      isCustomSearchArea: isCustomSearchArea ?? this.isCustomSearchArea,
       cameraLatitude: cameraLatitude ?? this.cameraLatitude,
       cameraLongitude: cameraLongitude ?? this.cameraLongitude,
       lastSearchedLatitude: lastSearchedLatitude ?? this.lastSearchedLatitude,
@@ -243,6 +290,8 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
   LocationService get locationService => ref.read(locationServiceProvider);
   ParkingRepository get parkingRepository => ref.read(parkingRepositoryProvider);
 
+  int _searchRequestId = 0;
+
   @override
   ParkingMapState build() {
     return const ParkingMapState();
@@ -254,6 +303,59 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     if (state.viewMode == mode) return;
     AppHaptics.selection();
     state = state.copyWith(viewMode: mode);
+  }
+
+  /// Sets search radius (1000m, 3000m, 5000m) and executes search around active search center.
+  Future<void> setRadius(int radiusMeters) async {
+    if (!ref.mounted) return;
+    if (state.radiusMeters == radiusMeters) return; // Prevent duplicate requests
+    if (!ParkingMapState.supportedRadiiMeters.contains(radiusMeters)) return;
+
+    AppHaptics.selection();
+
+    // Use current search center or user GPS position
+    final targetLat = state.searchCenterLatitude ?? state.userLatitude;
+    final targetLng = state.searchCenterLongitude ?? state.userLongitude;
+
+    if (targetLat != null && targetLng != null) {
+      await searchNearby(
+        latitude: targetLat,
+        longitude: targetLng,
+        radius: radiusMeters,
+      );
+    } else {
+      // If location is not acquired yet, record radius preference and retry init
+      state = state.copyWith(radiusMeters: radiusMeters);
+      await init(force: true);
+    }
+  }
+
+  /// Convenience method to step up radius to next tier (e.g. 1km -> 3km, 3km -> 5km).
+  Future<void> increaseRadius() async {
+    if (state.canIncreaseRadius) {
+      await setRadius(state.nextRadiusMeters);
+    }
+  }
+
+  /// Resets search center back to device GPS location and re-queries.
+  Future<void> searchNearUser() async {
+    if (!ref.mounted) return;
+    AppHaptics.lightImpact();
+
+    final userLat = state.userLatitude;
+    final userLng = state.userLongitude;
+
+    if (userLat != null && userLng != null) {
+      state = state.copyWith(isCustomSearchArea: false);
+      await searchNearby(
+        latitude: userLat,
+        longitude: userLng,
+        radius: state.radiusMeters,
+      );
+    } else {
+      state = state.copyWith(isCustomSearchArea: false);
+      await init(force: true);
+    }
   }
 
   /// Sets pricing filter (mutually exclusive free / paid / all).
@@ -278,7 +380,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     state = state.copyWith(publicAccessFilter: !state.publicAccessFilter);
   }
 
-  /// Clears all active filters back to 'All'.
+  /// Clears all active filters back to 'All' while strictly preserving selected radius.
   void clearFilters() {
     if (!ref.mounted) return;
     AppHaptics.lightImpact();
@@ -308,6 +410,9 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
         state = state.copyWith(
           userLatitude: latitude,
           userLongitude: longitude,
+          searchCenterLatitude: latitude,
+          searchCenterLongitude: longitude,
+          isCustomSearchArea: false,
           cameraLatitude: latitude,
           cameraLongitude: longitude,
         );
@@ -332,13 +437,14 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
   /// Pull-to-refresh or user-triggered refresh of parking results.
   Future<void> refresh() async {
     AppHaptics.lightImpact();
-    final userLat = state.userLatitude;
-    final userLng = state.userLongitude;
+    final targetLat = state.searchCenterLatitude ?? state.userLatitude;
+    final targetLng = state.searchCenterLongitude ?? state.userLongitude;
 
-    if (userLat != null && userLng != null) {
+    if (targetLat != null && targetLng != null) {
       await searchNearby(
-        latitude: userLat,
-        longitude: userLng,
+        latitude: targetLat,
+        longitude: targetLng,
+        radius: state.radiusMeters,
         isRefresh: true,
       );
     } else {
@@ -355,12 +461,15 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
   }) async {
     if (!ref.mounted) return;
     final effectiveRadius = radius ?? state.radiusMeters;
+    final requestId = ++_searchRequestId;
 
     // Retain existing locations during pull-to-refresh to prevent UI jump
     if (isRefresh && state.locations.isNotEmpty) {
       state = state.copyWith(
         isRefreshing: true,
         canSearchArea: false,
+        searchCenterLatitude: latitude,
+        searchCenterLongitude: longitude,
         lastSearchedLatitude: latitude,
         lastSearchedLongitude: longitude,
         radiusMeters: effectiveRadius,
@@ -370,6 +479,8 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
         status: ParkingMapStatus.loading,
         isRefreshing: false,
         canSearchArea: false,
+        searchCenterLatitude: latitude,
+        searchCenterLongitude: longitude,
         lastSearchedLatitude: latitude,
         lastSearchedLongitude: longitude,
         radiusMeters: effectiveRadius,
@@ -384,7 +495,8 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
         radius: effectiveRadius,
       );
 
-      if (!ref.mounted) return;
+      // Prevent stale in-flight requests from overwriting newer user actions
+      if (!ref.mounted || requestId != _searchRequestId) return;
 
       if (results.isEmpty) {
         state = state.copyWith(
@@ -400,7 +512,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
         );
       }
     } on NetworkException catch (e) {
-      if (!ref.mounted) return;
+      if (!ref.mounted || requestId != _searchRequestId) return;
       final isBackendUnreachable = e.statusCode == null ||
           e.statusCode == 503 ||
           e.statusCode == 502 ||
@@ -421,7 +533,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
         );
       }
     } catch (e) {
-      if (!ref.mounted) return;
+      if (!ref.mounted || requestId != _searchRequestId) return;
       if (isRefresh && state.locations.isNotEmpty) {
         state = state.copyWith(isRefreshing: false);
       } else {
@@ -436,11 +548,19 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
 
   /// Triggers a parking search centered around current camera target coordinates.
   Future<void> searchCurrentArea() async {
-    final lat = state.cameraLatitude ?? state.userLatitude;
-    final lng = state.cameraLongitude ?? state.userLongitude;
+    final lat = state.cameraLatitude ?? state.searchCenterLatitude ?? state.userLatitude;
+    final lng = state.cameraLongitude ?? state.searchCenterLongitude ?? state.userLongitude;
 
     if (lat != null && lng != null) {
-      await searchNearby(latitude: lat, longitude: lng);
+      state = state.copyWith(
+        isCustomSearchArea: true,
+        canSearchArea: false,
+      );
+      await searchNearby(
+        latitude: lat,
+        longitude: lng,
+        radius: state.radiusMeters,
+      );
     }
   }
 
@@ -481,13 +601,13 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
 
   /// Calculates straight-line distance in meters between user position and facility.
   double? getDistanceTo(ParkingLocation location) {
-    final userLat = state.userLatitude;
-    final userLng = state.userLongitude;
-    if (userLat == null || userLng == null) return null;
+    final refLat = state.userLatitude ?? state.searchCenterLatitude;
+    final refLng = state.userLongitude ?? state.searchCenterLongitude;
+    if (refLat == null || refLng == null) return null;
 
     return Geolocator.distanceBetween(
-      userLat,
-      userLng,
+      refLat,
+      refLng,
       location.latitude,
       location.longitude,
     );

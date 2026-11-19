@@ -8,9 +8,10 @@ import '../domain/parking_location.dart';
 import 'parking_providers.dart';
 import 'widgets/parking_details_sheet.dart';
 import 'widgets/parking_filter_bar.dart';
+import 'widgets/parking_radius_selector.dart';
 import 'widgets/parking_view_switcher.dart';
 
-/// Interactive Google Maps screen presenting parking facilities with markers, filters, and gestures.
+/// Interactive Google Maps screen presenting parking facilities with markers, filters, radius circle, and gestures.
 class ParkingMapScreen extends ConsumerStatefulWidget {
   const ParkingMapScreen({super.key});
 
@@ -77,6 +78,26 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
     }).toSet();
   }
 
+  Set<Circle> _buildCircles(ParkingMapState state, ColorScheme colorScheme) {
+    final centerLat = state.lastSearchedLatitude;
+    final centerLng = state.lastSearchedLongitude;
+
+    if (centerLat == null || centerLng == null) {
+      return const {};
+    }
+
+    return {
+      Circle(
+        circleId: const CircleId('prakaro_search_radius_circle'),
+        center: LatLng(centerLat, centerLng),
+        radius: state.radiusMeters.toDouble(),
+        fillColor: colorScheme.primary.withValues(alpha: 0.10),
+        strokeColor: colorScheme.primary.withValues(alpha: 0.38),
+        strokeWidth: 2,
+      ),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(parkingMapProvider);
@@ -100,11 +121,12 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
         : _fallbackLocation;
 
     final displayedMarkers = _buildMarkers(state.filteredLocations, state.selectedLocation);
+    final displayedCircles = _buildCircles(state, colorScheme);
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Full-screen Google Map
+          // 1. Full-screen Google Map with Radius Circle and Parking Markers
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
@@ -117,6 +139,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             compassEnabled: true,
             mapToolbarEnabled: false,
             markers: displayedMarkers,
+            circles: displayedCircles,
             onCameraMove: (position) {
               _currentCameraPosition = position;
             },
@@ -135,13 +158,14 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             },
           ),
 
-          // 2. Top Bar with Branding, Switcher, and Shared Filter Bar
+          // 2. Top Bar with Branding, Switcher, Radius Selector, and Filter Bar
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Row 1: Brand badge & View switcher
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -200,7 +224,26 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                     ],
                   ),
 
-                  // Shared Quick Filters Bar
+                  const SizedBox(height: 8),
+
+                  // Row 2: Search Radius Segmented Selector
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const ParkingRadiusSelector(isCompact: true),
+                  ),
+
+                  // Row 3: Shared Quick Filters Bar
                   if (state.locations.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     const ParkingFilterBar(),
@@ -257,7 +300,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Finding parking facilities...',
+                            'Finding parking within ${state.searchRadiusKm} km...',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurface,
                               fontWeight: FontWeight.w600,
@@ -327,15 +370,18 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               backgroundColor: colorScheme.surface,
               foregroundColor: colorScheme.primary,
               elevation: 3,
-              tooltip: 'Re-center on my location',
-              child: const Icon(Icons.my_location_rounded, size: 20),
+              tooltip: state.isCustomSearchArea ? 'Reset to my location' : 'Re-center on my location',
+              child: Icon(
+                state.isCustomSearchArea ? Icons.near_me_rounded : Icons.my_location_rounded,
+                size: 20,
+              ),
               onPressed: () {
                 AppHaptics.lightImpact();
                 final userLat = state.userLatitude;
                 final userLng = state.userLongitude;
                 if (userLat != null && userLng != null) {
                   _animateToPosition(userLat, userLng);
-                  notifier.searchNearby(latitude: userLat, longitude: userLng);
+                  notifier.searchNearUser();
                 } else {
                   notifier.init(force: true);
                 }
@@ -351,7 +397,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             _buildLocationUnavailableBanner(context, notifier, colorScheme, theme),
 
           if (state.status == ParkingMapStatus.empty && !state.isLoading && state.locations.isEmpty)
-            _buildEmptyStateToast(context, colorScheme, theme),
+            _buildEmptyStateToast(context, state, notifier, colorScheme, theme),
 
           if (state.status == ParkingMapStatus.backendUnavailable && !state.isLoading)
             _buildBackendErrorBanner(context, state.errorMessage, colorScheme, theme),
@@ -401,25 +447,15 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Allow location access to discover nearby parking facilities around your current position.',
+                'Allow location access to show parking facilities and your current position on the map.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FilledButton.icon(
-                    icon: const Icon(Icons.near_me_rounded, size: 16),
-                    label: const Text('Allow Access'),
-                    onPressed: () => notifier.init(force: true),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => ref.read(locationServiceProvider).openAppSettings(),
-                    child: const Text('Settings'),
-                  ),
-                ],
+              FilledButton.icon(
+                icon: const Icon(Icons.near_me_rounded, size: 16),
+                label: const Text('Allow Location'),
+                onPressed: () => notifier.init(force: true),
               ),
             ],
           ),
@@ -477,6 +513,8 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
 
   Widget _buildEmptyStateToast(
     BuildContext context,
+    ParkingMapState state,
+    ParkingMapNotifier notifier,
     ColorScheme colorScheme,
     ThemeData theme,
   ) {
@@ -496,13 +534,18 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'No parking facilities found in this area.',
+                  'No parking found within ${state.searchRadiusKm} km.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
+              if (state.canIncreaseRadius)
+                TextButton(
+                  onPressed: () => notifier.increaseRadius(),
+                  child: Text('Expand (${state.nextRadiusMeters ~/ 1000} km)'),
+                ),
             ],
           ),
         ),
@@ -512,7 +555,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
 
   Widget _buildBackendErrorBanner(
     BuildContext context,
-    String? message,
+    String? errorMessage,
     ColorScheme colorScheme,
     ThemeData theme,
   ) {
@@ -532,9 +575,13 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  message ?? 'Parking service is temporarily unreachable.',
+                  errorMessage ?? 'Unable to connect to parking service.',
                   style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface),
                 ),
+              ),
+              TextButton(
+                onPressed: () => ref.read(parkingMapProvider.notifier).refresh(),
+                child: const Text('Retry'),
               ),
             ],
           ),
