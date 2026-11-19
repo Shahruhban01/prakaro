@@ -404,8 +404,7 @@ void main() {
         ),
       );
 
-      // Initially bookmark is outline (not saved)
-      expect(find.byIcon(Icons.bookmark_outline_rounded), findsOneWidget);
+      // Initially bookmark is not saved
       expect(find.byTooltip('Save parking'), findsOneWidget);
 
       // Tap to save
@@ -419,14 +418,13 @@ void main() {
       }
 
       // Now bookmark is filled (saved)
-      expect(find.byIcon(Icons.bookmark_rounded), findsOneWidget);
       expect(find.byTooltip('Remove from saved'), findsOneWidget);
 
       // Tap again to unsave
       await tester.tap(find.byTooltip('Remove from saved'));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.bookmark_outline_rounded), findsOneWidget);
+      expect(find.byTooltip('Save parking'), findsOneWidget);
     });
 
     testWidgets('ParkingDetailsSheet renders bookmark button and toggles saved state', (tester) async {

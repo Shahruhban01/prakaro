@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prakaro/core/design/components/prakaro_card.dart';
+import 'package:prakaro/core/design/components/prakaro_filter_chip.dart';
 import 'package:prakaro/core/services/navigation_service.dart';
 import 'package:prakaro/core/theme/app_theme.dart';
 import 'package:prakaro/features/parking/domain/parking_location.dart';
@@ -75,7 +77,7 @@ void main() {
         expect(find.text('450 m away (straight-line)'), findsOneWidget);
         expect(find.text('Directions'), findsOneWidget);
 
-        await tester.tap(find.byIcon(Icons.close_rounded));
+        await tester.tap(find.byTooltip('Close details'));
         await tester.pump();
         expect(closed, isTrue);
       },
@@ -344,7 +346,7 @@ void main() {
           ),
         );
 
-        expect(find.byType(Card), findsNWidgets(3));
+        expect(find.byType(PrakaroCard), findsNWidgets(3));
       },
     );
   });
@@ -593,18 +595,18 @@ void main() {
       );
 
       // Verify all filter chips render
-      expect(find.widgetWithText(FilterChip, 'All'), findsOneWidget);
-      expect(find.widgetWithText(FilterChip, 'Free'), findsOneWidget);
-      expect(find.widgetWithText(FilterChip, 'Paid'), findsOneWidget);
-      expect(find.widgetWithText(FilterChip, 'Open now'), findsOneWidget);
-      expect(find.widgetWithText(FilterChip, 'Public access'), findsOneWidget);
+      expect(find.widgetWithText(PrakaroFilterChip, 'All'), findsOneWidget);
+      expect(find.widgetWithText(PrakaroFilterChip, 'Free'), findsOneWidget);
+      expect(find.widgetWithText(PrakaroFilterChip, 'Paid'), findsOneWidget);
+      expect(find.widgetWithText(PrakaroFilterChip, 'Open now'), findsOneWidget);
+      expect(find.widgetWithText(PrakaroFilterChip, 'Public access'), findsOneWidget);
 
       // Initially both cards appear
       expect(find.text('Free Park Lot'), findsOneWidget);
       expect(find.text('Paid Tower'), findsOneWidget);
 
       // Tap "Free" filter chip
-      await tester.tap(find.widgetWithText(FilterChip, 'Free'));
+      await tester.tap(find.widgetWithText(PrakaroFilterChip, 'Free'));
       await tester.pumpAndSettle();
 
       // Only free lot remains visible
@@ -888,7 +890,7 @@ void main() {
         );
 
         expect(find.text("You're offline"), findsOneWidget);
-        expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+        expect(find.text("You're offline. Connect to the internet to search for parking."), findsOneWidget);
       },
     );
 
@@ -914,7 +916,7 @@ void main() {
         );
 
         expect(find.text('Search timed out'), findsOneWidget);
-        expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
+        expect(find.text('This search is taking longer than expected.'), findsOneWidget);
       },
     );
   });

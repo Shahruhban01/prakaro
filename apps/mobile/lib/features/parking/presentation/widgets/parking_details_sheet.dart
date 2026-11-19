@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/components/prakaro_button.dart';
+import '../../../../core/design/components/prakaro_card.dart';
+import '../../../../core/design/components/prakaro_sheet.dart';
+import '../../../../core/design/prakaro_icons.dart';
 import '../../../../core/services/navigation_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -9,7 +13,8 @@ import '../../domain/parking_location.dart';
 import '../saved_providers.dart';
 import 'parking_photo_gallery.dart';
 
-/// Modal bottom sheet presenting verified facility metadata and direct navigation trigger.
+/// Modal bottom sheet presenting verified facility metadata, photo gallery,
+/// and direct navigation trigger in a refined consumer interface.
 class ParkingDetailsSheet extends ConsumerStatefulWidget {
   const ParkingDetailsSheet({
     super.key,
@@ -76,7 +81,7 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final loc = widget.location;
 
     final displayName = loc.name.trim().isEmpty
@@ -88,362 +93,329 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
         : loc.address.trim();
 
     final isSaved = ref.watch(savedParkingRefsProvider).any((r) => r.id == loc.id);
-
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusSheet)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Standard drag handle
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
+      child: PrakaroSheet(
+        showDragHandle: true,
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Scrollable Content
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 1. Photo Gallery Carousel
+                    ParkingPhotoGallery(
+                      parkingId: loc.id,
+                      facilityName: displayName,
+                    ),
+                    const SizedBox(height: 16),
 
-              // 2. Scrollable content area (prevents RenderFlex overflow on large font scaling)
-              Flexible(
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Photo Gallery Carousel / Placeholder Hero
-                      ParkingPhotoGallery(
-                        parkingId: loc.id,
-                        facilityName: displayName,
-                      ),
-                      const SizedBox(height: 14),
+                    // 2. Header Row: Name & Action Controls
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayName,
+                                style: TextStyle(
+                                  fontSize: 19.0,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.4,
+                                  color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                                  height: 1.25,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (widget.distanceMeters != null) ...[
+                                const SizedBox(height: 5),
+                                Row(
+                                  children: [
+                                    PrakaroIcon(
+                                      PrakaroIconData.nearMe,
+                                      size: 13.0,
+                                      color: AppTheme.primaryBlue,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${_formatDistance(widget.distanceMeters!)} away (straight-line)',
+                                      style: TextStyle(
+                                        fontSize: 13.0,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.primaryBlue,
+                                        letterSpacing: -0.1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
 
-                      // Header Row with Title and Close button
-                      Row(
+                        // Bookmark Save Action
+                        PrakaroIconButton(
+                          icon: isSaved ? PrakaroIconData.bookmarkFilled : PrakaroIconData.bookmarkOutline,
+                          color: isSaved
+                              ? AppTheme.primaryBlue
+                              : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+                          backgroundColor: isDark ? const Color(0xFF222834) : const Color(0xFFF1F3F6),
+                          tooltip: isSaved ? 'Remove from saved' : 'Save parking',
+                          onPressed: () {
+                            AppHaptics.lightImpact();
+                            ref.read(savedParkingRefsProvider.notifier).toggleSave(loc);
+                            if (ref.read(authProvider).isGuest && !isSaved) {
+                              AuthPromptBottomSheet.show(context, facilityName: loc.name);
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Close Button
+                        PrakaroIconButton(
+                          icon: PrakaroIconData.close,
+                          color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                          backgroundColor: isDark ? const Color(0xFF222834) : const Color(0xFFF1F3F6),
+                          tooltip: 'Close details',
+                          onPressed: widget.onClose,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 3. Address Card
+                    PrakaroCard(
+                      hasShadow: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      backgroundColor: isDark ? const Color(0xFF161920) : const Color(0xFFF7F8FA),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  displayName,
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.4,
-                                    color: colorScheme.onSurface,
-                                    height: 1.2,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (widget.distanceMeters != null) ...[
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.near_me_outlined,
-                                        size: 15,
-                                        color: colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${_formatDistance(widget.distanceMeters!)} away (straight-line)',
-                                        style: theme.textTheme.labelMedium?.copyWith(
-                                          color: colorScheme.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ],
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2.0),
+                            child: PrakaroIcon(
+                              PrakaroIconData.locationPin,
+                              size: 16.0,
+                              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            icon: Icon(
-                              isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
-                              size: 20,
-                              color: isSaved ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                            ),
-                            tooltip: isSaved ? 'Remove from saved' : 'Save parking',
-                            style: IconButton.styleFrom(
-                              minimumSize: const Size(36, 36),
-                              padding: EdgeInsets.zero,
-                            ),
-                            onPressed: () {
-                              AppHaptics.lightImpact();
-                              ref.read(savedParkingRefsProvider.notifier).toggleSave(loc);
-                              if (ref.read(authProvider).isGuest && !isSaved) {
-                                AuthPromptBottomSheet.show(context, facilityName: loc.name);
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            icon: const Icon(Icons.close_rounded, size: 20),
-                            onPressed: widget.onClose,
-                            tooltip: 'Close details',
-                            style: IconButton.styleFrom(
-                              minimumSize: const Size(36, 36),
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Address Card
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2.0),
-                              child: Icon(
-                                Icons.place_outlined,
-                                size: 18,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                displayAddress,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  height: 1.35,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Verified Facility Attributes (Pricing, Hours, Access)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                        ),
-                        child: Column(
-                          children: [
-                            // Pricing Info Row
-                            _DetailInfoRow(
-                              icon: Icons.payments_outlined,
-                              label: 'Pricing',
-                              value: _buildPricingLabel(loc),
-                              valueColor: _buildPricingColor(loc, colorScheme),
-                            ),
-                            const Divider(height: 16),
-
-                            // Operational Hours Row
-                            _DetailInfoRow(
-                              icon: Icons.access_time_rounded,
-                              label: 'Opening Hours',
-                              value: _buildOpeningLabel(loc),
-                              valueColor: _buildOpeningColor(loc, colorScheme),
-                            ),
-                            const Divider(height: 16),
-
-                            // Access Row
-                            _DetailInfoRow(
-                              icon: Icons.lock_open_rounded,
-                              label: 'Access',
-                              value: _buildAccessLabel(loc),
-                              valueColor: colorScheme.onSurface,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Provider Attribution & Coordinates
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              '${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.outline,
-                                fontSize: 11,
+                              displayAddress,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w400,
+                                color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                                height: 1.38,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Source: Google Places',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.outline,
-                              fontSize: 11,
                             ),
                           ),
                         ],
                       ),
+                    ),
 
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-              ),
+                    const SizedBox(height: 12),
 
-              // 3. Persistent Navigation Action
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton.icon(
-                  icon: _isLaunching
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colorScheme.onPrimary,
+                    // 4. Verified Facility Attributes (Pricing, Hours, Access)
+                    PrakaroCard(
+                      hasShadow: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      backgroundColor: isDark ? const Color(0xFF161920) : const Color(0xFFF7F8FA),
+                      child: Column(
+                        children: [
+                          _DetailRow(
+                            icon: PrakaroIconData.payments,
+                            label: 'Pricing',
+                            value: _buildPricingLabel(loc),
+                            valueColor: _buildPricingColor(loc, isDark),
                           ),
-                        )
-                      : const Icon(Icons.directions_rounded, size: 20),
-                  label: const Text(
-                    'Directions',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-                  onPressed: _isLaunching ? null : () => _handleDirections(),
+                          Divider(
+                            height: 20,
+                            color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+                          ),
+                          _DetailRow(
+                            icon: PrakaroIconData.clock,
+                            label: 'Hours',
+                            value: _buildOpeningLabel(loc),
+                            valueColor: _buildOpeningColor(loc, isDark),
+                          ),
+                          Divider(
+                            height: 20,
+                            color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+                          ),
+                          _DetailRow(
+                            icon: PrakaroIconData.shield,
+                            label: 'Access',
+                            value: _buildAccessLabel(loc),
+                            valueColor: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // 5. Source Attribution
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}',
+                            style: TextStyle(
+                              fontSize: 11.0,
+                              color: isDark ? AppTheme.textTertiaryDark : AppTheme.textTertiaryLight,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Source: Google Places',
+                          style: TextStyle(
+                            fontSize: 11.0,
+                            color: isDark ? AppTheme.textTertiaryDark : AppTheme.textTertiaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // Persistent Primary Directions Button
+            PrakaroButton.primary(
+              label: 'Directions',
+              icon: PrakaroIconData.directions,
+              size: PrakaroButtonSize.large,
+              isFullWidth: true,
+              isLoading: _isLaunching,
+              onPressed: () => _handleDirections(),
+            ),
+          ],
         ),
       ),
     );
   }
 
   String _buildPricingLabel(ParkingLocation loc) {
-    if (loc.isConfirmedFree) {
-      if (loc.parkingOptions.freeParkingLot == true) return 'Confirmed Free Lot';
-      if (loc.parkingOptions.freeStreetParking == true) return 'Confirmed Free Street Parking';
-      if (loc.parkingOptions.freeGarageParking == true) return 'Confirmed Free Garage';
-      return 'Confirmed Free';
+    switch (loc.pricingType) {
+      case PricingType.free:
+        return 'Free parking';
+      case PricingType.paid:
+        if (loc.hourlyRate != null && loc.currency != null) {
+          return '${loc.currency} ${loc.hourlyRate!.toStringAsFixed(0)} / hr';
+        }
+        return 'Paid parking';
+      case PricingType.mixed:
+        return 'Mixed rates';
+      case PricingType.unknown:
+        return 'Rate unlisted';
     }
-    if (loc.isConfirmedPaid) {
-      if (loc.parkingOptions.paidParkingLot == true) return 'Confirmed Paid Lot';
-      if (loc.parkingOptions.paidStreetParking == true) return 'Confirmed Paid Street Parking';
-      if (loc.parkingOptions.paidGarageParking == true) return 'Confirmed Paid Garage';
-      return 'Confirmed Paid';
-    }
-    if (loc.pricingType == PricingType.mixed) {
-      return 'Mixed (Free & Paid options available)';
-    }
-    return 'Pricing unlisted';
   }
 
-  Color _buildPricingColor(ParkingLocation loc, ColorScheme colorScheme) {
-    if (loc.isConfirmedFree) return Colors.green.shade800;
-    if (loc.isConfirmedPaid) return colorScheme.primary;
-    if (loc.pricingType == PricingType.mixed) return Colors.purple.shade800;
-    return colorScheme.onSurfaceVariant;
+  Color _buildPricingColor(ParkingLocation loc, bool isDark) {
+    if (loc.pricingType == PricingType.free) {
+      return isDark ? const Color(0xFF34D399) : AppTheme.successGreen;
+    }
+    return isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
   }
 
   String _buildOpeningLabel(ParkingLocation loc) {
-    if (loc.isConfirmedOpen) return 'Open now';
-    if (loc.isConfirmedClosed) return 'Currently closed';
-    return 'Hours unlisted';
+    switch (loc.openingStatus) {
+      case OpeningStatus.open:
+        return 'Open now';
+      case OpeningStatus.closed:
+        return 'Currently closed';
+      case OpeningStatus.unknown:
+        return 'Hours unlisted';
+    }
   }
 
-  Color _buildOpeningColor(ParkingLocation loc, ColorScheme colorScheme) {
-    if (loc.isConfirmedOpen) return Colors.teal.shade800;
-    if (loc.isConfirmedClosed) return Colors.red.shade800;
-    return colorScheme.onSurfaceVariant;
+  Color _buildOpeningColor(ParkingLocation loc, bool isDark) {
+    switch (loc.openingStatus) {
+      case OpeningStatus.open:
+        return isDark ? const Color(0xFF34D399) : AppTheme.successGreen;
+      case OpeningStatus.closed:
+        return isDark ? const Color(0xFFF87171) : AppTheme.errorRed;
+      case OpeningStatus.unknown:
+        return isDark ? AppTheme.textTertiaryDark : AppTheme.textTertiaryLight;
+    }
   }
 
   String _buildAccessLabel(ParkingLocation loc) {
     switch (loc.accessType) {
       case AccessType.public:
-        return 'Public Access';
+        return 'Public access';
       case AccessType.customersOnly:
-        return 'Customers Only';
+        return 'Customers only';
       case AccessType.private:
-        return 'Private Access';
+        return 'Private parking';
       case AccessType.unknown:
-        return 'Access unlisted';
+        return 'General access';
     }
   }
 }
 
-class _DetailInfoRow extends StatelessWidget {
-  const _DetailInfoRow({
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
     required this.icon,
     required this.label,
     required this.value,
     required this.valueColor,
   });
 
-  final IconData icon;
+  final PrakaroIconData icon;
   final String label;
   final String value;
   final Color valueColor;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-        const SizedBox(width: 8),
+        PrakaroIcon(
+          icon,
+          size: 16.0,
+          color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+        ),
+        const SizedBox(width: 10),
         Text(
           label,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
+          style: TextStyle(
+            fontSize: 13.0,
             fontWeight: FontWeight.w500,
+            color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
           ),
         ),
         const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: valueColor,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13.0,
+            fontWeight: FontWeight.w600,
+            color: valueColor,
+            letterSpacing: -0.1,
           ),
         ),
       ],

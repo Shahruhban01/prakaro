@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/design/components/prakaro_button.dart';
+import '../../../../core/design/prakaro_icons.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/parking_photo.dart';
 import '../parking_photos_provider.dart';
 import 'parking_photo_viewer_screen.dart';
 
-/// Swipeable photo gallery carousel embedded in the Parking Details Sheet.
-/// Lazily fetches photo metadata when opened, provides loading placeholders,
-/// graceful empty state, error retry, and tap-to-expand into full-screen viewer.
+/// Swipeable 16:9 photo gallery carousel embedded in the parking details sheet.
+/// Complies with Google Places Photo attribution rules, provides loading skeleton,
+/// graceful empty state, inline error recovery, and seamless full-screen tap-to-expand.
 class ParkingPhotoGallery extends ConsumerStatefulWidget {
   const ParkingPhotoGallery({
     super.key,
     required this.parkingId,
-    required this.facilityName,
+    this.facilityName = 'Parking Facility',
   });
 
   final String parkingId;
@@ -83,8 +85,8 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
                 color: colorScheme.surfaceContainerHigh,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.photo_library_outlined,
+              child: PrakaroIcon(
+                PrakaroIconData.photo,
                 size: 24,
                 color: colorScheme.primary.withValues(alpha: 0.7),
               ),
@@ -126,9 +128,9 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
                 color: colorScheme.surfaceContainerHigh,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.local_parking_rounded,
-                size: 26,
+              child: PrakaroIcon(
+                PrakaroIconData.parking,
+                size: 24,
                 color: colorScheme.outline,
               ),
             ),
@@ -167,9 +169,9 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.cloud_off_rounded,
-                  size: 20,
+                PrakaroIcon(
+                  PrakaroIconData.info,
+                  size: 18,
                   color: colorScheme.error,
                 ),
                 const SizedBox(width: 8),
@@ -184,17 +186,14 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
               ],
             ),
             const SizedBox(height: 8),
-            TextButton.icon(
+            PrakaroButton.ghost(
+              label: 'Retry',
+              icon: PrakaroIconData.refresh,
+              size: PrakaroButtonSize.small,
               onPressed: () {
                 AppHaptics.lightImpact();
                 ref.invalidate(parkingPhotosProvider(widget.parkingId));
               },
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Retry'),
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                foregroundColor: colorScheme.primary,
-              ),
             ),
           ],
         ),
@@ -262,8 +261,8 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
                       return Container(
                         color: colorScheme.surfaceContainerHigh,
                         child: Center(
-                          child: Icon(
-                            Icons.photo_outlined,
+                          child: PrakaroIcon(
+                            PrakaroIconData.photo,
                             size: 28,
                             color: colorScheme.outlineVariant,
                           ),
@@ -277,9 +276,9 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.broken_image_outlined,
-                                size: 32,
+                              PrakaroIcon(
+                                PrakaroIconData.photo,
+                                size: 30,
                                 color: colorScheme.outline,
                               ),
                               const SizedBox(height: 6),
@@ -313,8 +312,8 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.photo_library_outlined,
+                    const PrakaroIcon(
+                      PrakaroIconData.photo,
                       size: 12,
                       color: Colors.white,
                     ),
@@ -352,11 +351,12 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // Contributor name attribution
                     Expanded(
                       child: Text(
                         currentPhoto.attributions.isNotEmpty
                             ? 'By ${currentPhoto.attributions.first.displayName}'
-                            : 'Google Places Photo',
+                            : 'Google Maps contributor',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -366,23 +366,33 @@ class _ParkingPhotoGalleryState extends ConsumerState<ParkingPhotoGallery> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.zoom_in_rounded,
-                          size: 13,
-                          color: Colors.white70,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          'Tap to view',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 10,
+
+                    // Tap to view hint
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.20),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PrakaroIcon(
+                            PrakaroIconData.sparkle,
+                            size: 10,
+                            color: Colors.white,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          const Text(
+                            'Tap to view',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

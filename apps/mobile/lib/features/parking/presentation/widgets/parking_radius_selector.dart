@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/design/components/prakaro_segmented_control.dart';
 import '../parking_providers.dart';
 
 /// Interactive search radius selector supporting 1 km (1000m), 3 km (3000m), and 5 km (5000m).
-/// Uses Material 3 SegmentedButton for accessibility, clear selected states, and responsive layout.
+/// Uses custom smooth segmented control adhering to the Prakaro mobility design system.
 class ParkingRadiusSelector extends ConsumerWidget {
   const ParkingRadiusSelector({
     super.key,
@@ -19,77 +19,28 @@ class ParkingRadiusSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(parkingMapProvider);
     final notifier = ref.read(parkingMapProvider.notifier);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     final selectedRadius = state.radiusMeters;
 
-    return SegmentedButton<int>(
-      segments: const [
-        ButtonSegment<int>(
+    return PrakaroSegmentedControl<int>(
+      isCompact: isCompact,
+      items: const [
+        PrakaroSegmentItem(
           value: 1000,
-          label: Text('1 km'),
-          tooltip: 'Search within 1 km radius',
+          label: '1 km',
         ),
-        ButtonSegment<int>(
+        PrakaroSegmentItem(
           value: 3000,
-          label: Text('3 km'),
-          tooltip: 'Search within 3 km radius (default)',
+          label: '3 km',
         ),
-        ButtonSegment<int>(
+        PrakaroSegmentItem(
           value: 5000,
-          label: Text('5 km'),
-          tooltip: 'Search within 5 km radius',
+          label: '5 km',
         ),
       ],
-      selected: {selectedRadius},
-      emptySelectionAllowed: false,
-      multiSelectionEnabled: false,
-      showSelectedIcon: false,
-      style: ButtonStyle(
-        visualDensity: isCompact ? VisualDensity.compact : VisualDensity.comfortable,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return colorScheme.primaryContainer;
-          }
-          return colorScheme.surface;
-        }),
-        foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return colorScheme.onPrimaryContainer;
-          }
-          return colorScheme.onSurfaceVariant;
-        }),
-        textStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
-          final isSelected = states.contains(WidgetState.selected);
-          return (isCompact ? theme.textTheme.labelMedium : theme.textTheme.labelLarge)?.copyWith(
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            letterSpacing: -0.2,
-          );
-        }),
-        side: WidgetStateProperty.all(
-          BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-            width: 1.0,
-          ),
-        ),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          ),
-        ),
-        padding: WidgetStateProperty.all(
-          EdgeInsets.symmetric(
-            horizontal: isCompact ? 10 : 14,
-            vertical: isCompact ? 4 : 8,
-          ),
-        ),
-      ),
-      onSelectionChanged: (newSelection) {
-        if (newSelection.isNotEmpty) {
-          notifier.setRadius(newSelection.first);
-        }
+      selectedValue: selectedRadius,
+      onChanged: (newRadius) {
+        notifier.setRadius(newRadius);
       },
     );
   }

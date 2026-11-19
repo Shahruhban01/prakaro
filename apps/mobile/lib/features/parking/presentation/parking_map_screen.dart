@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../core/design/components/prakaro_button.dart';
+import '../../../core/design/components/prakaro_card.dart';
+import '../../../core/design/components/prakaro_search_bar.dart';
+import '../../../core/design/prakaro_icons.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/screens/profile_screen.dart';
@@ -186,12 +190,16 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: colorScheme.surface.withValues(alpha: 0.95),
+                              color: theme.brightness == Brightness.dark ? AppTheme.surfaceCardDark : Colors.white,
                               borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                              border: Border.all(
+                                color: theme.brightness == Brightness.dark ? AppTheme.borderDark : AppTheme.borderLight,
+                                width: 1.0,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 6,
+                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.08),
+                                  blurRadius: 10,
                                   offset: const Offset(0, 2),
                                 ),
                               ],
@@ -203,14 +211,14 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                                   width: 22,
                                   height: 22,
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer,
+                                    color: AppTheme.primaryBlue,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   alignment: Alignment.center,
-                                  child: Text(
+                                  child: const Text(
                                     'P',
                                     style: TextStyle(
-                                      color: colorScheme.onPrimaryContainer,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.w900,
                                       fontSize: 13,
                                     ),
@@ -219,43 +227,43 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Prakaro',
-                                  style: theme.textTheme.titleSmall?.copyWith(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: -0.3,
-                                    color: colorScheme.onSurface,
+                                    fontSize: 14,
+                                    color: theme.brightness == Brightness.dark
+                                        ? AppTheme.textPrimaryDark
+                                        : AppTheme.textPrimaryLight,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           // Profile / Account Button
-                          GestureDetector(
-                            onTap: () {
-                              AppHaptics.selection();
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
-                              );
-                            },
-                            child: Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: colorScheme.surface.withValues(alpha: 0.95),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.person_outline_rounded,
-                                size: 18,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: PrakaroIconButton(
+                              icon: PrakaroIconData.user,
+                              tooltip: 'Account',
+                              size: 36,
+                              iconSize: 18,
+                              backgroundColor: theme.brightness == Brightness.dark ? AppTheme.surfaceCardDark : Colors.white,
+                              borderColor: theme.brightness == Brightness.dark ? AppTheme.borderDark : AppTheme.borderLight,
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -269,106 +277,28 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                     ],
                   ),
 
+                  const SizedBox(height: 10),
+
                   // Floating Destination Search Bar
-                  GestureDetector(
+                  PrakaroSearchBarTrigger(
+                    destinationName: state.destinationName,
                     onTap: () {
-                      AppHaptics.selection();
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const DestinationSearchScreen(),
                         ),
                       );
                     },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      margin: const EdgeInsets.only(top: 8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: state.destinationName != null
-                              ? colorScheme.primary.withValues(alpha: 0.6)
-                              : colorScheme.outlineVariant.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            state.destinationName != null
-                                ? Icons.place_rounded
-                                : Icons.search_rounded,
-                            size: 18,
-                            color: state.destinationName != null
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              state.destinationName != null
-                                  ? state.destinationName!
-                                  : 'Search destination...',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: state.destinationName != null
-                                    ? colorScheme.onSurface
-                                    : colorScheme.onSurfaceVariant,
-                                fontWeight: state.destinationName != null
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (state.destinationName != null)
-                            GestureDetector(
-                              onTap: () {
-                                AppHaptics.selection();
-                                notifier.clearDestination();
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: 14,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    onClear: state.destinationName != null
+                        ? () => notifier.clearDestination()
+                        : null,
+                    placeholder: 'Search destination...',
                   ),
 
                   const SizedBox(height: 8),
 
                   // Row 2: Search Radius Segmented Selector
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: const ParkingRadiusSelector(isCompact: true),
-                  ),
+                  const ParkingRadiusSelector(isCompact: true),
 
                   // Row 3: Shared Quick Filters Bar
                   if (state.locations.isNotEmpty) ...[
@@ -379,20 +309,11 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                   // "Search this area" Button
                   if (state.canSearchArea && !state.isLoading) ...[
                     const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh_rounded, size: 16),
-                      label: const Text('Search this area'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.surface,
-                        foregroundColor: colorScheme.primary,
-                        elevation: 3,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                        ),
-                      ),
+                    PrakaroButton.primary(
+                      label: 'Search this area',
+                      icon: PrakaroIconData.refresh,
+                      size: PrakaroButtonSize.small,
                       onPressed: () {
-                        AppHaptics.lightImpact();
                         notifier.searchCurrentArea();
                       },
                     ),
@@ -402,14 +323,18 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                   if (state.isLoading) ...[
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.94),
+                        color: theme.brightness == Brightness.dark ? AppTheme.surfaceCardDark : Colors.white,
                         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        border: Border.all(
+                          color: theme.brightness == Brightness.dark ? AppTheme.borderDark : AppTheme.borderLight,
+                          width: 1.0,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 6,
+                            color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.08),
+                            blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
                         ],
@@ -417,20 +342,18 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colorScheme.primary,
-                            ),
+                          const PrakaroIcon(
+                            PrakaroIconData.search,
+                            size: 14,
+                            color: AppTheme.primaryBlue,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Finding parking within ${state.searchRadiusKm} km...',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface,
+                            style: TextStyle(
+                              fontSize: 12.0,
                               fontWeight: FontWeight.w600,
+                              color: theme.brightness == Brightness.dark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
                             ),
                           ),
                         ],
@@ -442,14 +365,18 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                   if (state.isFilterEmpty && !state.isLoading) ...[
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.95),
+                        color: theme.brightness == Brightness.dark ? AppTheme.surfaceCardDark : Colors.white,
                         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        border: Border.all(
+                          color: theme.brightness == Brightness.dark ? AppTheme.borderDark : AppTheme.borderLight,
+                          width: 1.0,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 6,
+                            color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.08),
+                            blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
                         ],
@@ -457,23 +384,29 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.filter_alt_off_rounded, size: 16, color: colorScheme.error),
+                          const PrakaroIcon(
+                            PrakaroIconData.filter,
+                            size: 14,
+                            color: AppTheme.textSecondaryLight,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             '0 matching facilities on map',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface,
+                            style: TextStyle(
+                              fontSize: 12.0,
                               fontWeight: FontWeight.w600,
+                              color: theme.brightness == Brightness.dark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
                             ),
                           ),
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () => notifier.clearFilters(),
-                            child: Text(
+                            child: const Text(
                               'Clear',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w800,
+                              style: TextStyle(
+                                fontSize: 12.0,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryBlue,
                               ),
                             ),
                           ),
@@ -486,14 +419,18 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                   if (state.isStaleResults && state.staleNotice != null && !state.isLoading) ...[
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.95),
+                        color: theme.brightness == Brightness.dark ? AppTheme.surfaceCardDark : Colors.white,
                         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        border: Border.all(
+                          color: theme.brightness == Brightness.dark ? AppTheme.borderDark : AppTheme.borderLight,
+                          width: 1.0,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 6,
+                            color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.08),
+                            blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
                         ],
@@ -501,13 +438,18 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.info_outline_rounded, size: 14, color: colorScheme.primary),
+                          const PrakaroIcon(
+                            PrakaroIconData.info,
+                            size: 14,
+                            color: AppTheme.primaryBlue,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             state.staleNotice!,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurface,
+                            style: TextStyle(
+                              fontSize: 12.0,
                               fontWeight: FontWeight.w600,
+                              color: theme.brightness == Brightness.dark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
                             ),
                           ),
                         ],
@@ -525,27 +467,36 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             curve: Curves.easeOutCubic,
             right: 16,
             bottom: state.selectedLocation != null ? 240 : 28,
-            child: FloatingActionButton.small(
-              heroTag: 'recenter_fab',
-              backgroundColor: colorScheme.surface,
-              foregroundColor: colorScheme.primary,
-              elevation: 3,
-              tooltip: state.isCustomSearchArea ? 'Reset to my location' : 'Re-center on my location',
-              child: Icon(
-                state.isCustomSearchArea ? Icons.near_me_rounded : Icons.my_location_rounded,
-                size: 20,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.4 : 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              onPressed: () {
-                AppHaptics.lightImpact();
-                final userLat = state.userLatitude;
-                final userLng = state.userLongitude;
-                if (userLat != null && userLng != null) {
-                  _animateToPosition(userLat, userLng);
-                  notifier.searchNearUser();
-                } else {
-                  notifier.init(force: true);
-                }
-              },
+              child: PrakaroIconButton(
+                size: 46.0,
+                iconSize: 22.0,
+                icon: state.isCustomSearchArea ? PrakaroIconData.nearMe : PrakaroIconData.nearMe,
+                color: AppTheme.primaryBlue,
+                backgroundColor: theme.brightness == Brightness.dark ? AppTheme.surfaceCardDark : Colors.white,
+                borderColor: theme.brightness == Brightness.dark ? AppTheme.borderDark : AppTheme.borderLight,
+                tooltip: state.isCustomSearchArea ? 'Reset to my location' : 'Re-center on my location',
+                onPressed: () {
+                  final userLat = state.userLatitude;
+                  final userLng = state.userLongitude;
+                  if (userLat != null && userLng != null) {
+                    _animateToPosition(userLat, userLng);
+                    notifier.searchNearUser();
+                  } else {
+                    notifier.init(force: true);
+                  }
+                },
+              ),
             ),
           ),
 
@@ -587,38 +538,50 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
       bottom: 24,
       left: 16,
       right: 16,
-      child: Card(
-        color: colorScheme.surface,
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.location_on_outlined, size: 32, color: colorScheme.primary),
-              const SizedBox(height: 8),
-              Text(
-                'Find parking near you',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
+      child: PrakaroCard(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: AppTheme.accentSoftLight,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Allow location access to show parking facilities and your current position on the map.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+              alignment: Alignment.center,
+              child: const PrakaroIcon(
+                PrakaroIconData.locationPin,
+                size: 22,
+                color: AppTheme.primaryBlue,
               ),
-              const SizedBox(height: 14),
-              FilledButton.icon(
-                icon: const Icon(Icons.near_me_rounded, size: 16),
-                label: const Text('Allow Location'),
-                onPressed: () => notifier.init(force: true),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Find parking near you',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Allow location access to show parking facilities and your current position on the map.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.brightness == Brightness.dark
+                    ? AppTheme.textSecondaryDark
+                    : AppTheme.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: 16),
+            PrakaroButton.primary(
+              label: 'Allow Location',
+              icon: PrakaroIconData.nearMe,
+              isFullWidth: true,
+              onPressed: () => notifier.init(force: true),
+            ),
+          ],
         ),
       ),
     );
@@ -634,38 +597,50 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
       bottom: 24,
       left: 16,
       right: 16,
-      child: Card(
-        color: colorScheme.surface,
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.location_off_outlined, size: 32, color: colorScheme.error),
-              const SizedBox(height: 8),
-              Text(
-                'Location is turned off',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
+      child: PrakaroCard(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFDE8E8),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Turn on location services to find parking near you.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+              alignment: Alignment.center,
+              child: const PrakaroIcon(
+                PrakaroIconData.locationPin,
+                size: 22,
+                color: Color(0xFFDC2626),
               ),
-              const SizedBox(height: 14),
-              FilledButton.icon(
-                icon: const Icon(Icons.location_searching_rounded, size: 16),
-                label: const Text('Enable Location'),
-                onPressed: () => ref.read(locationServiceProvider).openLocationSettings(),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Location is turned off',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Turn on location services to find parking near you.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.brightness == Brightness.dark
+                    ? AppTheme.textSecondaryDark
+                    : AppTheme.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: 16),
+            PrakaroButton.primary(
+              label: 'Enable Location',
+              icon: PrakaroIconData.nearMe,
+              isFullWidth: true,
+              onPressed: () => ref.read(locationServiceProvider).openLocationSettings(),
+            ),
+          ],
         ),
       ),
     );
@@ -680,34 +655,34 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
   ) {
     return Positioned(
       bottom: 32,
-      left: 24,
-      right: 24,
-      child: Card(
-        color: colorScheme.surface.withValues(alpha: 0.95),
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'No parking found within ${state.searchRadiusKm} km.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
+      left: 20,
+      right: 20,
+      child: PrakaroCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Row(
+          children: [
+            const PrakaroIcon(
+              PrakaroIconData.info,
+              size: 20,
+              color: AppTheme.primaryBlue,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No parking found within ${state.searchRadiusKm} km.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.1,
                 ),
               ),
-              if (state.canIncreaseRadius)
-                TextButton(
-                  onPressed: () => notifier.increaseRadius(),
-                  child: Text('Expand (${state.nextRadiusMeters ~/ 1000} km)'),
-                ),
-            ],
-          ),
+            ),
+            if (state.canIncreaseRadius)
+              PrakaroButton.tonal(
+                label: 'Expand (${state.nextRadiusMeters ~/ 1000} km)',
+                size: PrakaroButtonSize.small,
+                onPressed: () => notifier.increaseRadius(),
+              ),
+          ],
         ),
       ),
     );
@@ -720,45 +695,41 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
     ThemeData theme,
   ) {
     String message = state.errorMessage ?? 'Unable to connect to parking service.';
-    IconData icon = Icons.cloud_off_rounded;
 
     if (state.isOffline) {
       message = "You're offline. Connect to the internet to search for parking.";
-      icon = Icons.wifi_off_rounded;
     } else if (state.isTimedOut) {
       message = 'This search is taking longer than expected.';
-      icon = Icons.timer_outlined;
     } else if (state.isRateLimited) {
       message = 'Too many searches. Please wait a moment.';
-      icon = Icons.speed_rounded;
     }
 
     return Positioned(
       bottom: 24,
       left: 16,
       right: 16,
-      child: Card(
-        color: colorScheme.surface,
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(icon, size: 24, color: colorScheme.error),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface),
-                ),
+      child: PrakaroCard(
+        child: Row(
+          children: [
+            const PrakaroIcon(
+              PrakaroIconData.info,
+              size: 22,
+              color: Color(0xFFDC2626),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface),
               ),
-              TextButton(
-                onPressed: () => ref.read(parkingMapProvider.notifier).refresh(),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            PrakaroButton.tonal(
+              label: 'Retry',
+              size: PrakaroButtonSize.small,
+              onPressed: () => ref.read(parkingMapProvider.notifier).refresh(),
+            ),
+          ],
         ),
       ),
     );

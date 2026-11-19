@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
+import '../../../core/design/components/prakaro_nav_bar.dart';
+import '../../../core/design/prakaro_icons.dart';
 import 'parking_list_screen.dart';
 import 'parking_map_screen.dart';
 import 'parking_providers.dart';
@@ -54,22 +55,21 @@ class _ParkingHomeScreenState extends ConsumerState<ParkingHomeScreen> {
           const SavedParkingScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: PrakaroNavBar(
         selectedIndex: rootNavIndex,
-        onDestinationSelected: (index) {
-          AppHaptics.selection();
+        onItemSelected: (index) {
           ref.read(rootNavigationIndexProvider.notifier).setIndex(index);
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore_rounded),
+        items: const [
+          PrakaroNavItem(
             label: 'Explore',
+            icon: PrakaroIconData.search,
+            activeIcon: PrakaroIconData.search,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmark_outline_rounded),
-            selectedIcon: Icon(Icons.bookmark_rounded),
+          PrakaroNavItem(
             label: 'Saved',
+            icon: PrakaroIconData.bookmarkOutline,
+            activeIcon: PrakaroIconData.bookmarkFilled,
           ),
         ],
       ),

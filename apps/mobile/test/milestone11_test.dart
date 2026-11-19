@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prakaro/core/design/prakaro_icons.dart';
 
 import 'package:prakaro/core/services/navigation_service.dart';
 import 'package:prakaro/core/theme/app_theme.dart';
@@ -308,7 +309,7 @@ void main() {
         find.text('No photos available for this parking location.'),
         findsOneWidget,
       );
-      expect(find.byIcon(Icons.local_parking_rounded), findsOneWidget);
+      expect(find.byType(PrakaroIcon), findsWidgets);
     });
 
     testWidgets('renders error state with retry button and re-fetches on tap', (tester) async {
@@ -405,7 +406,7 @@ void main() {
       expect(find.text('1 / 2'), findsOneWidget);
       expect(find.text('Powered by Google'), findsOneWidget);
       expect(find.text('Jane Doe'), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byTooltip('Close viewer'), findsOneWidget);
 
       // Verify InteractiveViewer is present for pinch-to-zoom
       expect(find.byType(InteractiveViewer), findsWidgets);
@@ -438,7 +439,7 @@ void main() {
       expect(find.text('Photo 1 of 2'), findsOneWidget);
 
       // Tap close
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byTooltip('Close viewer'));
       await tester.pumpAndSettle();
 
       expect(find.text('Open Viewer'), findsOneWidget);
@@ -482,7 +483,7 @@ void main() {
       expect(find.text('450 m away (straight-line)'), findsOneWidget);
 
       // Verify Save button is present and interactive
-      final bookmarkFinder = find.byIcon(Icons.bookmark_outline_rounded);
+      final bookmarkFinder = find.byTooltip('Save parking');
       expect(bookmarkFinder, findsOneWidget);
       await tester.tap(bookmarkFinder);
       await tester.pumpAndSettle();

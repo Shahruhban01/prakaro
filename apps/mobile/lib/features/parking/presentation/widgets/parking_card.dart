@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/components/prakaro_button.dart';
+import '../../../../core/design/components/prakaro_card.dart';
+import '../../../../core/design/prakaro_icons.dart';
 import '../../../../core/services/navigation_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -9,7 +12,8 @@ import '../../domain/parking_location.dart';
 import '../parking_providers.dart';
 import '../saved_providers.dart';
 
-/// Refined, accessible card displaying a single discovered parking facility.
+/// Professional, human-centered card presenting a single discovered parking facility.
+/// Prioritizes facility name, distance, readable address, verified attributes, and clear directions.
 class ParkingCard extends ConsumerStatefulWidget {
   const ParkingCard({
     super.key,
@@ -68,7 +72,7 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final loc = widget.location;
 
     final displayName = loc.name.trim().isEmpty
@@ -85,200 +89,73 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
 
     final isSaved = ref.watch(savedParkingRefsProvider).any((r) => r.id == loc.id);
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: widget.onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-          child: Column(
+    return PrakaroCard(
+      onTap: widget.onTap,
+      padding: const EdgeInsets.all(AppTheme.space16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Top Row: Facility Name & Bookmark Save Action
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. Facility Header: Parking Emblem + Name & Address
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // High-contrast recognizable parking badge
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'P',
+              // Clean parking emblem
+              Container(
+                width: 36.0,
+                height: 36.0,
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.accentSoftDark : AppTheme.accentSoftLight,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'P',
+                  style: TextStyle(
+                    color: AppTheme.primaryBlue,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18.0,
+                    letterSpacing: -0.5,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12.0),
+
+              // Title and Distance
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
                       style: TextStyle(
-                        color: colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 20,
-                        letterSpacing: -0.5,
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                        color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                        height: 1.25,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Facility Title & Address
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 3.0),
+                    Row(
                       children: [
-                        Text(
-                          displayName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color: colorScheme.onSurface,
-                            height: 1.25,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        PrakaroIcon(
+                          PrakaroIconData.nearMe,
+                          size: 13.0,
+                          color: AppTheme.primaryBlue,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2.0),
-                              child: Icon(
-                                Icons.place_outlined,
-                                size: 14,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                displayAddress,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  height: 1.3,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Bookmark / Save Action
-                  IconButton(
-                    icon: Icon(
-                      isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
-                      color: isSaved ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                      size: 22,
-                    ),
-                    tooltip: isSaved ? 'Remove from saved' : 'Save parking',
-                    style: IconButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(36, 36),
-                    ),
-                    onPressed: () {
-                      AppHaptics.lightImpact();
-                      ref.read(savedParkingRefsProvider.notifier).toggleSave(widget.location);
-                      if (ref.read(authProvider).isGuest && !isSaved) {
-                        AuthPromptBottomSheet.show(context, facilityName: widget.location.name);
-                      }
-                    },
-                  ),
-                ],
-              ),
-
-              // 2. Verified Metadata Badges Row (Pricing, Opening Status, Access)
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6.0,
-                runSpacing: 4.0,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  // Pricing Badge
-                  if (loc.isConfirmedFree)
-                    _VerifiedInfoBadge(
-                      label: 'Free parking',
-                      icon: Icons.money_off_rounded,
-                      backgroundColor: Colors.green.withValues(alpha: 0.12),
-                      textColor: Colors.green.shade800,
-                    )
-                  else if (loc.isConfirmedPaid)
-                    _VerifiedInfoBadge(
-                      label: 'Paid parking',
-                      icon: Icons.payments_outlined,
-                      backgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.6),
-                      textColor: colorScheme.onSecondaryContainer,
-                    )
-                  else if (loc.pricingType == PricingType.mixed)
-                    _VerifiedInfoBadge(
-                      label: 'Mixed parking',
-                      icon: Icons.tune_rounded,
-                      backgroundColor: Colors.purple.withValues(alpha: 0.12),
-                      textColor: Colors.purple.shade800,
-                    )
-                  else
-                    _VerifiedInfoBadge(
-                      label: 'Price unlisted',
-                      icon: Icons.help_outline_rounded,
-                      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      textColor: colorScheme.onSurfaceVariant,
-                    ),
-
-                  // Opening Status Badge
-                  if (loc.isConfirmedOpen)
-                    _VerifiedInfoBadge(
-                      label: 'Open now',
-                      icon: Icons.check_circle_outline_rounded,
-                      backgroundColor: Colors.teal.withValues(alpha: 0.12),
-                      textColor: Colors.teal.shade800,
-                    )
-                  else if (loc.isConfirmedClosed)
-                    _VerifiedInfoBadge(
-                      label: 'Closed',
-                      icon: Icons.cancel_outlined,
-                      backgroundColor: Colors.red.withValues(alpha: 0.12),
-                      textColor: Colors.red.shade800,
-                    ),
-
-                  // Public Access Badge (if confirmed)
-                  if (loc.isConfirmedPublic)
-                    _VerifiedInfoBadge(
-                      label: 'Public access',
-                      icon: Icons.lock_open_rounded,
-                      backgroundColor: Colors.blue.withValues(alpha: 0.12),
-                      textColor: Colors.blue.shade800,
-                    ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // 3. Distance & Directions Action Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Distance label
-                  Flexible(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.near_me_outlined,
-                          size: 14,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 4.0),
                         Flexible(
                           child: Text(
                             formattedDistance,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: colorScheme.primary,
+                            style: TextStyle(
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               letterSpacing: -0.1,
+                              color: AppTheme.primaryBlue,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -286,76 +163,204 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
                         ),
                       ],
                     ),
-                  ),
+                  ],
+                ),
+              ),
 
-                  const SizedBox(width: 12),
-
-                  // Directions Action Button
-                  FilledButton.tonalIcon(
-                    icon: _isLaunching
-                        ? SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colorScheme.onSecondaryContainer,
-                            ),
-                          )
-                        : const Icon(Icons.directions_rounded, size: 16),
-                    label: const Text('Directions'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      minimumSize: const Size(0, 38),
-                      textStyle: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    onPressed: _isLaunching ? null : () => _handleDirections(),
-                  ),
-                ],
+              // Bookmark Save Button
+              PrakaroIconButton(
+                icon: isSaved ? PrakaroIconData.bookmarkFilled : PrakaroIconData.bookmarkOutline,
+                color: isSaved
+                    ? AppTheme.primaryBlue
+                    : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+                tooltip: isSaved ? 'Remove from saved' : 'Save parking',
+                onPressed: () {
+                  AppHaptics.lightImpact();
+                  ref.read(savedParkingRefsProvider.notifier).toggleSave(widget.location);
+                  if (ref.read(authProvider).isGuest && !isSaved) {
+                    AuthPromptBottomSheet.show(context, facilityName: widget.location.name);
+                  }
+                },
               ),
             ],
           ),
-        ),
+
+          const SizedBox(height: 10.0),
+
+          // 2. Address Row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2.0),
+                child: PrakaroIcon(
+                  PrakaroIconData.locationPin,
+                  size: 14.0,
+                  color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                ),
+              ),
+              const SizedBox(width: 6.0),
+              Expanded(
+                child: Text(
+                  displayAddress,
+                  style: TextStyle(
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.w400,
+                    color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                    height: 1.35,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          // 3. Verified Information Badges (Soft Pills)
+          const SizedBox(height: 10.0),
+          Wrap(
+            spacing: 6.0,
+            runSpacing: 4.0,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (loc.pricingType == PricingType.free)
+                _VerifiedBadge(
+                  label: 'Free parking',
+                  icon: PrakaroIconData.check,
+                  isSuccess: true,
+                )
+              else if (loc.pricingType == PricingType.paid)
+                _VerifiedBadge(
+                  label: 'Paid parking',
+                  icon: PrakaroIconData.payments,
+                )
+              else if (loc.pricingType == PricingType.mixed)
+                _VerifiedBadge(
+                  label: 'Mixed pricing',
+                  icon: PrakaroIconData.payments,
+                )
+              else
+                _VerifiedBadge(
+                  label: 'Price unlisted',
+                  isMuted: true,
+                ),
+
+              if (loc.openingStatus == OpeningStatus.open)
+                _VerifiedBadge(
+                  label: 'Open now',
+                  icon: PrakaroIconData.clock,
+                  isSuccess: true,
+                )
+              else if (loc.openingStatus == OpeningStatus.closed)
+                _VerifiedBadge(
+                  label: 'Closed',
+                  isDanger: true,
+                ),
+
+              if (loc.accessType == AccessType.public)
+                _VerifiedBadge(
+                  label: 'Public',
+                  icon: PrakaroIconData.shield,
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 12.0),
+
+          // 4. Bottom Divider and Action Row
+          Container(
+            height: 1.0,
+            color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+          ),
+          const SizedBox(height: 10.0),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Approx. distance',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w400,
+                  color: isDark ? AppTheme.textTertiaryDark : AppTheme.textTertiaryLight,
+                ),
+              ),
+              PrakaroButton.primary(
+                label: 'Directions',
+                icon: PrakaroIconData.directions,
+                size: PrakaroButtonSize.small,
+                isLoading: _isLaunching,
+                onPressed: () => _handleDirections(),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _VerifiedInfoBadge extends StatelessWidget {
-  const _VerifiedInfoBadge({
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge({
     required this.label,
-    required this.icon,
-    required this.backgroundColor,
-    required this.textColor,
+    this.icon,
+    this.isSuccess = false,
+    this.isDanger = false,
+    this.isMuted = false,
   });
 
   final String label;
-  final IconData icon;
-  final Color backgroundColor;
-  final Color textColor;
+  final PrakaroIconData? icon;
+  final bool isSuccess;
+  final bool isDanger;
+  final bool isMuted;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Color bg;
+    Color fg;
+
+    if (isSuccess) {
+      bg = isDark ? AppTheme.successSoftDark : AppTheme.successSoftLight;
+      fg = isDark ? const Color(0xFF34D399) : AppTheme.successGreen;
+    } else if (isDanger) {
+      bg = isDark ? AppTheme.errorSoftDark : AppTheme.errorSoftLight;
+      fg = isDark ? const Color(0xFFF87171) : AppTheme.errorRed;
+    } else if (isMuted) {
+      bg = isDark ? const Color(0xFF1E222B) : const Color(0xFFF1F3F6);
+      fg = isDark ? AppTheme.textTertiaryDark : AppTheme.textTertiaryLight;
+    } else {
+      bg = isDark ? const Color(0xFF1E2432) : const Color(0xFFF0F4FA);
+      fg = isDark ? const Color(0xFF90B5FF) : AppTheme.primaryBlue;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 3.5),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+        color: bg,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMicro),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: textColor),
-          const SizedBox(width: 4),
+          if (icon != null) ...[
+            PrakaroIcon(
+              icon!,
+              size: 11.0,
+              color: fg,
+            ),
+            const SizedBox(width: 4.0),
+          ],
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11.0,
               fontWeight: FontWeight.w600,
-              color: textColor,
               letterSpacing: -0.1,
+              color: fg,
+              height: 1.0,
             ),
           ),
         ],

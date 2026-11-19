@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/components/prakaro_button.dart';
+import '../../../../core/design/components/prakaro_card.dart';
+import '../../../../core/design/components/prakaro_dialog.dart';
+import '../../../../core/design/components/prakaro_header.dart';
+import '../../../../core/design/components/prakaro_segmented_control.dart';
+import '../../../../core/design/prakaro_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../parking/presentation/saved_providers.dart';
 import '../../domain/auth_state.dart';
 import '../providers/auth_providers.dart';
-import '../../../parking/presentation/saved_providers.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -12,100 +18,85 @@ import 'register_screen.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  void _showSignOutDialog(BuildContext context, WidgetRef ref) {
-    showDialog<void>(
+  Future<void> _showSignOutDialog(BuildContext context, WidgetRef ref) async {
+    final confirmed = await PrakaroDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Sign Out'),
-        content: const Text(
+      title: 'Sign Out',
+      message:
           'Are you sure you want to sign out? Your cloud-synced parking spots will remain safely stored in your account.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              AppHaptics.selection();
-              Navigator.of(ctx).pop();
-              ref.read(authProvider.notifier).signOut();
-            },
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Sign Out',
+      cancelLabel: 'Cancel',
+      icon: PrakaroIconData.user,
     );
+
+    if (confirmed == true) {
+      ref.read(authProvider.notifier).signOut();
+    }
   }
 
-  void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
-    showDialog<void>(
+  Future<void> _showDeleteAccountDialog(BuildContext context, WidgetRef ref) async {
+    final confirmed = await PrakaroDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error),
-            const SizedBox(width: 8),
-            const Text('Delete Account'),
-          ],
-        ),
-        content: const Text(
+      title: 'Delete Account',
+      message:
           'This action is irreversible. All your cloud-synced saved parking spots, search history, and account settings will be permanently erased.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            onPressed: () async {
-              AppHaptics.selection();
-              Navigator.of(ctx).pop();
-              final success = await ref.read(authProvider.notifier).deleteAccount();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success
-                          ? 'Account deleted successfully.'
-                          : 'Failed to delete account. Please try again.',
-                    ),
-                  ),
-                );
-              }
-            },
-            child: const Text('Delete Permanently'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Delete Permanently',
+      cancelLabel: 'Cancel',
+      isDanger: true,
+      icon: PrakaroIconData.trash,
     );
+
+    if (confirmed == true && context.mounted) {
+      final success = await ref.read(authProvider.notifier).deleteAccount();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Account deleted successfully.'
+                  : 'Failed to delete account. Please try again.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final savedCount = ref.watch(savedParkingRefsProvider).length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Account'),
-        elevation: 0,
+      backgroundColor: isDark ? AppTheme.canvasDark : Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            PrakaroHeader(
+              title: 'Account',
+              subtitle: 'Manage your profile and synchronization',
+              leading: PrakaroIconButton(
+                icon: PrakaroIconData.arrowBack,
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            Expanded(
+              child: authState.isGuest
+                  ? _buildGuestView(context, theme, isDark)
+                  : _buildAuthenticatedView(
+                      context, theme, isDark, ref, user!, authState, savedCount),
+            ),
+          ],
+        ),
       ),
-      body: authState.isGuest
-          ? _buildGuestView(context, theme)
-          : _buildAuthenticatedView(context, theme, ref, user!, authState, savedCount),
     );
   }
 
-  Widget _buildGuestView(BuildContext context, ThemeData theme) {
+  Widget _buildGuestView(BuildContext context, ThemeData theme, bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Column(
@@ -116,13 +107,14 @@ class ProfileScreen extends ConsumerWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
+                color: isDark ? AppTheme.surfaceCardDark : AppTheme.accentSoftLight,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.person_outline_rounded,
-                size: 44,
-                color: theme.colorScheme.onSurfaceVariant,
+              alignment: Alignment.center,
+              child: const PrakaroIcon(
+                PrakaroIconData.user,
+                size: 38,
+                color: AppTheme.primaryBlue,
               ),
             ),
           ),
@@ -130,54 +122,45 @@ class ProfileScreen extends ConsumerWidget {
           Text(
             'Guest Mode',
             textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: TextStyle(
+              fontSize: 22,
               fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'You are exploring parking spots anonymously. Sign in or create an account to sync saved parking spots and search preferences across all your devices.',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.4,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.45,
+              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 32),
 
-          FilledButton.icon(
+          PrakaroButton.primary(
+            label: 'Sign In',
+            icon: PrakaroIconData.user,
+            isFullWidth: true,
             onPressed: () {
-              AppHaptics.selection();
               Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
               );
             },
-            icon: const Icon(Icons.login_rounded),
-            label: const Text('Sign In'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
           ),
           const SizedBox(height: 12),
 
-          OutlinedButton.icon(
+          PrakaroButton.outline(
+            label: 'Create Free Account',
+            isFullWidth: true,
             onPressed: () {
-              AppHaptics.selection();
               Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const RegisterScreen()),
               );
             },
-            icon: const Icon(Icons.person_add_rounded),
-            label: const Text('Create Free Account'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
           ),
         ],
       ),
@@ -187,6 +170,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildAuthenticatedView(
     BuildContext context,
     ThemeData theme,
+    bool isDark,
     WidgetRef ref,
     user,
     AuthState authState,
@@ -202,93 +186,110 @@ class ProfileScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Profile card
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceContainerLow,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text(
-                      initials.toUpperCase(),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
+          PrakaroCard(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: isDark ? AppTheme.surfaceSecondaryDark : AppTheme.accentSoftLight,
+                  child: Text(
+                    initials.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppTheme.primaryBlue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.name,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                          color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.name,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                      const SizedBox(height: 2),
+                      Text(
+                        user.email,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          user.email,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF132E22) : const Color(0xFFEDF8F3),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.cloud_done_rounded,
-                                size: 14,
-                                color: theme.colorScheme.primary,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const PrakaroIcon(
+                              PrakaroIconData.check,
+                              size: 13,
+                              color: Color(0xFF27845B),
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Cloud Sync Active',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF27845B),
+                                fontWeight: FontWeight.w600,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Cloud Sync Active',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
 
           // Stats tile
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceContainerLow,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: ListTile(
-              leading: Icon(Icons.bookmark_rounded, color: theme.colorScheme.primary),
-              title: const Text('Saved Parking Spots'),
-              trailing: Text(
-                '$savedCount',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+          PrakaroCard(
+            hasShadow: false,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                const PrakaroIcon(
+                  PrakaroIconData.bookmarkFilled,
+                  color: AppTheme.primaryBlue,
+                  size: 20,
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Saved Parking Spots',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                    ),
+                  ),
+                ),
+                Text(
+                  '$savedCount',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
@@ -296,52 +297,98 @@ class ProfileScreen extends ConsumerWidget {
           // Preferences section
           Text(
             'Preferences',
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: theme.colorScheme.primary,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
 
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceContainerLow,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          PrakaroCard(
+            hasShadow: false,
+            padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SwitchListTile(
-                  title: const Text('Sync Recent Searches'),
-                  subtitle: const Text(
-                    'Save your recent search areas to your account for quick access across devices.',
-                  ),
-                  value: authState.preferences.recentSearchEnabled,
-                  onChanged: (val) {
-                    AppHaptics.selection();
-                    ref.read(authProvider.notifier).updatePreferences(
-                          recentSearchEnabled: val,
-                        );
-                  },
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Sync Recent Searches',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Save recent search areas to your account for quick access.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: authState.preferences.recentSearchEnabled,
+                      activeTrackColor: AppTheme.primaryBlue,
+                      onChanged: (val) {
+                        ref.read(authProvider.notifier).updatePreferences(
+                              recentSearchEnabled: val,
+                            );
+                      },
+                    ),
+                  ],
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  title: const Text('Default Search Radius'),
-                  subtitle: Text(
-                    '${(authState.preferences.defaultRadiusMeters / 1000).toStringAsFixed(0)} km',
-                  ),
-                  trailing: SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 1000, label: Text('1 km')),
-                      ButtonSegment(value: 3000, label: Text('3 km')),
-                      ButtonSegment(value: 5000, label: Text('5 km')),
-                    ],
-                    selected: {authState.preferences.defaultRadiusMeters},
-                    onSelectionChanged: (val) {
-                      AppHaptics.selection();
-                      ref.read(authProvider.notifier).updatePreferences(
-                            defaultRadiusMeters: val.first,
-                          );
-                    },
-                  ),
+                Divider(
+                  height: 24,
+                  color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Default Radius',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${(authState.preferences.defaultRadiusMeters / 1000).toStringAsFixed(0)} km search distance',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: PrakaroSegmentedControl<int>(
+                        items: const [
+                          PrakaroSegmentItem(value: 1000, label: '1 km'),
+                          PrakaroSegmentItem(value: 3000, label: '3 km'),
+                          PrakaroSegmentItem(value: 5000, label: '5 km'),
+                        ],
+                        selectedValue: authState.preferences.defaultRadiusMeters,
+                        onChanged: (val) {
+                          ref.read(authProvider.notifier).updatePreferences(
+                                defaultRadiusMeters: val,
+                              );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -351,38 +398,70 @@ class ProfileScreen extends ConsumerWidget {
           // Account actions section
           Text(
             'Account Actions',
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: theme.colorScheme.primary,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
 
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceContainerLow,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          PrakaroCard(
+            hasShadow: false,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.logout_rounded),
-                  title: const Text('Sign Out'),
-                  onTap: () {
-                    AppHaptics.selection();
-                    _showSignOutDialog(context, ref);
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.delete_forever_rounded, color: theme.colorScheme.error),
-                  title: Text(
-                    'Delete Account',
-                    style: TextStyle(color: theme.colorScheme.error),
+                InkWell(
+                  onTap: () => _showSignOutDialog(context, ref),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        const PrakaroIcon(PrakaroIconData.user, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Sign Out',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  onTap: () {
-                    AppHaptics.selection();
-                    _showDeleteAccountDialog(context, ref);
-                  },
+                ),
+                Divider(
+                  height: 1,
+                  color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+                ),
+                InkWell(
+                  onTap: () => _showDeleteAccountDialog(context, ref),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        const PrakaroIcon(
+                          PrakaroIconData.trash,
+                          size: 20,
+                          color: Color(0xFFDC2626),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Delete Account',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFDC2626),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),

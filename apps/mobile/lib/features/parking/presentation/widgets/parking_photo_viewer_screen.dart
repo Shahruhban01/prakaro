@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/design/components/prakaro_button.dart';
+import '../../../../core/design/prakaro_icons.dart';
 import '../../domain/parking_photo.dart';
 
 /// Full-screen photo viewer providing pinch-to-zoom, swiping between facility photos,
@@ -208,8 +210,11 @@ class _ParkingPhotoViewerScreenState extends State<ParkingPhotoViewerScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.white, size: 26),
+                      PrakaroIconButton(
+                        icon: PrakaroIconData.close,
+                        color: Colors.white,
+                        size: 36,
+                        iconSize: 20,
                         tooltip: 'Close viewer',
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -287,7 +292,7 @@ class _ParkingPhotoViewerScreenState extends State<ParkingPhotoViewerScreen> {
                     if (currentAttributions.isNotEmpty) ...[
                       Row(
                         children: [
-                          const Icon(Icons.person_outline, size: 14, color: Colors.white70),
+                          const PrakaroIcon(PrakaroIconData.user, size: 14, color: Colors.white70),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Wrap(
@@ -311,9 +316,9 @@ class _ParkingPhotoViewerScreenState extends State<ParkingPhotoViewerScreen> {
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        const SizedBox(width: 3),
-                                        const Icon(
-                                          Icons.open_in_new_rounded,
+                                        const SizedBox(width: 4),
+                                        const PrakaroIcon(
+                                          PrakaroIconData.directions,
                                           size: 11,
                                           color: Colors.lightBlueAccent,
                                         ),

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/design/components/prakaro_button.dart';
+import '../../../../core/design/prakaro_icons.dart';
 import '../../../../core/theme/app_theme.dart';
 
-/// Clean, informative empty state presented when no parking facilities are detected or match filters.
+/// Clean, human-centered empty state presented when no parking facilities are detected or match filters.
+/// Replaces stock Material buttons and default icons with bespoke Prakaro components.
 class ParkingEmptyState extends StatelessWidget {
   const ParkingEmptyState({
     super.key,
-    this.title = 'No parking facilities found',
+    this.title = 'No parking places nearby',
     this.message =
-        'No parking facilities were found within your current search area. Try refreshing or searching from a different location.',
+        'No parking facilities were found within your current search area. Try increasing your radius or searching another location.',
     this.onRetry,
     this.onClearFilters,
     this.onIncreaseRadius,
@@ -24,111 +27,95 @@ class ParkingEmptyState extends StatelessWidget {
   final VoidCallback? onIncreaseRadius;
   final String increaseRadiusLabel;
   final VoidCallback? onResetSearchArea;
-  final IconData? customIcon;
+  final PrakaroIconData? customIcon;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final PrakaroIconData icon = customIcon ??
+        (onClearFilters != null
+            ? PrakaroIconData.filter
+            : (onIncreaseRadius != null
+                ? PrakaroIconData.nearMe
+                : PrakaroIconData.parking));
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 32.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 64,
-              height: 64,
+              width: 56.0,
+              height: 56.0,
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+                color: isDark ? AppTheme.accentSoftDark : AppTheme.accentSoftLight,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(
-                customIcon ??
-                    (onClearFilters != null
-                        ? Icons.filter_alt_off_rounded
-                        : (onIncreaseRadius != null
-                            ? Icons.radar_rounded
-                            : Icons.local_parking_rounded)),
-                size: 32,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+              child: PrakaroIcon(
+                icon,
+                size: 26.0,
+                color: AppTheme.primaryBlue,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16.0),
             Text(
               title,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: TextStyle(
+                fontSize: 17.0,
                 fontWeight: FontWeight.w700,
-                color: colorScheme.onSurface,
-                letterSpacing: -0.2,
+                letterSpacing: -0.3,
+                color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 8.0),
             Text(
               message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.4,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w400,
+                color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                height: 1.42,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 20.0),
             Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: 8.0,
+              runSpacing: 8.0,
               alignment: WrapAlignment.center,
               children: [
                 if (onClearFilters != null)
-                  FilledButton.icon(
-                    icon: const Icon(Icons.clear_all_rounded, size: 18),
-                    label: const Text('Clear Filters'),
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                      ),
-                    ),
+                  PrakaroButton.primary(
+                    label: 'Clear Filters',
+                    icon: PrakaroIconData.close,
+                    size: PrakaroButtonSize.small,
                     onPressed: onClearFilters,
                   ),
                 if (onIncreaseRadius != null)
-                  FilledButton.icon(
-                    icon: const Icon(Icons.zoom_out_map_rounded, size: 18),
-                    label: Text(increaseRadiusLabel),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: onClearFilters != null
-                          ? colorScheme.secondaryContainer
-                          : colorScheme.primary,
-                      foregroundColor: onClearFilters != null
-                          ? colorScheme.onSecondaryContainer
-                          : colorScheme.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                      ),
-                    ),
+                  PrakaroButton.tonal(
+                    label: increaseRadiusLabel,
+                    icon: PrakaroIconData.nearMe,
+                    size: PrakaroButtonSize.small,
                     onPressed: onIncreaseRadius,
                   ),
                 if (onResetSearchArea != null)
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.my_location_rounded, size: 16),
-                    label: const Text('Near my location'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                      ),
-                    ),
+                  PrakaroButton.outline(
+                    label: 'Near my location',
+                    icon: PrakaroIconData.nearMe,
+                    size: PrakaroButtonSize.small,
                     onPressed: onResetSearchArea,
                   ),
                 if (onRetry != null)
-                  FilledButton.tonalIcon(
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('Refresh Search'),
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                      ),
-                    ),
+                  PrakaroButton.tonal(
+                    label: 'Refresh Search',
+                    icon: PrakaroIconData.refresh,
+                    size: PrakaroButtonSize.small,
                     onPressed: onRetry,
                   ),
               ],
