@@ -749,6 +749,9 @@ void main() {
         await tester.tap(find.text('5 km'));
         await tester.pump();
         expect(container.read(parkingMapProvider).radiusMeters, 5000);
+
+        // Allow debounce timer to settle before test finishes
+        await tester.pumpAndSettle(const Duration(milliseconds: 400));
       },
     );
 
@@ -814,6 +817,95 @@ void main() {
         expect(find.text('Selected map area'), findsOneWidget);
         expect(find.text('Near me'), findsOneWidget);
         expect(find.text('Dal Lake Parking'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'ParkingListScreen displays stale notice banner when isStaleResults is true',
+      (WidgetTester tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+          status: ParkingMapStatus.loaded,
+          isStaleResults: true,
+          staleNotice: 'Showing previous results. Refresh to try again.',
+          locations: [
+            ParkingLocation(
+              id: 'p_stale',
+              name: 'Cached View Facility',
+              latitude: 34.08,
+              longitude: 74.79,
+              address: 'Residency Road',
+              source: 'google',
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: ParkingListScreen(),
+            ),
+          ),
+        );
+
+        expect(find.text('Showing previous results. Refresh to try again.'), findsOneWidget);
+        expect(find.text('Refresh'), findsOneWidget);
+        expect(find.text('Cached View Facility'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'ParkingListScreen displays friendly offline message when isOffline is true',
+      (WidgetTester tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+          status: ParkingMapStatus.backendUnavailable,
+          isOffline: true,
+          errorMessage: "You're offline. Connect to the internet to search for parking.",
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: ParkingListScreen(),
+            ),
+          ),
+        );
+
+        expect(find.text("You're offline"), findsOneWidget);
+        expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'ParkingListScreen displays friendly timeout message when isTimedOut is true',
+      (WidgetTester tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+          status: ParkingMapStatus.backendUnavailable,
+          isTimedOut: true,
+          errorMessage: 'This search is taking longer than expected.',
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: ParkingListScreen(),
+            ),
+          ),
+        );
+
+        expect(find.text('Search timed out'), findsOneWidget);
+        expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
       },
     );
   });

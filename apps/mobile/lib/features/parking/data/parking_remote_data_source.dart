@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/errors/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import 'parking_location_dto.dart';
@@ -7,6 +9,7 @@ abstract class ParkingRemoteDataSource {
     required double latitude,
     required double longitude,
     int? radius,
+    CancelToken? cancelToken,
   });
 }
 
@@ -20,6 +23,7 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
     required double latitude,
     required double longitude,
     int? radius,
+    CancelToken? cancelToken,
   }) async {
     final queryParams = <String, dynamic>{
       'latitude': latitude,
@@ -32,6 +36,7 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
     final response = await _apiClient.get<Map<String, dynamic>>(
       '/api/v1/parking/nearby',
       queryParameters: queryParams,
+      cancelToken: cancelToken,
     );
 
     final responseData = response.data;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +26,8 @@ class MockApiClient extends ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
+    bool enableRetry = true,
   }) async {
     if (handler != null) {
       final res = await handler!(path, queryParameters);
@@ -57,17 +61,20 @@ class FakeParkingRepository implements ParkingRepository {
   int? lastRadius;
   double? lastLatitude;
   double? lastLongitude;
+  CancelToken? lastCancelToken;
 
   @override
   Future<List<ParkingLocation>> getNearbyParking({
     required double latitude,
     required double longitude,
     int? radius,
+    CancelToken? cancelToken,
   }) async {
     callCount++;
     lastLatitude = latitude;
     lastLongitude = longitude;
     lastRadius = radius;
+    lastCancelToken = cancelToken;
     if (errorToThrow != null) {
       throw errorToThrow!;
     }
@@ -743,6 +750,7 @@ void main() {
       expect(fakeRepo.lastRadius, 3000);
 
       await notifier.setRadius(1000);
+      await Future<void>.delayed(const Duration(milliseconds: 400));
       expect(container.read(parkingMapProvider).radiusMeters, 1000);
       expect(container.read(parkingMapProvider).searchRadiusKm, 1);
       expect(fakeRepo.lastRadius, 1000);
@@ -763,9 +771,11 @@ void main() {
       final notifier = container.read(parkingMapProvider.notifier);
       await notifier.init();
       await notifier.setRadius(1000);
+      await Future<void>.delayed(const Duration(milliseconds: 400));
       expect(fakeRepo.lastRadius, 1000);
 
       await notifier.setRadius(3000);
+      await Future<void>.delayed(const Duration(milliseconds: 400));
       expect(container.read(parkingMapProvider).radiusMeters, 3000);
       expect(fakeRepo.lastRadius, 3000);
     });
@@ -786,6 +796,7 @@ void main() {
       await notifier.init();
 
       await notifier.setRadius(5000);
+      await Future<void>.delayed(const Duration(milliseconds: 400));
       expect(container.read(parkingMapProvider).radiusMeters, 5000);
       expect(container.read(parkingMapProvider).searchRadiusKm, 5);
       expect(fakeRepo.lastRadius, 5000);
@@ -991,4 +1002,476 @@ void main() {
       expect(state5.nextRadiusMeters, 5000);
     });
   });
+
+  group('8. Milestone 08 - Performance, Reliability, Concurrency & Networking', () {
+    test('1. Superseded active search request CancelToken is cancelled', () async {
+      CancelToken? firstToken;
+      CancelToken? secondToken;
+
+      final fakeRepo = _DelayedMockRepo(
+        onCall: (token) {
+          if (firstToken == null) {
+            firstToken = token;
+          } else {
+            secondToken = token;
+          }
+        },
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+
+      // Launch first search (takes 50ms)
+      final f1 = notifier.searchNearby(latitude: 34.08, longitude: 74.79, radius: 1000);
+      // Immediately launch second search which supersedes the first
+      final f2 = notifier.searchNearby(latitude: 34.08, longitude: 74.79, radius: 3000);
+
+      await Future.wait([f1, f2]);
+
+      expect(firstToken, isNotNull);
+      expect(firstToken!.isCancelled, isTrue);
+      expect(secondToken, isNotNull);
+      expect(secondToken!.isCancelled, isFalse);
+    });
+
+    test('2. Cancelled request does not produce a user-facing error state', () async {
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(
+            FakeParkingRepository(
+              errorToThrow: const RequestCancelledException(),
+            ),
+          ),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.searchNearby(latitude: 34.08, longitude: 74.79);
+
+      final state = container.read(parkingMapProvider);
+      // Must not be in error state
+      expect(state.status, isNot(ParkingMapStatus.error));
+      expect(state.errorMessage, isNull);
+    });
+
+    test('3. Older responses cannot overwrite newer search results', () async {
+      final locSlow = const ParkingLocation(
+        id: 'slow',
+        name: 'Slow Facility',
+        latitude: 34.08,
+        longitude: 74.79,
+        address: '100 Slow Lane',
+        source: 'google',
+      );
+      final locFast = const ParkingLocation(
+        id: 'fast',
+        name: 'Fast Facility',
+        latitude: 34.08,
+        longitude: 74.79,
+        address: '200 Fast Expressway',
+        source: 'google',
+      );
+
+      int callNumber = 0;
+      final dynamicRepo = _DynamicTimingRepo(handler: (lat, lng, radius, token) async {
+        callNumber++;
+        if (callNumber == 1) {
+          // Slow first call
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          return [locSlow];
+        } else {
+          // Fast second call
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+          return [locFast];
+        }
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(dynamicRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      final f1 = notifier.searchNearby(latitude: 34.08, longitude: 74.79, radius: 1000);
+      final f2 = notifier.searchNearby(latitude: 34.08, longitude: 74.79, radius: 3000);
+
+      await Future.wait([f1, f2]);
+
+      final state = container.read(parkingMapProvider);
+      // Fast call completed for 3000m must prevail; slow 1000m must not overwrite
+      expect(state.locations.length, 1);
+      expect(state.locations.first.id, 'fast');
+      expect(state.radiusMeters, 3000);
+    });
+
+    test('4. Rapid radius changes are debounced into a single final search', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      expect(fakeRepo.callCount, 1);
+
+      // Rapidly change radius: 1km -> 3km -> 5km within 50ms
+      notifier.setRadius(1000);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      notifier.setRadius(3000);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      notifier.setRadius(5000);
+
+      // Immediately after, callCount should still be 1 (debouncing)
+      expect(fakeRepo.callCount, 1);
+
+      // Wait for debounce timer (350ms) to fire
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+
+      // Exactly 1 additional call was executed, with the final 5000m radius
+      expect(fakeRepo.callCount, 2);
+      expect(fakeRepo.lastRadius, 5000);
+    });
+
+    test('5. Explicit refresh and searchCurrentArea bypass debounce', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      expect(fakeRepo.callCount, 1);
+
+      // Explicit refresh happens immediately without 350ms delay
+      await notifier.refresh();
+      expect(fakeRepo.callCount, 2);
+    });
+
+    test('6. Duplicate in-flight query is coalesced into one search', () async {
+      final completer = Completer<List<ParkingLocation>>();
+      final dynamicRepo = _DynamicTimingRepo(handler: (lat, lng, radius, token) {
+        return completer.future;
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(dynamicRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+
+      // Start two concurrent identical searches
+      final f1 = notifier.searchNearby(latitude: 34.08, longitude: 74.79, radius: 3000);
+      final f2 = notifier.searchNearby(latitude: 34.08, longitude: 74.79, radius: 3000);
+
+      // Finish the response
+      completer.complete([
+        const ParkingLocation(
+          id: 'c1',
+          name: 'Coalesced Lot',
+          latitude: 34.08,
+          longitude: 74.79,
+          address: '300 Coalesced Way',
+          source: 'google',
+        ),
+      ]);
+
+      await Future.wait([f1, f2]);
+
+      // Only 1 network call was actually made
+      expect(dynamicRepo.callCount, 1);
+    });
+
+    test('7. List/Map switch causes zero additional network requests', () async {
+      final fakeRepo = FakeParkingRepository();
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(fakeRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      expect(fakeRepo.callCount, 1);
+
+      // Switch to Map
+      notifier.setViewMode(ParkingViewMode.map);
+      expect(fakeRepo.callCount, 1);
+
+      // Switch back to List
+      notifier.setViewMode(ParkingViewMode.list);
+      expect(fakeRepo.callCount, 1);
+    });
+
+    test('8. OfflineException maps to isOffline = true with friendly message', () async {
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(
+            FakeParkingRepository(errorToThrow: const OfflineException()),
+          ),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.searchNearby(latitude: 34.08, longitude: 74.79);
+
+      final state = container.read(parkingMapProvider);
+      expect(state.isOffline, isTrue);
+      expect(state.status, ParkingMapStatus.backendUnavailable);
+      expect(state.errorMessage, contains("offline"));
+    });
+
+    test('9. NetworkTimeoutException maps to isTimedOut = true', () async {
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(
+            FakeParkingRepository(errorToThrow: const NetworkTimeoutException()),
+          ),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.searchNearby(latitude: 34.08, longitude: 74.79);
+
+      final state = container.read(parkingMapProvider);
+      expect(state.isTimedOut, isTrue);
+      expect(state.errorMessage, contains("longer than expected"));
+    });
+
+    test('10. RateLimitException maps to isRateLimited = true', () async {
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(
+            FakeParkingRepository(errorToThrow: const RateLimitException()),
+          ),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.searchNearby(latitude: 34.08, longitude: 74.79);
+
+      final state = container.read(parkingMapProvider);
+      expect(state.isRateLimited, isTrue);
+      expect(state.errorMessage, contains("Too many searches"));
+    });
+
+    test('11. Refresh failure on SAME query preserves previous results with stale indicator', () async {
+      bool throwOnNext = false;
+      final dynamicRepo = _DynamicTimingRepo(handler: (lat, lng, radius, token) async {
+        if (throwOnNext) {
+          throw const NetworkException(message: 'Connection dropped on refresh');
+        }
+        return [
+          const ParkingLocation(
+            id: 'prev_1',
+            name: 'Existing Facility',
+            latitude: 34.08,
+            longitude: 74.79,
+            address: 'Main Boulevard',
+            source: 'google',
+          ),
+        ];
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(dynamicRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+
+      expect(container.read(parkingMapProvider).locations.length, 1);
+      expect(container.read(parkingMapProvider).isStaleResults, isFalse);
+
+      // Simulate refresh failure
+      throwOnNext = true;
+      await notifier.refresh();
+
+      final state = container.read(parkingMapProvider);
+      // Results must still be visible!
+      expect(state.locations.length, 1);
+      expect(state.locations.first.id, 'prev_1');
+      expect(state.isStaleResults, isTrue);
+      expect(state.staleNotice, contains('previous results'));
+    });
+
+    test('12. Failure on NEW query clears results and does not mislabel them as stale', () async {
+      bool throwOnNext = false;
+      final dynamicRepo = _DynamicTimingRepo(handler: (lat, lng, radius, token) async {
+        if (throwOnNext) {
+          throw const NetworkException(message: 'Remote server failure');
+        }
+        return [
+          const ParkingLocation(
+            id: 'prev_1',
+            name: 'Existing Facility',
+            latitude: 34.08,
+            longitude: 74.79,
+            address: 'Main Boulevard',
+            source: 'google',
+          ),
+        ];
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(dynamicRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      await notifier.init();
+      expect(container.read(parkingMapProvider).locations.length, 1);
+
+      // Search a brand new area (different coordinates) that fails
+      throwOnNext = true;
+      await notifier.searchNearby(latitude: 35.50, longitude: 75.50, radius: 5000);
+
+      final state = container.read(parkingMapProvider);
+      // Old results must NOT be shown as if they belong to the new area
+      expect(state.locations.isEmpty, isTrue);
+      expect(state.isStaleResults, isFalse);
+      expect(state.staleNotice, isNull);
+      expect(state.status, isNot(ParkingMapStatus.loaded));
+    });
+
+    test('13. Disposed notifier does not update state', () async {
+      final completer = Completer<List<ParkingLocation>>();
+      final dynamicRepo = _DynamicTimingRepo(handler: (lat, lng, radius, token) {
+        return completer.future;
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          parkingRepositoryProvider.overrideWithValue(dynamicRepo),
+          locationServiceProvider.overrideWithValue(
+            FakeLocationService(result: const LocationSuccess(34.08, 74.79)),
+          ),
+        ],
+      );
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      final searchFuture = notifier.searchNearby(latitude: 34.08, longitude: 74.79);
+
+      // Dispose container before response completes
+      container.dispose();
+
+      completer.complete([
+        const ParkingLocation(
+          id: 'late',
+          name: 'Late Facility',
+          latitude: 34.08,
+          longitude: 74.79,
+          address: 'Late Lane',
+          source: 'google',
+        ),
+      ]);
+
+      await searchFuture;
+      // No uncaught exception or state modification
+    });
+  });
+}
+
+class _DelayedMockRepo implements ParkingRepository {
+  _DelayedMockRepo({required this.onCall});
+
+  final void Function(CancelToken? token) onCall;
+
+  @override
+  Future<List<ParkingLocation>> getNearbyParking({
+    required double latitude,
+    required double longitude,
+    int? radius,
+    CancelToken? cancelToken,
+  }) async {
+    onCall(cancelToken);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return [];
+  }
+}
+
+class _DynamicTimingRepo implements ParkingRepository {
+  _DynamicTimingRepo({required this.handler});
+
+  final Future<List<ParkingLocation>> Function(
+    double lat,
+    double lng,
+    int? radius,
+    CancelToken? cancelToken,
+  ) handler;
+
+  int callCount = 0;
+
+  @override
+  Future<List<ParkingLocation>> getNearbyParking({
+    required double latitude,
+    required double longitude,
+    int? radius,
+    CancelToken? cancelToken,
+  }) {
+    callCount++;
+    return handler(latitude, longitude, radius, cancelToken);
+  }
 }

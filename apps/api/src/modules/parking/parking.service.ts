@@ -117,4 +117,8 @@ export class ParkingService {
     }
     return mapGooglePlaceToParkingFacility(rawPlace);
   }
+
+  public getMetricsSnapshot() {
+    return this.googlePlacesClient.getMetrics().getMetricsSnapshot();
+  }
 }

@@ -8,6 +8,7 @@ This document defines the REST API endpoints provided by the **Prakaro API** ser
 
 - **Base URL**: `/`
 - **Default Format**: JSON (`Content-Type: application/json; charset=utf-8`)
+- **Correlation Header**: `X-Request-Id` (unique correlation ID echoed on every response)
 - **Error Format**:
   All error responses adhere to the standard structured envelope:
   ```json
@@ -149,6 +150,56 @@ Retrieves deep details for a specific parking facility on demand. This avoids un
     },
     "hourlyRate": null,
     "currency": null
+  }
+}
+```
+
+### C. In-Process Metrics & Diagnostics
+
+Returns aggregate runtime usage counters for upstream Google Places requests without revealing API keys, authorization tokens, or precise user coordinates.
+
+- **URL**: `/api/v1/parking/metrics`
+- **Method**: `GET`
+- **Authentication**: None
+- **Rate Limit**: 60 requests per minute per IP address
+
+#### Success Response (`200 OK`)
+
+```json
+{
+  "data": {
+    "nearbySearch": {
+      "attempts": 42,
+      "success": 40,
+      "failures": 2,
+      "timeouts": 1,
+      "rateLimited": 1,
+      "successRate": 95.2
+    },
+    "placeDetails": {
+      "attempts": 5,
+      "success": 5,
+      "failures": 0,
+      "timeouts": 0,
+      "rateLimited": 0,
+      "successRate": 100.0
+    },
+    "totals": {
+      "totalUpstreamRequests": 47,
+      "totalSuccess": 45,
+      "totalFailures": 2,
+      "totalDurationMs": 14250,
+      "averageDurationMs": 303
+    },
+    "fieldMasks": {
+      "searchFieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus,places.parkingOptions,places.currentOpeningHours",
+      "detailsFieldMask": "id,displayName,formattedAddress,location,businessStatus,parkingOptions,currentOpeningHours,regularOpeningHours"
+    },
+    "costEstimation": {
+      "note": "Estimated costs depend on active Google Cloud Platform billing SKU rates and free tier credits ($200 monthly allowance). Multiply billable requests by current regional SKU rate.",
+      "nearbySearchSku": "Places API (New) - Nearby Search (Pro/Enterprise based on field mask)",
+      "placeDetailsSku": "Places API (New) - Place Details (Essentials/Pro based on field mask)"
+    }
   }
 }
 ```

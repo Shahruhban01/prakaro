@@ -31,22 +31,50 @@ class ApiClient {
 
   Dio get dio => _dio;
 
-  /// Perform a GET request with unified error translation.
+  /// Perform a GET request with request cancellation, transient auto-retry, and unified error translation.
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
+    bool enableRetry = true,
   }) async {
-    try {
-      return await _dio.get<T>(
-        path,
-        queryParameters: queryParameters,
-        options: options,
-      );
-    } on DioException catch (e) {
-      throw _handleDioError(e);
-    } catch (e) {
-      throw AppException(message: 'Unexpected network error: $e', cause: e);
+    int attempts = 0;
+    const maxAttempts = 2; // Initial request + at most 1 bounded retry
+
+    while (true) {
+      attempts++;
+      try {
+        return await _dio.get<T>(
+          path,
+          queryParameters: queryParameters,
+          options: options,
+          cancelToken: cancelToken,
+        );
+      } on DioException catch (e) {
+        final isCancel = e.type == DioExceptionType.cancel;
+        final statusCode = e.response?.statusCode;
+        final isNonRetryable = isCancel ||
+            statusCode == 400 ||
+            statusCode == 401 ||
+            statusCode == 403 ||
+            statusCode == 404 ||
+            statusCode == 422 ||
+            statusCode == 429 ||
+            statusCode == 503; // Configuration error should not be retried
+
+        if (!enableRetry || attempts >= maxAttempts || isNonRetryable) {
+          throw _handleDioError(e);
+        }
+
+        // Bounded jittered backoff: ~250ms
+        await Future<void>.delayed(
+          Duration(milliseconds: 200 + (DateTime.now().microsecond % 100)),
+        );
+      } catch (e) {
+        if (e is AppException) rethrow;
+        throw AppException(message: 'Unexpected network error: $e', cause: e);
+      }
     }
   }
 
@@ -56,6 +84,7 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
       return await _dio.post<T>(
@@ -63,6 +92,7 @@ class ApiClient {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
       );
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -72,6 +102,20 @@ class ApiClient {
   }
 
   AppException _handleDioError(DioException error) {
+    if (error.type == DioExceptionType.cancel) {
+      return RequestCancelledException(cause: error);
+    }
+
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout) {
+      return NetworkTimeoutException(cause: error);
+    }
+
+    if (error.type == DioExceptionType.connectionError) {
+      return OfflineException(cause: error);
+    }
+
     final statusCode = error.response?.statusCode;
     final dynamic responseData = error.response?.data;
 
@@ -83,6 +127,28 @@ class ApiClient {
       } else if (responseData['message'] != null) {
         extractedMessage = responseData['message'].toString();
       }
+    }
+
+    if (statusCode == 429) {
+      return RateLimitException(
+        message: extractedMessage ?? 'Too many searches. Please wait a moment.',
+        cause: error,
+      );
+    }
+
+    if (statusCode == 408) {
+      return NetworkTimeoutException(
+        message: extractedMessage ?? 'This search is taking longer than expected.',
+        cause: error,
+      );
+    }
+
+    if (statusCode == 502 || statusCode == 504) {
+      return UpstreamServiceException(
+        message: extractedMessage ?? 'Parking search is temporarily unavailable.',
+        statusCode: statusCode,
+        cause: error,
+      );
     }
 
     final message = extractedMessage ?? error.message ?? 'Network connection failure';

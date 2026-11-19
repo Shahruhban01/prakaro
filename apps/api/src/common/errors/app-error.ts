@@ -39,6 +39,13 @@ export class UpstreamTimeoutError extends AppError {
   }
 }
 
+export class UpstreamRateLimitError extends AppError {
+  constructor(message = 'Google Places rate limit exceeded. Please try again shortly.', details?: unknown) {
+    super(429, 'RATE_LIMIT_EXCEEDED', message, details);
+    this.name = 'UpstreamRateLimitError';
+  }
+}
+
 export class ConfigurationError extends AppError {
   constructor(
     message = 'Parking discovery service is not configured. Missing Google Places API credentials.',

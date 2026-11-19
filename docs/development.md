@@ -208,3 +208,32 @@ The backend does not have `GOOGLE_PLACES_API_KEY` defined in `apps/api/.env`. Se
 - Check if backend is bound to `0.0.0.0` (not strictly `127.0.0.1`).
 - Ensure emulator uses `10.0.2.2:3000` instead of `localhost:3000`.
 - Verify Windows Defender Firewall is not blocking the Node process on private networks.
+
+---
+
+## 7. Google Places Usage Monitoring & Cost Estimation
+
+### Monitoring Upstream API Calls
+To inspect live upstream Google Places request counts during local development, query the diagnostics endpoint:
+```powershell
+curl http://localhost:3000/api/v1/parking/metrics
+```
+This returns in-process counters tracking:
+- `nearbySearch`: Total search attempts, successes, failures, timeouts, 429 rate limits, and success rate percentage.
+- `placeDetails`: Total single-facility details attempts, successes, and failures.
+- `totals`: Cumulative upstream HTTP requests and average request duration.
+- `fieldMasks`: Active minimal field masks for Nearby Search and Place Details.
+
+### Cost Calculation & Billing Guidelines
+Google Places API (New) charges per 1,000 requests based on the requested field mask:
+- **Nearby Search (Basic/Pro)**: Approximately $32 to $35 per 1,000 requests depending on field tier.
+- **Place Details (Basic/Pro)**: Approximately $17 to $25 per 1,000 requests.
+- **Monthly Free Allowance**: Google Cloud provides a recurring $200 monthly credit, covering approximately 5,700–6,200 Nearby Search requests each month.
+
+**Cost Safety Protections Implemented in Prakaro**:
+1. Client-side debouncing (350 ms) prevents rapid radius toggling from firing multiple upstream requests.
+2. In-flight request coalescing shares simultaneous identical searches.
+3. List/Map view switching causes **zero** network requests.
+4. Local filters (Free, Paid, Open Now, Public Access) filter in-memory candidate sets without calling Google Places again.
+5. Place Details are queried **only** when specifically requested for a single facility (Stage B), never prefetched in bulk.
+6. Persistent caching of Places content is strictly omitted in compliance with Google Maps Platform terms of service.

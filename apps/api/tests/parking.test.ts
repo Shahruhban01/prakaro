@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildApp } from '../src/app';
 import { GooglePlacesClient } from '../src/integrations/google-places/google-places.client';
+import { GooglePlacesMetrics } from '../src/integrations/google-places/google-places.metrics';
 import {
   GooglePlaceItem,
   GooglePlacesSearchNearbyResponse,
@@ -16,6 +17,7 @@ function createMockClient(options: {
   status?: number;
   throwTimeout?: boolean;
   throwNetworkError?: boolean;
+  metrics?: GooglePlacesMetrics;
   onFetchCalled?: (url: string, init?: RequestInit) => void;
 }) {
   const mockFetch = async (
@@ -64,6 +66,9 @@ function createMockClient(options: {
     options.apiKey ?? SECRET_API_KEY,
     8000,
     mockFetch as unknown as typeof fetch,
+    undefined,
+    undefined,
+    options.metrics,
   );
 }
 
@@ -385,5 +390,88 @@ describe('GET /api/v1/parking/nearby', () => {
     });
 
     assert.equal(res.statusCode, 503);
+  });
+
+  it('10. Request correlation ID - attaches X-Request-Id header to every response', async () => {
+    const mockClient = createMockClient({ response: { places: [] } });
+    const app = buildApp({ googlePlacesClient: mockClient });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.ok(res.headers['x-request-id']);
+  });
+
+  it('11. Upstream rate limit (429) handling - returns 429 with RATE_LIMIT_EXCEEDED', async () => {
+    const mockClient = createMockClient({ status: 429 });
+    const app = buildApp({ googlePlacesClient: mockClient });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
+    });
+
+    assert.equal(res.statusCode, 429);
+    const body = JSON.parse(res.payload);
+    assert.equal(body.error.code, 'RATE_LIMIT_EXCEEDED');
+  });
+
+  it('12. Upstream 5xx handling - returns 502 UPSTREAM_ERROR', async () => {
+    const mockClient = createMockClient({ status: 500 });
+    const app = buildApp({ googlePlacesClient: mockClient });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
+    });
+
+    assert.equal(res.statusCode, 502);
+    const body = JSON.parse(res.payload);
+    assert.equal(body.error.code, 'UPSTREAM_ERROR');
+  });
+
+  it('13. Google Places API usage metrics - GET /api/v1/parking/metrics returns in-process counters', async () => {
+    const isolatedMetrics = new GooglePlacesMetrics();
+    const mockClient = createMockClient({
+      metrics: isolatedMetrics,
+      response: {
+        places: [
+          {
+            id: 'metric_place_1',
+            displayName: { text: 'Metrics Test Garage' },
+            formattedAddress: '456 Test Ave',
+            location: { latitude: 34.08, longitude: 74.79 },
+            businessStatus: 'OPERATIONAL',
+          },
+        ],
+      },
+    });
+
+    const app = buildApp({ googlePlacesClient: mockClient });
+
+    // Perform a nearby search request
+    await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79',
+    });
+
+    // Query metrics
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/metrics',
+    });
+
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.ok(body.data);
+    assert.equal(body.data.nearbySearch.attempts, 1);
+    assert.equal(body.data.nearbySearch.success, 1);
+    assert.equal(body.data.nearbySearch.failures, 0);
+    assert.equal(body.data.totals.totalUpstreamRequests, 1);
+    assert.ok(body.data.fieldMasks.searchFieldMask);
+    assert.ok(body.data.costEstimation.note);
   });
 });

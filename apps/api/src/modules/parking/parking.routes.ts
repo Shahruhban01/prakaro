@@ -25,6 +25,19 @@ export async function parkingRoutes(
   );
 
   app.get(
+    '/metrics',
+    {
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    controller.getMetrics,
+  );
+
+  app.get(
     '/:id',
     {
       config: {

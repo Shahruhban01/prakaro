@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -47,6 +50,39 @@ enum ParkingMapStatus {
   error,
 }
 
+/// Immutable logical search query representation for deterministic request identity and coalescing.
+class ParkingSearchQuery {
+  const ParkingSearchQuery({
+    required this.latitude,
+    required this.longitude,
+    required this.radiusMeters,
+  });
+
+  final double latitude;
+  final double longitude;
+  final int radiusMeters;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ParkingSearchQuery &&
+          runtimeType == other.runtimeType &&
+          (latitude - other.latitude).abs() < 0.0001 &&
+          (longitude - other.longitude).abs() < 0.0001 &&
+          radiusMeters == other.radiusMeters;
+
+  @override
+  int get hashCode => Object.hash(
+        (latitude * 10000).round(),
+        (longitude * 10000).round(),
+        radiusMeters,
+      );
+
+  @override
+  String toString() =>
+      'ParkingSearchQuery(lat: $latitude, lng: $longitude, radius: $radiusMeters)';
+}
+
 /// Pairing of a parking location with its computed straight-line distance.
 class ParkingLocationWithDistance {
   const ParkingLocationWithDistance({
@@ -81,6 +117,13 @@ class ParkingMapState {
     this.pricingFilter = PricingFilter.all,
     this.openNowFilter = false,
     this.publicAccessFilter = false,
+    this.displayedQuery,
+    this.lastSuccessfulFetchTime,
+    this.isStaleResults = false,
+    this.staleNotice,
+    this.isOffline = false,
+    this.isTimedOut = false,
+    this.isRateLimited = false,
   });
 
   static const List<int> supportedRadiiMeters = [1000, 3000, 5000];
@@ -106,6 +149,15 @@ class ParkingMapState {
   final PricingFilter pricingFilter;
   final bool openNowFilter;
   final bool publicAccessFilter;
+
+  // Milestone 08 Performance, Reliability & Lifecycle fields
+  final ParkingSearchQuery? displayedQuery;
+  final DateTime? lastSuccessfulFetchTime;
+  final bool isStaleResults;
+  final String? staleNotice;
+  final bool isOffline;
+  final bool isTimedOut;
+  final bool isRateLimited;
 
   bool get isLoading =>
       status == ParkingMapStatus.initializing || status == ParkingMapStatus.loading;
@@ -257,6 +309,14 @@ class ParkingMapState {
     PricingFilter? pricingFilter,
     bool? openNowFilter,
     bool? publicAccessFilter,
+    ParkingSearchQuery? displayedQuery,
+    DateTime? lastSuccessfulFetchTime,
+    bool? isStaleResults,
+    String? staleNotice,
+    bool clearStaleNotice = false,
+    bool? isOffline,
+    bool? isTimedOut,
+    bool? isRateLimited,
   }) {
     return ParkingMapState(
       viewMode: viewMode ?? this.viewMode,
@@ -281,6 +341,15 @@ class ParkingMapState {
       pricingFilter: pricingFilter ?? this.pricingFilter,
       openNowFilter: openNowFilter ?? this.openNowFilter,
       publicAccessFilter: publicAccessFilter ?? this.publicAccessFilter,
+      displayedQuery: displayedQuery ?? this.displayedQuery,
+      lastSuccessfulFetchTime:
+          lastSuccessfulFetchTime ?? this.lastSuccessfulFetchTime,
+      isStaleResults: isStaleResults ?? this.isStaleResults,
+      staleNotice:
+          clearStaleNotice ? null : (staleNotice ?? this.staleNotice),
+      isOffline: isOffline ?? this.isOffline,
+      isTimedOut: isTimedOut ?? this.isTimedOut,
+      isRateLimited: isRateLimited ?? this.isRateLimited,
     );
   }
 }
@@ -291,9 +360,19 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
   ParkingRepository get parkingRepository => ref.read(parkingRepositoryProvider);
 
   int _searchRequestId = 0;
+  CancelToken? _activeCancelToken;
+  Timer? _debounceTimer;
+
+  // In-flight request coalescing (prevents duplicate identical active queries)
+  ParkingSearchQuery? _inFlightQuery;
+  Future<List<ParkingLocation>>? _inFlightSearchFuture;
 
   @override
   ParkingMapState build() {
+    ref.onDispose(() {
+      _debounceTimer?.cancel();
+      _activeCancelToken?.cancel('Notifier disposed');
+    });
     return const ParkingMapState();
   }
 
@@ -305,7 +384,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     state = state.copyWith(viewMode: mode);
   }
 
-  /// Sets search radius (1000m, 3000m, 5000m) and executes search around active search center.
+  /// Sets search radius (1000m, 3000m, 5000m) with 350ms debouncing for rapid changes.
   Future<void> setRadius(int radiusMeters) async {
     if (!ref.mounted) return;
     if (state.radiusMeters == radiusMeters) return; // Prevent duplicate requests
@@ -313,21 +392,29 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
 
     AppHaptics.selection();
 
-    // Use current search center or user GPS position
-    final targetLat = state.searchCenterLatitude ?? state.userLatitude;
-    final targetLng = state.searchCenterLongitude ?? state.userLongitude;
+    // Cancel any previous debounced timer
+    _debounceTimer?.cancel();
 
-    if (targetLat != null && targetLng != null) {
-      await searchNearby(
-        latitude: targetLat,
-        longitude: targetLng,
-        radius: radiusMeters,
-      );
-    } else {
-      // If location is not acquired yet, record radius preference and retry init
-      state = state.copyWith(radiusMeters: radiusMeters);
-      await init(force: true);
-    }
+    // Immediately update UI state so radius selector & map circle reflect selection
+    state = state.copyWith(radiusMeters: radiusMeters);
+
+    // Debounce the actual backend query by 350ms to coalesce rapid user switching
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () async {
+      if (!ref.mounted) return;
+
+      final targetLat = state.searchCenterLatitude ?? state.userLatitude;
+      final targetLng = state.searchCenterLongitude ?? state.userLongitude;
+
+      if (targetLat != null && targetLng != null) {
+        await searchNearby(
+          latitude: targetLat,
+          longitude: targetLng,
+          radius: radiusMeters,
+        );
+      } else {
+        await init(force: true);
+      }
+    });
   }
 
   /// Convenience method to step up radius to next tier (e.g. 1km -> 3km, 3km -> 5km).
@@ -337,9 +424,10 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     }
   }
 
-  /// Resets search center back to device GPS location and re-queries.
+  /// Resets search center back to device GPS location and re-queries (bypasses debounce).
   Future<void> searchNearUser() async {
     if (!ref.mounted) return;
+    _debounceTimer?.cancel();
     AppHaptics.lightImpact();
 
     final userLat = state.userLatitude;
@@ -358,7 +446,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     }
   }
 
-  /// Sets pricing filter (mutually exclusive free / paid / all).
+  /// Sets pricing filter (mutually exclusive free / paid / all). Local filter, no network call.
   void setPricingFilter(PricingFilter filter) {
     if (!ref.mounted) return;
     if (state.pricingFilter == filter) return;
@@ -366,14 +454,14 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     state = state.copyWith(pricingFilter: filter);
   }
 
-  /// Toggles the 'Open Now' filter.
+  /// Toggles the 'Open Now' filter. Local filter, no network call.
   void toggleOpenNow() {
     if (!ref.mounted) return;
     AppHaptics.selection();
     state = state.copyWith(openNowFilter: !state.openNowFilter);
   }
 
-  /// Toggles the 'Public Access' filter.
+  /// Toggles the 'Public Access' filter. Local filter, no network call.
   void togglePublicAccess() {
     if (!ref.mounted) return;
     AppHaptics.selection();
@@ -400,6 +488,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
       return;
     }
 
+    _debounceTimer?.cancel();
     state = state.copyWith(status: ParkingMapStatus.initializing);
 
     final locationResult = await locationService.getCurrentLocation();
@@ -434,8 +523,9 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     }
   }
 
-  /// Pull-to-refresh or user-triggered refresh of parking results.
+  /// Pull-to-refresh or user-triggered refresh of parking results (bypasses debounce).
   Future<void> refresh() async {
+    _debounceTimer?.cancel();
     AppHaptics.lightImpact();
     final targetLat = state.searchCenterLatitude ?? state.userLatitude;
     final targetLng = state.searchCenterLongitude ?? state.userLongitude;
@@ -453,6 +543,12 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
   }
 
   /// Queries the Prakaro backend for parking locations near the provided coordinates.
+  ///
+  /// Incorporates:
+  /// - Dio CancelToken request cancellation for superseded searches.
+  /// - In-flight query coalescing to prevent duplicate simultaneous requests.
+  /// - Stale-response protection using generation tokens & ParkingSearchQuery identity.
+  /// - Stale-result indication when refresh fails for the same query area.
   Future<void> searchNearby({
     required double latitude,
     required double longitude,
@@ -460,7 +556,36 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     bool isRefresh = false,
   }) async {
     if (!ref.mounted) return;
+
     final effectiveRadius = radius ?? state.radiusMeters;
+    final targetQuery = ParkingSearchQuery(
+      latitude: latitude,
+      longitude: longitude,
+      radiusMeters: effectiveRadius,
+    );
+
+    // Cancel any pending debounced search
+    _debounceTimer?.cancel();
+
+    // 1. In-flight Request Coalescing (Duplicate Prevention)
+    if (_inFlightQuery != null &&
+        _inFlightQuery == targetQuery &&
+        _inFlightSearchFuture != null) {
+      try {
+        await _inFlightSearchFuture;
+      } catch (_) {
+        // Handled by the original in-flight search caller
+      }
+      return;
+    }
+
+    // 2. Cancel superseded active network request
+    if (_activeCancelToken != null && !_activeCancelToken!.isCancelled) {
+      _activeCancelToken!.cancel('Superseded by new parking search');
+    }
+    final cancelToken = CancelToken();
+    _activeCancelToken = cancelToken;
+
     final requestId = ++_searchRequestId;
 
     // Retain existing locations during pull-to-refresh to prevent UI jump
@@ -488,14 +613,19 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
       );
     }
 
-    try {
-      final results = await parkingRepository.getNearbyParking(
-        latitude: latitude,
-        longitude: longitude,
-        radius: effectiveRadius,
-      );
+    _inFlightQuery = targetQuery;
+    final searchFuture = parkingRepository.getNearbyParking(
+      latitude: latitude,
+      longitude: longitude,
+      radius: effectiveRadius,
+      cancelToken: cancelToken,
+    );
+    _inFlightSearchFuture = searchFuture;
 
-      // Prevent stale in-flight requests from overwriting newer user actions
+    try {
+      final results = await searchFuture;
+
+      // Stale-response guard: ignore older response if a newer request started
       if (!ref.mounted || requestId != _searchRequestId) return;
 
       if (results.isEmpty) {
@@ -503,51 +633,108 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
           status: ParkingMapStatus.empty,
           isRefreshing: false,
           locations: const [],
+          displayedQuery: targetQuery,
+          lastSuccessfulFetchTime: DateTime.now(),
+          isStaleResults: false,
+          clearStaleNotice: true,
+          isOffline: false,
+          isTimedOut: false,
+          isRateLimited: false,
         );
       } else {
         state = state.copyWith(
           status: ParkingMapStatus.loaded,
           isRefreshing: false,
           locations: results,
+          displayedQuery: targetQuery,
+          lastSuccessfulFetchTime: DateTime.now(),
+          isStaleResults: false,
+          clearStaleNotice: true,
+          isOffline: false,
+          isTimedOut: false,
+          isRateLimited: false,
         );
       }
+    } on RequestCancelledException {
+      // Cancellation is an expected control-flow event, do not update state with error
+      return;
     } on NetworkException catch (e) {
       if (!ref.mounted || requestId != _searchRequestId) return;
-      final isBackendUnreachable = e.statusCode == null ||
+
+      final isOffline = e is OfflineException;
+      final isTimeout = e is NetworkTimeoutException;
+      final isRateLimit = e is RateLimitException;
+      final isBackendUnreachable = isOffline ||
+          isTimeout ||
+          isRateLimit ||
+          e.statusCode == null ||
           e.statusCode == 503 ||
           e.statusCode == 502 ||
           e.statusCode == 504;
 
-      if (isRefresh && state.locations.isNotEmpty) {
+      final isSameQuery =
+          state.displayedQuery != null && state.displayedQuery == targetQuery;
+
+      // Stale result preservation: keep previous results visible on same-query refresh failure
+      if (isRefresh && state.locations.isNotEmpty && isSameQuery) {
         state = state.copyWith(
           isRefreshing: false,
+          isStaleResults: true,
+          staleNotice: 'Showing previous results. Refresh to try again.',
           errorMessage: e.message,
+          isOffline: isOffline,
+          isTimedOut: isTimeout,
+          isRateLimited: isRateLimit,
         );
       } else {
+        // New search failure (different location/radius): do not mislabel old results
         state = state.copyWith(
           status: isBackendUnreachable
               ? ParkingMapStatus.backendUnavailable
               : ParkingMapStatus.error,
           isRefreshing: false,
+          locations: const [],
+          isStaleResults: false,
+          clearStaleNotice: true,
           errorMessage: e.message,
+          isOffline: isOffline,
+          isTimedOut: isTimeout,
+          isRateLimited: isRateLimit,
         );
       }
     } catch (e) {
       if (!ref.mounted || requestId != _searchRequestId) return;
-      if (isRefresh && state.locations.isNotEmpty) {
-        state = state.copyWith(isRefreshing: false);
+      if (e is RequestCancelledException) return;
+
+      final isSameQuery =
+          state.displayedQuery != null && state.displayedQuery == targetQuery;
+      if (isRefresh && state.locations.isNotEmpty && isSameQuery) {
+        state = state.copyWith(
+          isRefreshing: false,
+          isStaleResults: true,
+          staleNotice: 'Showing previous results. Refresh to try again.',
+        );
       } else {
         state = state.copyWith(
           status: ParkingMapStatus.error,
           isRefreshing: false,
+          locations: const [],
+          isStaleResults: false,
+          clearStaleNotice: true,
           errorMessage: 'An unexpected error occurred while searching for parking.',
         );
+      }
+    } finally {
+      if (_inFlightQuery == targetQuery) {
+        _inFlightQuery = null;
+        _inFlightSearchFuture = null;
       }
     }
   }
 
-  /// Triggers a parking search centered around current camera target coordinates.
+  /// Triggers a parking search centered around current camera target coordinates (bypasses debounce).
   Future<void> searchCurrentArea() async {
+    _debounceTimer?.cancel();
     final lat = state.cameraLatitude ?? state.searchCenterLatitude ?? state.userLatitude;
     final lng = state.cameraLongitude ?? state.searchCenterLongitude ?? state.userLongitude;
 

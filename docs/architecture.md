@@ -197,3 +197,45 @@ Milestone 07 introduces interactive radius controls, explicit search center trac
 - If an older response resolves after a newer search was initiated, `requestId != _searchRequestId` triggers immediate safe discard of the obsolete response.
 - Pull-to-refresh retains existing facilities in state (`isRefreshing: true`) to prevent UI jumping.
 
+---
+
+## 7. Performance, Reliability & API Cost Optimization (Milestone 08)
+
+Milestone 08 introduces comprehensive request lifecycle management, client-side debouncing, cancellation propagation, in-flight request coalescing, failure recovery semantics, and in-process Google Places usage tracking:
+
+```
+[ User Interaction ]
+   │
+   ├─► Rapid Radius Changes (1 km -> 3 km -> 5 km)
+   │     └─► Debounced by 350 ms. Cancels previous timer. Only executes final 5 km search.
+   │
+   ├─► Explicit Actions (Refresh, Search This Area, Near Me, Retry)
+   │     └─► Bypass debounce (0 ms delay).
+   │
+   ├─► Duplicate In-Flight Query Coalescing
+   │     └─► If an identical ParkingSearchQuery is already active in-flight, returns active Future.
+   │
+   ├─► Superseded Request Cancellation
+   │     └─► Aborts active Dio CancelToken. Treated as clean control-flow (zero error states).
+   │
+   ├─► Logical Request Identity (ParkingSearchQuery)
+   │     └─► Compares (lat, lng, radius) to prevent older responses from overwriting newer state.
+   │
+   ├─► Refresh Failure Recovery
+   │     ├─► If refresh fails on SAME search query: retains loaded locations, marks isStaleResults: true,
+   │     │   displays subtle notice banner ("Showing previous results. Refresh to try again.").
+   │     └─► If a NEW search fails: clears results to prevent mislabeling old data.
+   │
+   └─► Categorized Network Error Translation
+         ├─► OfflineException -> "You're offline. Connect to the internet to search for parking."
+         ├─► NetworkTimeoutException -> "This search is taking longer than expected."
+         ├─► RateLimitException -> "Too many searches. Please wait a moment."
+         └─► UpstreamServiceException -> "Parking search is temporarily unavailable."
+```
+
+### Backend Usage Monitoring & Correlation
+- **Request Correlation ID**: Fastify generates or accepts an `X-Request-Id` header and echoes it on every response.
+- **In-Process Usage Metrics**: `GooglePlacesMetrics` tracks attempts, successes, failures, timeouts, 429 rate limits, and latency without logging API keys or precise coordinates.
+- **Diagnostics Endpoint**: `GET /api/v1/parking/metrics` exposes read-only runtime usage counters and field mask definitions for cost analysis.
+- **Compliance & Privacy**: Raw user coordinates in URLs and request bodies are masked to two decimal places in logs (`34.08***`), and no sensitive credentials or places data are stored on persistent disk.
+

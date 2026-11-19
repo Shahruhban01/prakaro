@@ -14,6 +14,7 @@ class ParkingEmptyState extends StatelessWidget {
     this.onIncreaseRadius,
     this.increaseRadiusLabel = 'Increase Radius',
     this.onResetSearchArea,
+    this.customIcon,
   });
 
   final String title;
@@ -23,6 +24,7 @@ class ParkingEmptyState extends StatelessWidget {
   final VoidCallback? onIncreaseRadius;
   final String increaseRadiusLabel;
   final VoidCallback? onResetSearchArea;
+  final IconData? customIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -44,11 +46,12 @@ class ParkingEmptyState extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Icon(
-                onClearFilters != null
-                    ? Icons.filter_alt_off_rounded
-                    : (onIncreaseRadius != null
-                        ? Icons.radar_rounded
-                        : Icons.local_parking_rounded),
+                customIcon ??
+                    (onClearFilters != null
+                        ? Icons.filter_alt_off_rounded
+                        : (onIncreaseRadius != null
+                            ? Icons.radar_rounded
+                            : Icons.local_parking_rounded)),
                 size: 32,
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
               ),

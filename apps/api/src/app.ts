@@ -12,21 +12,42 @@ export interface AppOptions extends FastifyServerOptions {
   googlePlacesClient?: GooglePlacesClient;
 }
 
+function maskSensitiveUrl(url: string): string {
+  // Mask coordinates to 2 decimal places to prevent logging precise user coordinates
+  return url.replace(/([?&](?:latitude|longitude)=)(-?\d+\.\d{2})\d*/gi, '$1$2***');
+}
+
 export function buildApp(opts: AppOptions = {}): FastifyInstance {
   const { googlePlacesClient: customGooglePlacesClient, ...fastifyOpts } = opts;
 
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'test' ? 'silent' : 'info',
+      serializers: {
+        req(req) {
+          return {
+            method: req.method,
+            url: maskSensitiveUrl(req.url),
+            hostname: req.hostname,
+            remoteAddress: req.ip,
+          };
+        },
+      },
     },
     ...fastifyOpts,
+  });
+
+  // Attach correlation ID header to every response
+  app.addHook('onSend', async (request, reply) => {
+    reply.header('X-Request-Id', request.id);
   });
 
   // Sensible CORS configuration
   app.register(cors, {
     origin: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id'],
   });
 
   // Basic endpoint rate limiting

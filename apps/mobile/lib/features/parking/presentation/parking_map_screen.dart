@@ -354,6 +354,39 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                       ),
                     ),
                   ],
+
+                  // Stale Results Notice Chip (when refresh fails on same query)
+                  if (state.isStaleResults && state.staleNotice != null && !state.isLoading) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 14, color: colorScheme.primary),
+                          const SizedBox(width: 6),
+                          Text(
+                            state.staleNotice!,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -400,7 +433,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             _buildEmptyStateToast(context, state, notifier, colorScheme, theme),
 
           if (state.status == ParkingMapStatus.backendUnavailable && !state.isLoading)
-            _buildBackendErrorBanner(context, state.errorMessage, colorScheme, theme),
+            _buildBackendErrorBanner(context, state, colorScheme, theme),
 
           // 5. Selected Parking Details Sheet
           if (state.selectedLocation != null)
@@ -555,10 +588,24 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
 
   Widget _buildBackendErrorBanner(
     BuildContext context,
-    String? errorMessage,
+    ParkingMapState state,
     ColorScheme colorScheme,
     ThemeData theme,
   ) {
+    String message = state.errorMessage ?? 'Unable to connect to parking service.';
+    IconData icon = Icons.cloud_off_rounded;
+
+    if (state.isOffline) {
+      message = "You're offline. Connect to the internet to search for parking.";
+      icon = Icons.wifi_off_rounded;
+    } else if (state.isTimedOut) {
+      message = 'This search is taking longer than expected.';
+      icon = Icons.timer_outlined;
+    } else if (state.isRateLimited) {
+      message = 'Too many searches. Please wait a moment.';
+      icon = Icons.speed_rounded;
+    }
+
     return Positioned(
       bottom: 24,
       left: 16,
@@ -571,11 +618,11 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Icon(Icons.cloud_off_rounded, size: 24, color: colorScheme.error),
+              Icon(icon, size: 24, color: colorScheme.error),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  errorMessage ?? 'Unable to connect to parking service.',
+                  message,
                   style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface),
                 ),
               ),

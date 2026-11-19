@@ -187,7 +187,13 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
               ),
 
-            // 3. Results Count Subheader (When loaded)
+            // 3. Stale Results Notice Banner (when refresh fails on same query)
+            if (state.isStaleResults && state.staleNotice != null)
+              SliverToBoxAdapter(
+                child: _buildStaleNoticeBanner(context, state, notifier),
+              ),
+
+            // 4. Results Count Subheader (When loaded)
             if (state.status == ParkingMapStatus.loaded && totalDiscovered > 0)
               SliverToBoxAdapter(
                 child: Padding(
@@ -217,7 +223,7 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
               ),
 
-            // 4. Body State Routing
+            // 5. Body State Routing
             if (state.status == ParkingMapStatus.locationPermissionRequired)
               SliverFillRemaining(
                 hasScrollBody: false,
@@ -234,7 +240,7 @@ class ParkingListScreen extends ConsumerWidget {
                 child: _buildBackendErrorView(
                   context,
                   notifier,
-                  state.errorMessage,
+                  state,
                   theme,
                   colorScheme,
                 ),
@@ -245,7 +251,7 @@ class ParkingListScreen extends ConsumerWidget {
                 child: _buildGenericErrorView(
                   context,
                   notifier,
-                  state.errorMessage,
+                  state,
                   theme,
                   colorScheme,
                 ),
@@ -497,13 +503,90 @@ class ParkingListScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildStaleNoticeBanner(
+    BuildContext context,
+    ParkingMapState state,
+    ParkingMapNotifier notifier,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              state.staleNotice ?? 'Showing previous results. Refresh to try again.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () => notifier.refresh(),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Text(
+                'Refresh',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBackendErrorView(
     BuildContext context,
     ParkingMapNotifier notifier,
-    String? errorMessage,
+    ParkingMapState state,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
+    String title = 'Parking service unavailable';
+    String message = state.errorMessage ??
+        'Parking discovery is temporarily unavailable. Please verify backend connection and try again.';
+    IconData icon = Icons.cloud_off_rounded;
+    String buttonLabel = 'Retry Connection';
+
+    if (state.isOffline) {
+      title = "You're offline";
+      message = "You're offline. Connect to the internet to search for parking.";
+      icon = Icons.wifi_off_rounded;
+      buttonLabel = 'Retry';
+    } else if (state.isTimedOut) {
+      title = 'Search timed out';
+      message = 'This search is taking longer than expected.';
+      icon = Icons.timer_outlined;
+      buttonLabel = 'Try Again';
+    } else if (state.isRateLimited) {
+      title = 'Too many searches';
+      message = 'Too many searches. Please wait a moment.';
+      icon = Icons.speed_rounded;
+      buttonLabel = 'Wait & Retry';
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -521,11 +604,11 @@ class ParkingListScreen extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: Icon(Icons.cloud_off_rounded, size: 26, color: colorScheme.error),
+                  child: Icon(icon, size: 26, color: colorScheme.error),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Parking service unavailable',
+                  title,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
@@ -534,8 +617,7 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  errorMessage ??
-                      'Parking discovery is temporarily unavailable. Please verify backend connection and try again.',
+                  message,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     height: 1.35,
@@ -545,7 +627,7 @@ class ParkingListScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
                 FilledButton.icon(
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Retry Connection'),
+                  label: Text(buttonLabel),
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -564,10 +646,31 @@ class ParkingListScreen extends ConsumerWidget {
   Widget _buildGenericErrorView(
     BuildContext context,
     ParkingMapNotifier notifier,
-    String? errorMessage,
+    ParkingMapState state,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
+    String title = 'Something went wrong';
+    String message =
+        state.errorMessage ?? 'An error occurred while finding parking. Please try again.';
+    IconData icon = Icons.error_outline_rounded;
+    String buttonLabel = 'Try Again';
+
+    if (state.isOffline) {
+      title = "You're offline";
+      message = "You're offline. Connect to the internet to search for parking.";
+      icon = Icons.wifi_off_rounded;
+    } else if (state.isTimedOut) {
+      title = 'Search timed out';
+      message = 'This search is taking longer than expected.';
+      icon = Icons.timer_outlined;
+    } else if (state.isRateLimited) {
+      title = 'Too many searches';
+      message = 'Too many searches. Please wait a moment.';
+      icon = Icons.speed_rounded;
+      buttonLabel = 'Wait & Retry';
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -585,11 +688,11 @@ class ParkingListScreen extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: Icon(Icons.error_outline_rounded, size: 26, color: colorScheme.error),
+                  child: Icon(icon, size: 26, color: colorScheme.error),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Something went wrong',
+                  title,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
@@ -598,7 +701,7 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  errorMessage ?? 'An error occurred while finding parking. Please try again.',
+                  message,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     height: 1.35,
@@ -608,7 +711,7 @@ class ParkingListScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
                 FilledButton.icon(
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Try Again'),
+                  label: Text(buttonLabel),
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMedium),

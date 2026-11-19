@@ -40,4 +40,12 @@ export class ParkingController {
 
     return reply.status(200).send({ data: facility });
   };
+
+  public getMetrics = async (
+    _req: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    const metrics = this.parkingService.getMetricsSnapshot();
+    return reply.status(200).send({ data: metrics });
+  };
 }
