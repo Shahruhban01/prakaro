@@ -66,10 +66,53 @@ function createRadiusSchema() {
   );
 }
 
+function createBooleanSchema(defaultValue: boolean) {
+  return z.preprocess((val) => {
+    if (val === undefined || val === null || val === '') {
+      return defaultValue;
+    }
+    if (typeof val === 'boolean') {
+      return val;
+    }
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      if (lower === 'true' || lower === '1') return true;
+      if (lower === 'false' || lower === '0') return false;
+      return 'INVALID_BOOLEAN';
+    }
+    return val;
+  }, z.boolean({ invalid_type_error: 'Value must be a boolean (true or false).' }).default(defaultValue));
+}
+
 export const nearbyParkingQuerySchema = z.object({
   latitude: createCoordinateSchema('Latitude', -90, 90),
   longitude: createCoordinateSchema('Longitude', -180, 180),
   radius: createRadiusSchema(),
+  pricing: z
+    .enum(['all', 'free', 'paid'], {
+      errorMap: () => ({ message: "Pricing filter must be one of: 'all', 'free', 'paid'." }),
+    })
+    .default('all'),
+  openNow: createBooleanSchema(false),
+  access: z
+    .enum(['all', 'public'], {
+      errorMap: () => ({ message: "Access filter must be one of: 'all', 'public'." }),
+    })
+    .default('all'),
+  sort: z
+    .enum(['distance'], {
+      errorMap: () => ({ message: "Sort option must be 'distance'." }),
+    })
+    .default('distance'),
 });
 
 export type NearbyParkingQueryInput = z.infer<typeof nearbyParkingQuerySchema>;
+
+export const facilityIdParamSchema = z.object({
+  id: z
+    .string({ required_error: 'Facility ID is required.' })
+    .trim()
+    .min(1, 'Facility ID cannot be empty.'),
+});
+
+export type FacilityIdParamInput = z.infer<typeof facilityIdParamSchema>;

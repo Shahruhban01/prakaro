@@ -51,9 +51,10 @@ prakaro/
 │   │   │   │       ├── data/                 # ParkingLocationDto & ParkingRemoteDataSource
 │   │   │   │       ├── domain/               # ParkingLocation entity & ParkingRepository
 │   │   │   │       └── presentation/         # ParkingHomeScreen, ParkingListScreen (Default),
-│   │   │   │                                 # ParkingMapScreen, ParkingViewSwitcher, ParkingCard
+│   │   │   │                                 # ParkingMapScreen, ParkingViewSwitcher, ParkingCard,
+│   │   │   │                                 # ParkingFilterBar, ParkingDetailsSheet, ParkingEmptyState
 │   │   │   └── main.dart                     # App entry point (ProviderScope root)
-│   │   ├── test/                             # Unit, repository, and widget tests
+│   │   ├── test/                             # Unit, repository, filter, and widget tests (40 tests)
 │   │   └── pubspec.yaml
 │   │
 │   └── api/                                  # Fastify TypeScript backend service
@@ -141,9 +142,10 @@ flutter run --dart-define=API_BASE_URL=http://<YOUR_COMPUTER_LAN_IP>:3000
 | :--- | :--- |
 | `npm run api:build` | Compiles TypeScript backend in strict mode |
 | `npm run api:lint` | Runs ESLint across the backend codebase |
-| `npm run api:test` | Executes backend test suite (13 integration tests) |
-| `flutter analyze` | Runs Dart static analysis across the mobile codebase |
-| `flutter test` | Executes Flutter unit, DTO, repository, and widget tests |
+| `npm run api:test` | Executes backend test suite (10 comprehensive test suites) |
+| `flutter analyze` | Runs Dart static analysis across the mobile codebase (0 issues) |
+| `flutter test` | Executes Flutter unit, DTO, repository, filter, and widget tests (40 tests) |
+| `flutter build apk --debug` | Verifies full native Android APK compilation |
 
 ---
 

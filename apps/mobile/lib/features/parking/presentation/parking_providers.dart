@@ -28,6 +28,13 @@ enum ParkingViewMode {
   map,
 }
 
+/// Active pricing filter selection.
+enum PricingFilter {
+  all,
+  free,
+  paid,
+}
+
 /// Lifecycle and discovery states of the parking screen.
 enum ParkingMapStatus {
   initializing,
@@ -68,6 +75,9 @@ class ParkingMapState {
     this.selectedLocation,
     this.errorMessage,
     this.canSearchArea = false,
+    this.pricingFilter = PricingFilter.all,
+    this.openNowFilter = false,
+    this.publicAccessFilter = false,
   });
 
   final ParkingViewMode viewMode;
@@ -84,13 +94,44 @@ class ParkingMapState {
   final ParkingLocation? selectedLocation;
   final String? errorMessage;
   final bool canSearchArea;
+  final PricingFilter pricingFilter;
+  final bool openNowFilter;
+  final bool publicAccessFilter;
 
   bool get isLoading =>
       status == ParkingMapStatus.initializing || status == ParkingMapStatus.loading;
 
-  /// Returns parking locations sorted by ascending straight-line distance to user coordinates.
-  List<ParkingLocationWithDistance> get sortedLocationsWithDistance {
-    final list = locations.map((loc) {
+  /// True if any non-default filter is currently applied.
+  bool get isAnyFilterActive =>
+      pricingFilter != PricingFilter.all || openNowFilter || publicAccessFilter;
+
+  /// Number of active non-default filters.
+  int get activeFilterCount =>
+      (pricingFilter != PricingFilter.all ? 1 : 0) +
+      (openNowFilter ? 1 : 0) +
+      (publicAccessFilter ? 1 : 0);
+
+  /// Returns parking locations matching active filters, sorted by ascending straight-line distance.
+  List<ParkingLocationWithDistance> get filteredLocationsWithDistance {
+    // 1. Filter candidate facilities
+    final filtered = locations.where((loc) {
+      if (pricingFilter == PricingFilter.free && !loc.isConfirmedFree) {
+        return false;
+      }
+      if (pricingFilter == PricingFilter.paid && !loc.isConfirmedPaid) {
+        return false;
+      }
+      if (openNowFilter && !loc.isConfirmedOpen) {
+        return false;
+      }
+      if (publicAccessFilter && !loc.isConfirmedPublic) {
+        return false;
+      }
+      return true;
+    });
+
+    // 2. Attach straight-line distance
+    final list = filtered.map((loc) {
       double? dist;
       if (userLatitude != null && userLongitude != null) {
         dist = Geolocator.distanceBetween(
@@ -103,21 +144,39 @@ class ParkingMapState {
       return ParkingLocationWithDistance(location: loc, distanceMeters: dist);
     }).toList();
 
+    // 3. Nearest first sorting with stable tie-breaker
     if (userLatitude != null && userLongitude != null) {
       list.sort((a, b) {
-        if (a.distanceMeters == null && b.distanceMeters == null) return 0;
+        if (a.distanceMeters == null && b.distanceMeters == null) {
+          return a.location.id.compareTo(b.location.id);
+        }
         if (a.distanceMeters == null) return 1;
         if (b.distanceMeters == null) return -1;
-        return a.distanceMeters!.compareTo(b.distanceMeters!);
+        final cmp = a.distanceMeters!.compareTo(b.distanceMeters!);
+        if (cmp != 0) return cmp;
+        return a.location.id.compareTo(b.location.id);
       });
     }
 
     return list;
   }
 
-  /// Returns sorted locations without distance wrappers.
-  List<ParkingLocation> get nearestLocations =>
-      sortedLocationsWithDistance.map((item) => item.location).toList();
+  /// Returns filtered locations without distance wrappers.
+  List<ParkingLocation> get filteredLocations =>
+      filteredLocationsWithDistance.map((item) => item.location).toList();
+
+  /// Backward-compatible alias for filtered locations with straight-line distance.
+  List<ParkingLocationWithDistance> get sortedLocationsWithDistance =>
+      filteredLocationsWithDistance;
+
+  /// Backward-compatible alias for sorted locations list.
+  List<ParkingLocation> get nearestLocations => filteredLocations;
+
+  /// True when backend loaded facilities, but active filter criteria matched 0 facilities.
+  bool get isFilterEmpty =>
+      status == ParkingMapStatus.loaded &&
+      locations.isNotEmpty &&
+      filteredLocations.isEmpty;
 
   /// Formats straight-line distance in a human-readable format.
   static String formatDistance(double? meters) {
@@ -151,6 +210,9 @@ class ParkingMapState {
     bool clearSelectedLocation = false,
     String? errorMessage,
     bool? canSearchArea,
+    PricingFilter? pricingFilter,
+    bool? openNowFilter,
+    bool? publicAccessFilter,
   }) {
     return ParkingMapState(
       viewMode: viewMode ?? this.viewMode,
@@ -169,6 +231,9 @@ class ParkingMapState {
           : (selectedLocation ?? this.selectedLocation),
       errorMessage: errorMessage ?? this.errorMessage,
       canSearchArea: canSearchArea ?? this.canSearchArea,
+      pricingFilter: pricingFilter ?? this.pricingFilter,
+      openNowFilter: openNowFilter ?? this.openNowFilter,
+      publicAccessFilter: publicAccessFilter ?? this.publicAccessFilter,
     );
   }
 }
@@ -189,6 +254,39 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     if (state.viewMode == mode) return;
     AppHaptics.selection();
     state = state.copyWith(viewMode: mode);
+  }
+
+  /// Sets pricing filter (mutually exclusive free / paid / all).
+  void setPricingFilter(PricingFilter filter) {
+    if (!ref.mounted) return;
+    if (state.pricingFilter == filter) return;
+    AppHaptics.selection();
+    state = state.copyWith(pricingFilter: filter);
+  }
+
+  /// Toggles the 'Open Now' filter.
+  void toggleOpenNow() {
+    if (!ref.mounted) return;
+    AppHaptics.selection();
+    state = state.copyWith(openNowFilter: !state.openNowFilter);
+  }
+
+  /// Toggles the 'Public Access' filter.
+  void togglePublicAccess() {
+    if (!ref.mounted) return;
+    AppHaptics.selection();
+    state = state.copyWith(publicAccessFilter: !state.publicAccessFilter);
+  }
+
+  /// Clears all active filters back to 'All'.
+  void clearFilters() {
+    if (!ref.mounted) return;
+    AppHaptics.lightImpact();
+    state = state.copyWith(
+      pricingFilter: PricingFilter.all,
+      openNowFilter: false,
+      publicAccessFilter: false,
+    );
   }
 
   /// Bootstrap GPS position and search initial nearby parking.
@@ -308,7 +406,6 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
           e.statusCode == 502 ||
           e.statusCode == 504;
 
-      // If we already have cached results from a prior load, retain them and clear refresh flag
       if (isRefresh && state.locations.isNotEmpty) {
         state = state.copyWith(
           isRefreshing: false,

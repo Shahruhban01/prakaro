@@ -1,3 +1,17 @@
+export type AccessType = 'public' | 'customers_only' | 'private' | 'unknown';
+export type OwnershipType = 'public' | 'private' | 'unknown';
+export type PricingType = 'free' | 'paid' | 'mixed' | 'unknown';
+export type OpeningStatus = 'open' | 'closed' | 'unknown';
+
+export interface ParkingOptions {
+  freeParkingLot: boolean | null;
+  paidParkingLot: boolean | null;
+  freeStreetParking: boolean | null;
+  paidStreetParking: boolean | null;
+  freeGarageParking: boolean | null;
+  paidGarageParking: boolean | null;
+}
+
 export interface ParkingFacility {
   id: string;
   name: string;
@@ -5,18 +19,37 @@ export interface ParkingFacility {
   longitude: number;
   address: string;
   source: 'google';
+  accessType: AccessType;
+  ownershipType: OwnershipType;
+  pricingType: PricingType;
+  openingStatus: OpeningStatus;
+  parkingOptions: ParkingOptions;
+  hourlyRate: number | null;
+  currency: string | null;
 }
 
 export interface NearbyParkingQuery {
   latitude: number;
   longitude: number;
   radius: number;
+  pricing?: 'all' | 'free' | 'paid';
+  openNow?: boolean;
+  access?: 'all' | 'public';
+  sort?: 'distance';
 }
 
 export interface NearbyParkingResponse {
   data: ParkingFacility[];
   meta: {
     count: number;
+    totalDiscovered: number;
     radiusMeters: number;
+    filterApplied: {
+      pricing: 'all' | 'free' | 'paid';
+      openNow: boolean;
+      access: 'all' | 'public';
+      sort: 'distance';
+    };
+    filteredOnCandidateSet: boolean;
   };
 }

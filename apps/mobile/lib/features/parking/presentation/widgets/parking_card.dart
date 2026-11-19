@@ -66,14 +66,15 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = widget.location;
 
-    final displayName = widget.location.name.trim().isEmpty
+    final displayName = loc.name.trim().isEmpty
         ? 'Parking Facility'
-        : widget.location.name.trim();
+        : loc.name.trim();
 
-    final displayAddress = widget.location.address.trim().isEmpty
+    final displayAddress = loc.address.trim().isEmpty
         ? 'Address unavailable'
-        : widget.location.address.trim();
+        : loc.address.trim();
 
     final formattedDistance = widget.distanceMeters != null
         ? '${ParkingMapState.formatDistance(widget.distanceMeters)} (straight-line)'
@@ -89,7 +90,7 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. Facility Header: Parking Emblem + Name
+              // 1. Facility Header: Parking Emblem + Name & Address
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -162,14 +163,78 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
                 ],
               ),
 
-              const SizedBox(height: 12),
+              // 2. Verified Metadata Badges Row (Pricing, Opening Status, Access)
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6.0,
+                runSpacing: 4.0,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  // Pricing Badge
+                  if (loc.isConfirmedFree)
+                    _VerifiedInfoBadge(
+                      label: 'Free parking',
+                      icon: Icons.money_off_rounded,
+                      backgroundColor: Colors.green.withValues(alpha: 0.12),
+                      textColor: Colors.green.shade800,
+                    )
+                  else if (loc.isConfirmedPaid)
+                    _VerifiedInfoBadge(
+                      label: 'Paid parking',
+                      icon: Icons.payments_outlined,
+                      backgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.6),
+                      textColor: colorScheme.onSecondaryContainer,
+                    )
+                  else if (loc.pricingType == PricingType.mixed)
+                    _VerifiedInfoBadge(
+                      label: 'Mixed parking',
+                      icon: Icons.tune_rounded,
+                      backgroundColor: Colors.purple.withValues(alpha: 0.12),
+                      textColor: Colors.purple.shade800,
+                    )
+                  else
+                    _VerifiedInfoBadge(
+                      label: 'Price unlisted',
+                      icon: Icons.help_outline_rounded,
+                      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      textColor: colorScheme.onSurfaceVariant,
+                    ),
 
-              // 2. Metadata & Action Row: Distance + Directions Button
+                  // Opening Status Badge
+                  if (loc.isConfirmedOpen)
+                    _VerifiedInfoBadge(
+                      label: 'Open now',
+                      icon: Icons.check_circle_outline_rounded,
+                      backgroundColor: Colors.teal.withValues(alpha: 0.12),
+                      textColor: Colors.teal.shade800,
+                    )
+                  else if (loc.isConfirmedClosed)
+                    _VerifiedInfoBadge(
+                      label: 'Closed',
+                      icon: Icons.cancel_outlined,
+                      backgroundColor: Colors.red.withValues(alpha: 0.12),
+                      textColor: Colors.red.shade800,
+                    ),
+
+                  // Public Access Badge (if confirmed)
+                  if (loc.isConfirmedPublic)
+                    _VerifiedInfoBadge(
+                      label: 'Public access',
+                      icon: Icons.lock_open_rounded,
+                      backgroundColor: Colors.blue.withValues(alpha: 0.12),
+                      textColor: Colors.blue.shade800,
+                    ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // 3. Distance & Directions Action Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Distance label (scannable & clear)
+                  // Distance label
                   Flexible(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -226,6 +291,47 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _VerifiedInfoBadge extends StatelessWidget {
+  const _VerifiedInfoBadge({
+    required this.label,
+    required this.icon,
+    required this.backgroundColor,
+    required this.textColor,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color backgroundColor;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ],
       ),
     );
   }

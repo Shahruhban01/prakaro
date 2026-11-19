@@ -73,16 +73,17 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = widget.location;
 
-    final displayName = widget.location.name.trim().isEmpty
+    final displayName = loc.name.trim().isEmpty
         ? 'Parking Facility'
-        : widget.location.name.trim();
+        : loc.name.trim();
 
-    final displayAddress = widget.location.address.trim().isEmpty
+    final displayAddress = loc.address.trim().isEmpty
         ? 'Address unavailable'
-        : widget.location.address.trim();
+        : loc.address.trim();
 
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.65;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -183,7 +184,7 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
 
                       const SizedBox(height: 14),
 
-                      // Address Section
+                      // Address Card
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
@@ -213,6 +214,69 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
                             ),
                           ],
                         ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Verified Facility Attributes (Pricing, Hours, Access)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                        ),
+                        child: Column(
+                          children: [
+                            // Pricing Info Row
+                            _DetailInfoRow(
+                              icon: Icons.payments_outlined,
+                              label: 'Pricing',
+                              value: _buildPricingLabel(loc),
+                              valueColor: _buildPricingColor(loc, colorScheme),
+                            ),
+                            const Divider(height: 16),
+
+                            // Operational Hours Row
+                            _DetailInfoRow(
+                              icon: Icons.access_time_rounded,
+                              label: 'Opening Hours',
+                              value: _buildOpeningLabel(loc),
+                              valueColor: _buildOpeningColor(loc, colorScheme),
+                            ),
+                            const Divider(height: 16),
+
+                            // Access Row
+                            _DetailInfoRow(
+                              icon: Icons.lock_open_rounded,
+                              label: 'Access',
+                              value: _buildAccessLabel(loc),
+                              valueColor: colorScheme.onSurface,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Provider Attribution & Coordinates
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.outline,
+                              fontSize: 11,
+                            ),
+                          ),
+                          Text(
+                            'Source: Google Places',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.outline,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 20),
@@ -247,6 +311,105 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
           ),
         ),
       ),
+    );
+  }
+
+  String _buildPricingLabel(ParkingLocation loc) {
+    if (loc.isConfirmedFree) {
+      if (loc.parkingOptions.freeParkingLot == true) return 'Confirmed Free Lot';
+      if (loc.parkingOptions.freeStreetParking == true) return 'Confirmed Free Street Parking';
+      if (loc.parkingOptions.freeGarageParking == true) return 'Confirmed Free Garage';
+      return 'Confirmed Free';
+    }
+    if (loc.isConfirmedPaid) {
+      if (loc.parkingOptions.paidParkingLot == true) return 'Confirmed Paid Lot';
+      if (loc.parkingOptions.paidStreetParking == true) return 'Confirmed Paid Street Parking';
+      if (loc.parkingOptions.paidGarageParking == true) return 'Confirmed Paid Garage';
+      return 'Confirmed Paid';
+    }
+    if (loc.pricingType == PricingType.mixed) {
+      return 'Mixed (Free & Paid options available)';
+    }
+    return 'Pricing unlisted';
+  }
+
+  Color _buildPricingColor(ParkingLocation loc, ColorScheme colorScheme) {
+    if (loc.isConfirmedFree) return Colors.green.shade800;
+    if (loc.isConfirmedPaid) return colorScheme.primary;
+    if (loc.pricingType == PricingType.mixed) return Colors.purple.shade800;
+    return colorScheme.onSurfaceVariant;
+  }
+
+  String _buildOpeningLabel(ParkingLocation loc) {
+    if (loc.isConfirmedOpen) return 'Open now';
+    if (loc.isConfirmedClosed) return 'Currently closed';
+    return 'Hours unlisted';
+  }
+
+  Color _buildOpeningColor(ParkingLocation loc, ColorScheme colorScheme) {
+    if (loc.isConfirmedOpen) return Colors.teal.shade800;
+    if (loc.isConfirmedClosed) return Colors.red.shade800;
+    return colorScheme.onSurfaceVariant;
+  }
+
+  String _buildAccessLabel(ParkingLocation loc) {
+    switch (loc.accessType) {
+      case AccessType.public:
+        return 'Public Access';
+      case AccessType.customersOnly:
+        return 'Customers Only';
+      case AccessType.private:
+        return 'Private Access';
+      case AccessType.unknown:
+        return 'Access unlisted';
+    }
+  }
+}
+
+class _DetailInfoRow extends StatelessWidget {
+  const _DetailInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: valueColor,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

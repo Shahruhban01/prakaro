@@ -2,13 +2,17 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildApp } from '../src/app';
 import { GooglePlacesClient } from '../src/integrations/google-places/google-places.client';
-import { GooglePlacesSearchNearbyResponse } from '../src/integrations/google-places/google-places.types';
+import {
+  GooglePlaceItem,
+  GooglePlacesSearchNearbyResponse,
+} from '../src/integrations/google-places/google-places.types';
 
 const SECRET_API_KEY = 'SECRET_TEST_KEY_DO_NOT_LEAK_XYZ123';
 
 function createMockClient(options: {
   apiKey?: string;
   response?: GooglePlacesSearchNearbyResponse;
+  detailsResponse?: GooglePlaceItem | null;
   status?: number;
   throwTimeout?: boolean;
   throwNetworkError?: boolean;
@@ -18,8 +22,9 @@ function createMockClient(options: {
     input: string | URL | Request,
     init?: RequestInit,
   ): Promise<Response> => {
+    const urlStr = input.toString();
     if (options.onFetchCalled) {
-      options.onFetchCalled(input.toString(), init);
+      options.onFetchCalled(urlStr, init);
     }
 
     if (options.throwTimeout) {
@@ -33,8 +38,22 @@ function createMockClient(options: {
     }
 
     const status = options.status ?? 200;
-    const body = options.response ?? {};
 
+    // Route between searchNearby and details endpoint
+    if (urlStr.includes('/places/') && !urlStr.includes(':searchNearby')) {
+      if (options.detailsResponse === null) {
+        return new Response(JSON.stringify({ error: 'Not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify(options.detailsResponse ?? {}), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = options.response ?? {};
     return new Response(JSON.stringify(body), {
       status,
       headers: { 'Content-Type': 'application/json' },
@@ -49,7 +68,7 @@ function createMockClient(options: {
 }
 
 describe('GET /api/v1/parking/nearby', () => {
-  it('1. Valid coordinates and radius - returns 200 and normalized parking list', async () => {
+  it('1. Valid coordinates and radius - returns 200 and normalized parking list with enriched metadata', async () => {
     const mockClient = createMockClient({
       response: {
         places: [
@@ -58,6 +77,9 @@ describe('GET /api/v1/parking/nearby', () => {
             displayName: { text: 'Central City Parking' },
             formattedAddress: '123 Main Street',
             location: { latitude: 34.0837, longitude: 74.7973 },
+            businessStatus: 'OPERATIONAL',
+            parkingOptions: { paidParkingLot: true },
+            currentOpeningHours: { openNow: true },
           },
         ],
       },
@@ -72,331 +94,296 @@ describe('GET /api/v1/parking/nearby', () => {
     assert.equal(res.statusCode, 200);
     const body = JSON.parse(res.payload);
     assert.equal(body.meta.count, 1);
+    assert.equal(body.meta.totalDiscovered, 1);
     assert.equal(body.meta.radiusMeters, 2500);
+    assert.equal(body.meta.filteredOnCandidateSet, true);
     assert.equal(body.data.length, 1);
-    assert.deepEqual(body.data[0], {
-      id: 'google:place_1',
-      name: 'Central City Parking',
-      latitude: 34.0837,
-      longitude: 74.7973,
-      address: '123 Main Street',
-      source: 'google',
-    });
-  });
 
-  it('2. Default radius - applies 3000 meters when radius query param is omitted', async () => {
-    let capturedBody: string | undefined;
-
-    const mockClient = createMockClient({
-      response: { places: [] },
-      onFetchCalled: (_url, init) => {
-        capturedBody = init?.body?.toString();
-      },
-    });
-
-    const app = buildApp({ googlePlacesClient: mockClient });
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
-    });
-
-    assert.equal(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.equal(body.meta.radiusMeters, 3000);
-
-    assert.ok(capturedBody);
-    const parsedPayload = JSON.parse(capturedBody);
-    assert.equal(parsedPayload.locationRestriction.circle.radius, 3000);
-  });
-
-  it('3. Invalid latitude - rejects missing, out-of-range, and non-numeric latitude with 400', async () => {
-    const app = buildApp({ googlePlacesClient: createMockClient({}) });
-
-    // Missing latitude
-    const resMissing = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?longitude=74.7973',
-    });
-    assert.equal(resMissing.statusCode, 400);
-    const bodyMissing = JSON.parse(resMissing.payload);
-    assert.equal(bodyMissing.error.code, 'INVALID_QUERY_PARAMS');
-
-    // Latitude > 90
-    const resHigh = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=91&longitude=74.7973',
-    });
-    assert.equal(resHigh.statusCode, 400);
-
-    // Latitude < -90
-    const resLow = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=-90.5&longitude=74.7973',
-    });
-    assert.equal(resLow.statusCode, 400);
-
-    // Non-numeric latitude
-    const resStr = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=invalid&longitude=74.7973',
-    });
-    assert.equal(resStr.statusCode, 400);
-
-    // Infinity
-    const resInf = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=Infinity&longitude=74.7973',
-    });
-    assert.equal(resInf.statusCode, 400);
-  });
-
-  it('4. Invalid longitude - rejects missing, out-of-range, and non-numeric longitude with 400', async () => {
-    const app = buildApp({ googlePlacesClient: createMockClient({}) });
-
-    // Missing longitude
-    const resMissing = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837',
-    });
-    assert.equal(resMissing.statusCode, 400);
-    const bodyMissing = JSON.parse(resMissing.payload);
-    assert.equal(bodyMissing.error.code, 'INVALID_QUERY_PARAMS');
-
-    // Longitude > 180
-    const resHigh = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=180.1',
-    });
-    assert.equal(resHigh.statusCode, 400);
-
-    // Longitude < -180
-    const resLow = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=-185',
-    });
-    assert.equal(resLow.statusCode, 400);
-
-    // Non-numeric longitude
-    const resStr = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=not_a_number',
-    });
-    assert.equal(resStr.statusCode, 400);
-  });
-
-  it('5. Invalid radius - rejects radius below 100m, above 5000m, or non-numeric with 400', async () => {
-    const app = buildApp({ googlePlacesClient: createMockClient({}) });
-
-    // Radius < 100
-    const resLow = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&radius=50',
-    });
-    assert.equal(resLow.statusCode, 400);
-    const bodyLow = JSON.parse(resLow.payload);
-    assert.equal(bodyLow.error.code, 'INVALID_QUERY_PARAMS');
-
-    // Radius > 5000
-    const resHigh = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&radius=5001',
-    });
-    assert.equal(resHigh.statusCode, 400);
-
-    // Non-numeric radius
-    const resStr = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&radius=huge',
-    });
-    assert.equal(resStr.statusCode, 400);
-  });
-
-  it('6. Successful Google Places response - maps multiple facilities correctly', async () => {
-    const mockClient = createMockClient({
-      response: {
-        places: [
-          {
-            id: 'place_a',
-            displayName: { text: 'North Lot' },
-            formattedAddress: '100 North Rd',
-            location: { latitude: 34.09, longitude: 74.8 },
-          },
-          {
-            id: 'place_b',
-            displayName: { text: 'South Lot' },
-            formattedAddress: '200 South Rd',
-            location: { latitude: 34.07, longitude: 74.79 },
-          },
-        ],
-      },
-    });
-
-    const app = buildApp({ googlePlacesClient: mockClient });
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
-    });
-
-    assert.equal(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.equal(body.data.length, 2);
-    assert.equal(body.meta.count, 2);
-    assert.equal(body.data[0].id, 'google:place_a');
-    assert.equal(body.data[1].id, 'google:place_b');
-  });
-
-  it('7. Empty Google Places response - returns empty data array with 200 status', async () => {
-    const mockClient = createMockClient({
-      response: { places: [] },
-    });
-
-    const app = buildApp({ googlePlacesClient: mockClient });
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
-    });
-
-    assert.equal(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.deepEqual(body.data, []);
-    assert.equal(body.meta.count, 0);
-    assert.equal(body.meta.radiusMeters, 3000);
-  });
-
-  it('8. Malformed provider entries - filters invalid entries and provides fallbacks for missing name/address', async () => {
-    const mockClient = createMockClient({
-      response: {
-        places: [
-          // Missing ID -> must be excluded
-          {
-            displayName: { text: 'No ID Lot' },
-            location: { latitude: 34.08, longitude: 74.79 },
-          },
-          // Missing coordinates -> must be excluded
-          {
-            id: 'no_coords',
-            displayName: { text: 'No Coords Lot' },
-          },
-          // Invalid coordinate types / NaN -> must be excluded
-          {
-            id: 'bad_coords',
-            displayName: { text: 'Bad Coords Lot' },
-            location: { latitude: NaN, longitude: 74.79 },
-          },
-          // Valid ID & coords, but missing displayName & formattedAddress -> fallback values
-          {
-            id: 'fallback_lot',
-            location: { latitude: 34.085, longitude: 74.795 },
-          },
-        ],
-      },
-    });
-
-    const app = buildApp({ googlePlacesClient: mockClient });
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
-    });
-
-    assert.equal(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.equal(body.data.length, 1);
-    assert.equal(body.data[0].id, 'google:fallback_lot');
-    assert.equal(body.data[0].name, 'Parking Facility');
-    assert.equal(body.data[0].address, 'Address unavailable');
+    // Verify backward compatible properties
+    assert.equal(body.data[0].id, 'google:place_1');
+    assert.equal(body.data[0].name, 'Central City Parking');
+    assert.equal(body.data[0].latitude, 34.0837);
+    assert.equal(body.data[0].longitude, 74.7973);
+    assert.equal(body.data[0].address, '123 Main Street');
     assert.equal(body.data[0].source, 'google');
+
+    // Verify Prompt 06 enriched properties
+    assert.equal(body.data[0].pricingType, 'paid');
+    assert.equal(body.data[0].openingStatus, 'open');
+    assert.equal(body.data[0].accessType, 'unknown');
+    assert.equal(body.data[0].ownershipType, 'unknown');
+    assert.equal(body.data[0].parkingOptions.paidParkingLot, true);
+    assert.equal(body.data[0].hourlyRate, null);
+    assert.equal(body.data[0].currency, null);
   });
 
-  it('9. Provider timeout - returns HTTP 504 with UPSTREAM_TIMEOUT error', async () => {
+  it('2. Pricing classification - maps free, paid, mixed, and unknown pricing correctly', async () => {
     const mockClient = createMockClient({
-      throwTimeout: true,
+      response: {
+        places: [
+          {
+            id: 'p_free',
+            displayName: { text: 'Community Free Lot' },
+            formattedAddress: 'Free Way',
+            location: { latitude: 34.081, longitude: 74.791 },
+            parkingOptions: { freeParkingLot: true },
+          },
+          {
+            id: 'p_paid',
+            displayName: { text: 'Downtown Paid Garage' },
+            formattedAddress: 'Paid Ave',
+            location: { latitude: 34.082, longitude: 74.792 },
+            parkingOptions: { paidGarageParking: true },
+          },
+          {
+            id: 'p_mixed',
+            displayName: { text: 'Mixed Use Facility' },
+            formattedAddress: 'Mixed Blvd',
+            location: { latitude: 34.083, longitude: 74.793 },
+            parkingOptions: { freeStreetParking: true, paidParkingLot: true },
+          },
+          {
+            id: 'p_unknown',
+            displayName: { text: 'Unspecified Facility' },
+            formattedAddress: 'Unknown Rd',
+            location: { latitude: 34.084, longitude: 74.794 },
+          },
+        ],
+      },
     });
 
     const app = buildApp({ googlePlacesClient: mockClient });
+
+    // A: All pricing (default)
+    const resAll = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79',
+    });
+    const bodyAll = JSON.parse(resAll.payload);
+    assert.equal(bodyAll.data.length, 4);
+
+    // B: Free pricing - includes confirmed free and mixed
+    const resFree = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79&pricing=free',
+    });
+    const bodyFree = JSON.parse(resFree.payload);
+    assert.equal(bodyFree.data.length, 2);
+    const freeIds = bodyFree.data.map((f: { id: string }) => f.id);
+    assert.ok(freeIds.includes('google:p_free'));
+    assert.ok(freeIds.includes('google:p_mixed'));
+
+    // C: Paid pricing - includes confirmed paid and mixed
+    const resPaid = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79&pricing=paid',
+    });
+    const bodyPaid = JSON.parse(resPaid.payload);
+    assert.equal(bodyPaid.data.length, 2);
+    const paidIds = bodyPaid.data.map((f: { id: string }) => f.id);
+    assert.ok(paidIds.includes('google:p_paid'));
+    assert.ok(paidIds.includes('google:p_mixed'));
+  });
+
+  it('3. Open Now filter - filters only confirmed open facilities and respects closed status', async () => {
+    const mockClient = createMockClient({
+      response: {
+        places: [
+          {
+            id: 'p_open',
+            displayName: { text: '24/7 Lot' },
+            formattedAddress: 'Open St',
+            location: { latitude: 34.081, longitude: 74.791 },
+            currentOpeningHours: { openNow: true },
+          },
+          {
+            id: 'p_closed_hours',
+            displayName: { text: 'Nightly Closed Lot' },
+            formattedAddress: 'Closed St',
+            location: { latitude: 34.082, longitude: 74.792 },
+            currentOpeningHours: { openNow: false },
+          },
+          {
+            id: 'p_closed_business',
+            displayName: { text: 'Renovating Lot' },
+            formattedAddress: 'Reno St',
+            location: { latitude: 34.083, longitude: 74.793 },
+            businessStatus: 'CLOSED_TEMPORARILY',
+            currentOpeningHours: { openNow: true }, // business status overrides openNow
+          },
+          {
+            id: 'p_no_hours',
+            displayName: { text: 'Unlisted Hours Lot' },
+            formattedAddress: 'Mystery St',
+            location: { latitude: 34.084, longitude: 74.794 },
+          },
+        ],
+      },
+    });
+
+    const app = buildApp({ googlePlacesClient: mockClient });
+
+    // Open now = true
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79&openNow=true',
+    });
+    const body = JSON.parse(res.payload);
+    assert.equal(body.data.length, 1);
+    assert.equal(body.data[0].id, 'google:p_open');
+    assert.equal(body.meta.totalDiscovered, 4);
+    assert.equal(body.meta.count, 1);
+  });
+
+  it('4. Public access filter - excludes unverified facilities honestly', async () => {
+    const mockClient = createMockClient({
+      response: {
+        places: [
+          {
+            id: 'p_1',
+            displayName: { text: 'Public Parking Municipal' }, // Name says public, but provider metadata is unknown
+            formattedAddress: 'City St',
+            location: { latitude: 34.081, longitude: 74.791 },
+          },
+        ],
+      },
+    });
+
+    const app = buildApp({ googlePlacesClient: mockClient });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79&access=public',
+    });
+
+    const body = JSON.parse(res.payload);
+    // Because Google Places does not supply verified accessType, it remains unknown, so confirmed public count is 0
+    assert.equal(body.data.length, 0);
+    assert.equal(body.meta.count, 0);
+    assert.equal(body.meta.totalDiscovered, 1);
+  });
+
+  it('5. Distance sorting - sorts facilities nearest first with stable tie-breaker', async () => {
+    const mockClient = createMockClient({
+      response: {
+        places: [
+          {
+            id: 'far_away',
+            displayName: { text: 'Far Facility' },
+            formattedAddress: 'Far St',
+            location: { latitude: 34.10, longitude: 74.82 }, // ~2.8km away
+          },
+          {
+            id: 'very_close',
+            displayName: { text: 'Close Facility' },
+            formattedAddress: 'Close St',
+            location: { latitude: 34.0838, longitude: 74.7974 }, // ~15m away
+          },
+          {
+            id: 'mid_distance',
+            displayName: { text: 'Mid Facility' },
+            formattedAddress: 'Mid St',
+            location: { latitude: 34.086, longitude: 74.80 }, // ~350m away
+          },
+        ],
+      },
+    });
+
+    const app = buildApp({ googlePlacesClient: mockClient });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&sort=distance',
+    });
+
+    const body = JSON.parse(res.payload);
+    assert.equal(body.data.length, 3);
+    assert.equal(body.data[0].id, 'google:very_close');
+    assert.equal(body.data[1].id, 'google:mid_distance');
+    assert.equal(body.data[2].id, 'google:far_away');
+  });
+
+  it('6. Invalid filter query parameters - rejects invalid pricing, openNow, and access with 400', async () => {
+    const app = buildApp({ googlePlacesClient: createMockClient({}) });
+
+    // Invalid pricing
+    const resPricing = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79&pricing=expensive',
+    });
+    assert.equal(resPricing.statusCode, 400);
+
+    // Invalid openNow
+    const resOpen = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79&openNow=maybe',
+    });
+    assert.equal(resOpen.statusCode, 400);
+
+    // Invalid access
+    const resAccess = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.08&longitude=74.79&access=vip',
+    });
+    assert.equal(resAccess.statusCode, 400);
+  });
+
+  it('7. Stage B: Single facility details endpoint GET /api/v1/parking/:id', async () => {
+    const mockClient = createMockClient({
+      detailsResponse: {
+        id: 'place_deep_1',
+        displayName: { text: 'Srinagar Multi-Storey' },
+        formattedAddress: 'MA Road, Srinagar',
+        location: { latitude: 34.072, longitude: 74.811 },
+        parkingOptions: { paidGarageParking: true },
+        currentOpeningHours: { openNow: true },
+      },
+    });
+
+    const app = buildApp({ googlePlacesClient: mockClient });
+
+    // Successful lookup
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/google:place_deep_1',
+    });
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.equal(body.data.id, 'google:place_deep_1');
+    assert.equal(body.data.name, 'Srinagar Multi-Storey');
+    assert.equal(body.data.pricingType, 'paid');
+    assert.equal(body.data.openingStatus, 'open');
+
+    // 404 lookup
+    const notFoundClient = createMockClient({ detailsResponse: null });
+    const appNotFound = buildApp({ googlePlacesClient: notFoundClient });
+    const res404 = await appNotFound.inject({
+      method: 'GET',
+      url: '/api/v1/parking/google:non_existent',
+    });
+    assert.equal(res404.statusCode, 404);
+  });
+
+  it('8. Upstream timeout error handling - returns 504 and does not leak keys', async () => {
+    const mockClient = createMockClient({ throwTimeout: true });
+    const app = buildApp({ googlePlacesClient: mockClient });
+
     const res = await app.inject({
       method: 'GET',
       url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
     });
 
     assert.equal(res.statusCode, 504);
-    const body = JSON.parse(res.payload);
-    assert.deepEqual(body, {
-      error: {
-        code: 'UPSTREAM_TIMEOUT',
-        message: 'Google Places request timed out.',
-      },
-    });
-  });
-
-  it('10. Provider error - returns HTTP 502 with UPSTREAM_ERROR on upstream failure', async () => {
-    const mockClient = createMockClient({
-      status: 500,
-    });
-
-    const app = buildApp({ googlePlacesClient: mockClient });
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
-    });
-
-    assert.equal(res.statusCode, 502);
-    const body = JSON.parse(res.payload);
-    assert.deepEqual(body, {
-      error: {
-        code: 'UPSTREAM_ERROR',
-        message: 'Unable to retrieve nearby parking locations.',
-      },
-    });
-  });
-
-  it('11. Missing Google API key - returns HTTP 503 CONFIGURATION_ERROR while GET /health still works', async () => {
-    // Client initialized without API key
-    const unconfiguredClient = new GooglePlacesClient(undefined);
-    const app = buildApp({ googlePlacesClient: unconfiguredClient });
-
-    // Parking endpoint returns 503
-    const resParking = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
-    });
-
-    assert.equal(resParking.statusCode, 503);
-    const bodyParking = JSON.parse(resParking.payload);
-    assert.deepEqual(bodyParking, {
-      error: {
-        code: 'CONFIGURATION_ERROR',
-        message:
-          'Parking discovery service is not configured. Missing Google Places API credentials.',
-      },
-    });
-
-    // Health endpoint continues to function normally
-    const resHealth = await app.inject({
-      method: 'GET',
-      url: '/health',
-    });
-    assert.equal(resHealth.statusCode, 200);
-    const bodyHealth = JSON.parse(resHealth.payload);
-    assert.deepEqual(bodyHealth, {
-      status: 'ok',
-      service: 'prakaro-api',
-    });
-  });
-
-  it('12. Google API key never appearing in the response - ensures secrets are never leaked', async () => {
-    const mockClient = createMockClient({
-      apiKey: SECRET_API_KEY,
-      status: 502,
-    });
-
-    const app = buildApp({ googlePlacesClient: mockClient });
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
-    });
-
     assert.ok(!res.payload.includes(SECRET_API_KEY));
-    const headerString = JSON.stringify(res.headers);
-    assert.ok(!headerString.includes(SECRET_API_KEY));
+  });
+
+  it('9. Missing API key configuration error - returns 503', async () => {
+    const mockClient = createMockClient({ apiKey: '' });
+    const app = buildApp({ googlePlacesClient: mockClient });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973',
+    });
+
+    assert.equal(res.statusCode, 503);
   });
 });

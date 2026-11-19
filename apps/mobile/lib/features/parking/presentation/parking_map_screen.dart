@@ -7,9 +7,10 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/parking_location.dart';
 import 'parking_providers.dart';
 import 'widgets/parking_details_sheet.dart';
+import 'widgets/parking_filter_bar.dart';
 import 'widgets/parking_view_switcher.dart';
 
-/// Interactive Google Maps screen presenting parking facilities with markers and gestures.
+/// Interactive Google Maps screen presenting parking facilities with markers, filters, and gestures.
 class ParkingMapScreen extends ConsumerStatefulWidget {
   const ParkingMapScreen({super.key});
 
@@ -52,12 +53,17 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
     return locations.map((loc) {
       final isSelected = selected?.id == loc.id;
 
+      double hue = BitmapDescriptor.hueAzure;
+      if (isSelected) {
+        hue = BitmapDescriptor.hueViolet;
+      } else if (loc.isConfirmedFree) {
+        hue = BitmapDescriptor.hueGreen;
+      }
+
       return Marker(
         markerId: MarkerId(loc.id),
         position: LatLng(loc.latitude, loc.longitude),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          isSelected ? BitmapDescriptor.hueViolet : BitmapDescriptor.hueAzure,
-        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
         infoWindow: InfoWindow(
           title: loc.name,
           snippet: loc.address,
@@ -65,7 +71,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
         onTap: () {
           AppHaptics.lightImpact();
           ref.read(parkingMapProvider.notifier).selectLocation(loc);
-          _animateToPosition(loc.latitude, loc.longitude);
+          _animateToPosition(loc.latitude, loc.longitude, zoom: 16.0);
         },
       );
     }).toSet();
@@ -93,6 +99,8 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
         ? LatLng(state.userLatitude!, state.userLongitude!)
         : _fallbackLocation;
 
+    final displayedMarkers = _buildMarkers(state.filteredLocations, state.selectedLocation);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -108,7 +116,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             zoomControlsEnabled: false,
             compassEnabled: true,
             mapToolbarEnabled: false,
-            markers: _buildMarkers(state.locations, state.selectedLocation),
+            markers: displayedMarkers,
             onCameraMove: (position) {
               _currentCameraPosition = position;
             },
@@ -127,7 +135,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             },
           ),
 
-          // 2. Top Bar with Branding & View Switcher
+          // 2. Top Bar with Branding, Switcher, and Shared Filter Bar
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -192,6 +200,12 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                     ],
                   ),
 
+                  // Shared Quick Filters Bar
+                  if (state.locations.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const ParkingFilterBar(),
+                  ],
+
                   // "Search this area" Button
                   if (state.canSearchArea && !state.isLoading) ...[
                     const SizedBox(height: 10),
@@ -253,6 +267,50 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                       ),
                     ),
                   ],
+
+                  // Filter Empty Notice Floating Chip
+                  if (state.isFilterEmpty && !state.isLoading) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.filter_alt_off_rounded, size: 16, color: colorScheme.error),
+                          const SizedBox(width: 8),
+                          Text(
+                            '0 matching facilities on map',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => notifier.clearFilters(),
+                            child: Text(
+                              'Clear',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -292,7 +350,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
           if (state.status == ParkingMapStatus.locationUnavailable)
             _buildLocationUnavailableBanner(context, notifier, colorScheme, theme),
 
-          if (state.status == ParkingMapStatus.empty && !state.isLoading)
+          if (state.status == ParkingMapStatus.empty && !state.isLoading && state.locations.isEmpty)
             _buildEmptyStateToast(context, colorScheme, theme),
 
           if (state.status == ParkingMapStatus.backendUnavailable && !state.isLoading)
@@ -351,14 +409,15 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  OutlinedButton(
-                    onPressed: () => ref.read(locationServiceProvider).openAppSettings(),
-                    child: const Text('Open Settings'),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton(
+                  FilledButton.icon(
+                    icon: const Icon(Icons.near_me_rounded, size: 16),
+                    label: const Text('Allow Access'),
                     onPressed: () => notifier.init(force: true),
-                    child: const Text('Allow Access'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () => ref.read(locationServiceProvider).openAppSettings(),
+                    child: const Text('Settings'),
                   ),
                 ],
               ),
@@ -388,10 +447,10 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.gps_off_rounded, size: 32, color: colorScheme.error),
+              Icon(Icons.location_off_outlined, size: 32, color: colorScheme.error),
               const SizedBox(height: 8),
               Text(
-                'Turn on location',
+                'Location is turned off',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.2,
@@ -399,14 +458,15 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Turn on device location to find nearby parking facilities.',
+                'Turn on location services to find parking near you.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 14),
-              FilledButton(
+              FilledButton.icon(
+                icon: const Icon(Icons.location_searching_rounded, size: 16),
+                label: const Text('Enable Location'),
                 onPressed: () => ref.read(locationServiceProvider).openLocationSettings(),
-                child: const Text('Enable Location'),
               ),
             ],
           ),
@@ -415,37 +475,36 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
     );
   }
 
-  Widget _buildEmptyStateToast(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
+  Widget _buildEmptyStateToast(
+    BuildContext context,
+    ColorScheme colorScheme,
+    ThemeData theme,
+  ) {
     return Positioned(
-      bottom: 24,
+      bottom: 32,
       left: 24,
       right: 24,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: colorScheme.inverseSurface.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.info_outline_rounded, size: 18, color: colorScheme.onInverseSurface),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'No parking facilities found in this area.',
-                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onInverseSurface),
-                overflow: TextOverflow.ellipsis,
+      child: Card(
+        color: colorScheme.surface.withValues(alpha: 0.95),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'No parking facilities found in this area.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -462,35 +521,19 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
       left: 16,
       right: 16,
       child: Card(
-        color: colorScheme.errorContainer.withValues(alpha: 0.9),
+        color: colorScheme.surface,
+        elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Icon(Icons.cloud_off_rounded, color: colorScheme.onErrorContainer),
+              Icon(Icons.cloud_off_rounded, size: 24, color: colorScheme.error),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Service Notice',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onErrorContainer,
-                      ),
-                    ),
-                    Text(
-                      message ?? 'Unable to connect to parking discovery service.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onErrorContainer,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                child: Text(
+                  message ?? 'Parking service is temporarily unreachable.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface),
                 ),
               ),
             ],

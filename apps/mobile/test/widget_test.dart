@@ -434,8 +434,8 @@ void main() {
         );
 
         expect(find.text('Find parking near you'), findsOneWidget);
-        expect(find.text('Allow Access'), findsOneWidget);
-        expect(find.text('Open Settings'), findsOneWidget);
+        expect(find.text('Allow Location Access'), findsOneWidget);
+        expect(find.text('Open Device Settings'), findsOneWidget);
       },
     );
 
@@ -457,8 +457,8 @@ void main() {
           ),
         );
 
-        expect(find.text('Service Notice'), findsOneWidget);
-        expect(find.text('Try Again'), findsOneWidget);
+        expect(find.text('Parking service unavailable'), findsOneWidget);
+        expect(find.text('Retry Connection'), findsOneWidget);
       },
     );
 
@@ -538,5 +538,179 @@ void main() {
         expect(find.text('Night Express Parking'), findsOneWidget);
       },
     );
+  });
+
+  group('8. ParkingFilterBar and Smart Filtering interaction', () {
+    testWidgets('renders filter chips and updates filter state on tap', (WidgetTester tester) async {
+      const locations = [
+        ParkingLocation(
+          id: 'spot_1',
+          name: 'Free Park Lot',
+          latitude: 34.08,
+          longitude: 74.79,
+          address: 'Main St',
+          source: 'google',
+          pricingType: PricingType.free,
+          openingStatus: OpeningStatus.open,
+        ),
+        ParkingLocation(
+          id: 'spot_2',
+          name: 'Paid Tower',
+          latitude: 34.085,
+          longitude: 74.795,
+          address: 'Commercial Way',
+          source: 'google',
+          pricingType: PricingType.paid,
+          openingStatus: OpeningStatus.closed,
+        ),
+      ];
+
+      final container = ProviderContainer();
+      container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+        status: ParkingMapStatus.loaded,
+        userLatitude: 34.0837,
+        userLongitude: 74.7973,
+        locations: locations,
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: ParkingListScreen(),
+          ),
+        ),
+      );
+
+      // Verify all filter chips render
+      expect(find.widgetWithText(FilterChip, 'All'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'Free'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'Paid'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'Open now'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'Public access'), findsOneWidget);
+
+      // Initially both cards appear
+      expect(find.text('Free Park Lot'), findsOneWidget);
+      expect(find.text('Paid Tower'), findsOneWidget);
+
+      // Tap "Free" filter chip
+      await tester.tap(find.widgetWithText(FilterChip, 'Free'));
+      await tester.pumpAndSettle();
+
+      // Only free lot remains visible
+      expect(find.text('Free Park Lot'), findsOneWidget);
+      expect(find.text('Paid Tower'), findsNothing);
+      expect(find.text('Clear (1)'), findsOneWidget);
+
+      // Ensure Clear (1) is visible by scrolling the horizontal filter list, then tap
+      await tester.ensureVisible(find.text('Clear (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Clear (1)'));
+      await tester.pumpAndSettle();
+
+      // Both cards re-appear
+      expect(find.text('Free Park Lot'), findsOneWidget);
+      expect(find.text('Paid Tower'), findsOneWidget);
+    });
+
+    testWidgets('renders filter-aware empty state with clear filters button', (WidgetTester tester) async {
+      const locations = [
+        ParkingLocation(
+          id: 'spot_only_paid',
+          name: 'Paid Lot Only',
+          latitude: 34.08,
+          longitude: 74.79,
+          address: 'Paid St',
+          source: 'google',
+          pricingType: PricingType.paid,
+        ),
+      ];
+
+      final container = ProviderContainer();
+      container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+        status: ParkingMapStatus.loaded,
+        userLatitude: 34.0837,
+        userLongitude: 74.7973,
+        locations: locations,
+        pricingFilter: PricingFilter.free, // Active free filter
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: ParkingListScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('No confirmed free parking found'), findsOneWidget);
+      expect(find.text('Clear Filters'), findsOneWidget);
+
+      // Tap Clear Filters
+      await tester.tap(find.text('Clear Filters'));
+      await tester.pumpAndSettle();
+
+      // Paid lot re-appears because filter was cleared back to All
+      expect(find.text('Paid Lot Only'), findsOneWidget);
+    });
+  });
+
+  group('9. Enriched ParkingCard badges', () {
+    testWidgets('renders verified badges for free, open now, and price unlisted', (WidgetTester tester) async {
+      const freeOpenLoc = ParkingLocation(
+        id: 'loc_free_open',
+        name: 'Eco Lot',
+        latitude: 34.08,
+        longitude: 74.79,
+        address: 'Eco Lane',
+        source: 'google',
+        pricingType: PricingType.free,
+        openingStatus: OpeningStatus.open,
+      );
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: ParkingCard(
+                location: freeOpenLoc,
+                distanceMeters: 300,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Free parking'), findsOneWidget);
+      expect(find.text('Open now'), findsOneWidget);
+      expect(find.text('Eco Lot'), findsOneWidget);
+    });
+
+    testWidgets('renders price unlisted badge when metadata is unknown', (WidgetTester tester) async {
+      const unknownLoc = ParkingLocation(
+        id: 'loc_unknown',
+        name: 'Mystery Lot',
+        latitude: 34.08,
+        longitude: 74.79,
+        address: 'Unknown Road',
+        source: 'google',
+      );
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: ParkingCard(
+                location: unknownLoc,
+                distanceMeters: 500,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Price unlisted'), findsOneWidget);
+    });
   });
 }

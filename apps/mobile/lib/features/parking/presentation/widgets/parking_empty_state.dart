@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 
-/// Clean, informative empty state presented when no parking facilities are detected.
+/// Clean, informative empty state presented when no parking facilities are detected or match filters.
 class ParkingEmptyState extends StatelessWidget {
   const ParkingEmptyState({
     super.key,
@@ -10,11 +10,13 @@ class ParkingEmptyState extends StatelessWidget {
     this.message =
         'No parking facilities were found within your current search area. Try refreshing or searching from a different location.',
     this.onRetry,
+    this.onClearFilters,
   });
 
   final String title;
   final String message;
   final VoidCallback? onRetry;
+  final VoidCallback? onClearFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +38,9 @@ class ParkingEmptyState extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Icon(
-                Icons.local_parking_rounded,
+                onClearFilters != null
+                    ? Icons.filter_alt_off_rounded
+                    : Icons.local_parking_rounded,
                 size: 32,
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
               ),
@@ -60,19 +64,36 @@ class ParkingEmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            if (onRetry != null) ...[
-              const SizedBox(height: 20),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Refresh Search'),
-                style: FilledButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (onClearFilters != null) ...[
+                  FilledButton.icon(
+                    icon: const Icon(Icons.clear_all_rounded, size: 18),
+                    label: const Text('Clear Filters'),
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      ),
+                    ),
+                    onPressed: onClearFilters,
                   ),
-                ),
-                onPressed: onRetry,
-              ),
-            ],
+                  if (onRetry != null) const SizedBox(width: 10),
+                ],
+                if (onRetry != null)
+                  FilledButton.tonalIcon(
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Refresh Search'),
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      ),
+                    ),
+                    onPressed: onRetry,
+                  ),
+              ],
+            ),
           ],
         ),
       ),

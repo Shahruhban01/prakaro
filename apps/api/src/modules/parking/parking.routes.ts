@@ -23,4 +23,17 @@ export async function parkingRoutes(
     },
     controller.getNearbyParking,
   );
+
+  app.get(
+    '/:id',
+    {
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    controller.getParkingDetails,
+  );
 }

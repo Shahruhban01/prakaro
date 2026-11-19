@@ -9,6 +9,13 @@ class ParkingLocationDto {
     required this.longitude,
     required this.address,
     required this.source,
+    this.accessType = AccessType.unknown,
+    this.ownershipType = OwnershipType.unknown,
+    this.pricingType = PricingType.unknown,
+    this.openingStatus = OpeningStatus.unknown,
+    this.parkingOptions = ParkingOptions.empty,
+    this.hourlyRate,
+    this.currency,
   });
 
   final String id;
@@ -17,6 +24,13 @@ class ParkingLocationDto {
   final double longitude;
   final String address;
   final String source;
+  final AccessType accessType;
+  final OwnershipType ownershipType;
+  final PricingType pricingType;
+  final OpeningStatus openingStatus;
+  final ParkingOptions parkingOptions;
+  final double? hourlyRate;
+  final String? currency;
 
   factory ParkingLocationDto.fromJson(Map<String, dynamic> json) {
     final id = json['id'] as String?;
@@ -34,6 +48,9 @@ class ParkingLocationDto {
       throw const FormatException('Missing or invalid parking location coordinates');
     }
 
+    final rawOptions = json['parkingOptions'] as Map<String, dynamic>?;
+    final hourlyRateNum = (json['hourlyRate'] as num?)?.toDouble();
+
     return ParkingLocationDto(
       id: id.trim(),
       name: name != null && name.trim().isNotEmpty
@@ -45,6 +62,13 @@ class ParkingLocationDto {
           ? address.trim()
           : 'Address unavailable',
       source: source,
+      accessType: AccessType.fromString(json['accessType'] as String?),
+      ownershipType: OwnershipType.fromString(json['ownershipType'] as String?),
+      pricingType: PricingType.fromString(json['pricingType'] as String?),
+      openingStatus: OpeningStatus.fromString(json['openingStatus'] as String?),
+      parkingOptions: ParkingOptions.fromJson(rawOptions),
+      hourlyRate: hourlyRateNum,
+      currency: json['currency'] as String?,
     );
   }
 
@@ -56,6 +80,13 @@ class ParkingLocationDto {
       longitude: longitude,
       address: address,
       source: source,
+      accessType: accessType,
+      ownershipType: ownershipType,
+      pricingType: pricingType,
+      openingStatus: openingStatus,
+      parkingOptions: parkingOptions,
+      hourlyRate: hourlyRate,
+      currency: currency,
     );
   }
 }

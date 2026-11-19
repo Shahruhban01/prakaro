@@ -124,3 +124,37 @@ Prakaro utilizes a dual-view presentation model managed by a unified `parkingMap
    - Widgets never initiate raw Dio/HTTP requests. All requests flow through `ParkingRemoteDataSource` and `ParkingRepository`.
 3. **Decoupled Contracts**:
    - `ParkingLocationDto` insulates mobile presentation widgets from changes to the backend schema.
+
+---
+
+## 5. Smart Parking Filtering & Enrichment Architecture (Prompt 06)
+
+Prakaro implements a cost-conscious, trustworthy two-stage data enrichment and filtering model:
+
+```
+[ Stage A: Batch Discovery ]
+GET /api/v1/parking/nearby?latitude=...&longitude=...&pricing=...&openNow=...
+  - Calls Google Places searchNearby once with verified field mask
+  - Returns candidates with pricingType, openingStatus, parkingOptions
+  - Applies server-side logical filtering & straight-line Haversine sorting
+  - Cost: 1 searchNearby request per search (zero redundant calls)
+
+[ Stage B: On-Demand Facility Details ]
+GET /api/v1/parking/:id
+  - Dedicated endpoint for deep details of a specific facility
+  - Invoked only on demand when a user inspects details
+  - Protects against expensive batch place details calls
+
+[ Mobile Client Reactive Filtering ]
+ParkingFilterBar (All, Free, Paid, Open now, Public access)
+  - Controlled by shared Riverpod ParkingMapState
+  - Mutual exclusivity between Free and Paid
+  - Instant client-side candidate re-filtering across List and Map views
+  - Synchronized filtered cards and filtered map markers
+  - Filter-aware empty states explaining missing provider data honestly
+```
+
+### Truthful Data Contracts
+- **No Fabricated Pricing**: If Google Places does not return verified `parkingOptions`, pricing is labeled `unknown` / `Price unlisted`. Never guessed from name or category.
+- **No Inferred Operating Hours**: If opening hours are absent, status is `unknown`. Never assumed open.
+- **No Inferred Access**: Facilities default to `accessType: unknown`. Public filter only includes confirmed public facilities.

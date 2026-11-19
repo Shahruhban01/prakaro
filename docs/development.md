@@ -66,6 +66,13 @@ Invoke-RestMethod -Uri http://127.0.0.1:3000/health
 
 # Parking discovery endpoint (requires GOOGLE_PLACES_API_KEY)
 Invoke-RestMethod -Uri "http://127.0.0.1:3000/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&radius=3000"
+
+# Filtered discovery queries (pricing, openNow, access, sort)
+Invoke-RestMethod -Uri "http://127.0.0.1:3000/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&pricing=free"
+Invoke-RestMethod -Uri "http://127.0.0.1:3000/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&openNow=true"
+
+# Stage B on-demand single facility details
+Invoke-RestMethod -Uri "http://127.0.0.1:3000/api/v1/parking/google:ChIJZVma6EOP4TgRxagbQBLFB64"
 ```
 
 ---

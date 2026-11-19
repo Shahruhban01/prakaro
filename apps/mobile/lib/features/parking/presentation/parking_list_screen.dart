@@ -9,6 +9,7 @@ import 'widgets/google_attribution.dart';
 import 'widgets/parking_card.dart';
 import 'widgets/parking_details_sheet.dart';
 import 'widgets/parking_empty_state.dart';
+import 'widgets/parking_filter_bar.dart';
 import 'widgets/parking_loading_state.dart';
 import 'widgets/parking_view_switcher.dart';
 
@@ -37,7 +38,8 @@ class ParkingListScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final sortedItems = state.sortedLocationsWithDistance;
+    final filteredItems = state.filteredLocationsWithDistance;
+    final totalDiscovered = state.locations.length;
     final radiusKm = (state.radiusMeters / 1000).toStringAsFixed(0);
 
     return Scaffold(
@@ -89,10 +91,10 @@ class ParkingListScreen extends ConsumerWidget {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // 1. Compact Header & View Switcher Section
+            // 1. Compact Header, View Switcher & Smart Filters Section
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -134,37 +136,51 @@ class ParkingListScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-
-                    // Results Count Header (When loaded)
-                    if (state.status == ParkingMapStatus.loaded && sortedItems.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${sortedItems.length} parking facilities found',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: colorScheme.onSurface,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          Text(
-                            'Nearest first',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),
             ),
 
-            // 2. Body State Routing
+            // 2. Horizontally Scrollable Filter Chips Bar
+            if (state.status == ParkingMapStatus.loaded || state.locations.isNotEmpty)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 8.0),
+                  child: ParkingFilterBar(),
+                ),
+              ),
+
+            // 3. Results Count Subheader (When loaded)
+            if (state.status == ParkingMapStatus.loaded && totalDiscovered > 0)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        state.isAnyFilterActive
+                            ? '${filteredItems.length} matching facilities ($totalDiscovered discovered)'
+                            : '$totalDiscovered parking facilities found',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      Text(
+                        'Nearest first',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // 4. Body State Routing
             if (state.status == ParkingMapStatus.locationPermissionRequired)
               SliverFillRemaining(
                 hasScrollBody: false,
@@ -175,7 +191,7 @@ class ParkingListScreen extends ConsumerWidget {
                 hasScrollBody: false,
                 child: _buildLocationDisabledView(context, ref, notifier, theme, colorScheme),
               )
-            else if (state.status == ParkingMapStatus.backendUnavailable && sortedItems.isEmpty)
+            else if (state.status == ParkingMapStatus.backendUnavailable && state.locations.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: _buildBackendErrorView(
@@ -186,7 +202,7 @@ class ParkingListScreen extends ConsumerWidget {
                   colorScheme,
                 ),
               )
-            else if (state.status == ParkingMapStatus.error && sortedItems.isEmpty)
+            else if (state.status == ParkingMapStatus.error && state.locations.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: _buildGenericErrorView(
@@ -197,25 +213,33 @@ class ParkingListScreen extends ConsumerWidget {
                   colorScheme,
                 ),
               )
-            else if (state.isLoading && sortedItems.isEmpty)
+            else if (state.isLoading && state.locations.isEmpty)
               const SliverToBoxAdapter(
                 child: ParkingLoadingState(),
               )
-            else if (state.status == ParkingMapStatus.empty || sortedItems.isEmpty)
+            else if (state.isFilterEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _buildFilterEmptyState(state, notifier),
+              )
+            else if (state.status == ParkingMapStatus.empty || filteredItems.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: ParkingEmptyState(
+                  title: 'No parking facilities found',
+                  message:
+                      'No parking facilities were found within your current search area. Try refreshing or searching from a different location.',
                   onRetry: () => notifier.refresh(),
                 ),
               )
             else ...[
-              // 3. Scrollable List of Parking Cards
+              // 5. Scrollable List of Parking Cards
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final item = sortedItems[index];
+                      final item = filteredItems[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10.0),
                         child: ParkingCard(
@@ -229,12 +253,12 @@ class ParkingListScreen extends ConsumerWidget {
                         ),
                       );
                     },
-                    childCount: sortedItems.length,
+                    childCount: filteredItems.length,
                   ),
                 ),
               ),
 
-              // 4. Subtle Google Attribution Footer
+              // 6. Subtle Google Attribution Footer
               const SliverToBoxAdapter(
                 child: GoogleAttributionFooter(),
               ),
@@ -242,6 +266,52 @@ class ParkingListScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterEmptyState(ParkingMapState state, ParkingMapNotifier notifier) {
+    if (state.pricingFilter == PricingFilter.free) {
+      return ParkingEmptyState(
+        title: 'No confirmed free parking found',
+        message:
+            'None of the ${state.locations.length} facilities in this area have verified free parking in Google Places data.',
+        onClearFilters: () => notifier.clearFilters(),
+        onRetry: () => notifier.refresh(),
+      );
+    }
+    if (state.pricingFilter == PricingFilter.paid) {
+      return ParkingEmptyState(
+        title: 'No confirmed paid parking found',
+        message:
+            'None of the ${state.locations.length} facilities in this area have verified paid parking in Google Places data.',
+        onClearFilters: () => notifier.clearFilters(),
+        onRetry: () => notifier.refresh(),
+      );
+    }
+    if (state.openNowFilter) {
+      return ParkingEmptyState(
+        title: 'No verified open parking found right now',
+        message:
+            'Operating hours are either unlisted or facilities are currently closed for the ${state.locations.length} nearby locations.',
+        onClearFilters: () => notifier.clearFilters(),
+        onRetry: () => notifier.refresh(),
+      );
+    }
+    if (state.publicAccessFilter) {
+      return ParkingEmptyState(
+        title: 'No confirmed public parking found',
+        message:
+            'Public access classifications are not currently provided by Google Places for these facilities.',
+        onClearFilters: () => notifier.clearFilters(),
+        onRetry: () => notifier.refresh(),
+      );
+    }
+
+    return ParkingEmptyState(
+      title: 'No matching parking facilities',
+      message: 'No facilities match your active filters. Try clearing your filters.',
+      onClearFilters: () => notifier.clearFilters(),
+      onRetry: () => notifier.refresh(),
     );
   }
 
@@ -285,24 +355,20 @@ class ParkingListScreen extends ConsumerWidget {
                   'Allow location access to discover nearby parking facilities around your current position.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
+                    height: 1.35,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => ref.read(locationServiceProvider).openAppSettings(),
-                      child: const Text('Open Settings'),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: () => notifier.init(force: true),
-                      child: const Text('Allow Access'),
-                    ),
-                  ],
+                FilledButton.icon(
+                  icon: const Icon(Icons.near_me_rounded, size: 18),
+                  label: const Text('Allow Location Access'),
+                  onPressed: () => notifier.init(force: true),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => ref.read(locationServiceProvider).openAppSettings(),
+                  child: const Text('Open Device Settings'),
                 ),
               ],
             ),
@@ -332,15 +398,15 @@ class ParkingListScreen extends ConsumerWidget {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: colorScheme.errorContainer.withValues(alpha: 0.4),
+                    color: colorScheme.errorContainer.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: Icon(Icons.gps_off_rounded, size: 26, color: colorScheme.error),
+                  child: Icon(Icons.location_off_outlined, size: 26, color: colorScheme.error),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Turn on location',
+                  'Location is turned off',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
@@ -349,18 +415,23 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Turn on device location to find nearby parking facilities.',
+                  'Turn on location services so Prakaro can display parking facilities near you.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
+                    height: 1.35,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
                 FilledButton.icon(
-                  icon: const Icon(Icons.gps_fixed_rounded, size: 18),
+                  icon: const Icon(Icons.location_searching_rounded, size: 18),
                   label: const Text('Enable Location'),
                   onPressed: () => ref.read(locationServiceProvider).openLocationSettings(),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => notifier.init(force: true),
+                  child: const Text('I turned it on - Try Again'),
                 ),
               ],
             ),
@@ -373,7 +444,7 @@ class ParkingListScreen extends ConsumerWidget {
   Widget _buildBackendErrorView(
     BuildContext context,
     ParkingMapNotifier notifier,
-    String? errorMessage,
+    String? message,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
@@ -381,37 +452,43 @@ class ParkingListScreen extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Card(
-          color: colorScheme.surfaceContainerLowest,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.cloud_off_rounded, size: 36, color: colorScheme.error),
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(Icons.cloud_off_rounded, size: 26, color: colorScheme.error),
+                ),
                 const SizedBox(height: 16),
                 Text(
-                  'Service Notice',
+                  'Parking service unavailable',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
                     letterSpacing: -0.2,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  errorMessage ??
-                      'Unable to connect to the parking discovery service. Please check your connection.',
+                  message ?? 'Unable to connect to the parking discovery service. Please try again.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
+                    height: 1.35,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
                 FilledButton.icon(
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Try Again'),
+                  label: const Text('Retry Connection'),
                   onPressed: () => notifier.refresh(),
                 ),
               ],
@@ -425,7 +502,7 @@ class ParkingListScreen extends ConsumerWidget {
   Widget _buildGenericErrorView(
     BuildContext context,
     ParkingMapNotifier notifier,
-    String? errorMessage,
+    String? message,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
@@ -439,9 +516,9 @@ class ParkingListScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.error_outline_rounded, size: 36, color: colorScheme.error),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Text(
-                  'Unable to find parking',
+                  'Something went wrong',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
@@ -450,17 +527,17 @@ class ParkingListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  errorMessage ?? 'An unexpected error occurred while searching for parking.',
+                  message ?? 'An unexpected error occurred while loading parking locations.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
+                    height: 1.35,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
-                FilledButton.icon(
+                FilledButton.tonalIcon(
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Retry'),
+                  label: const Text('Try Again'),
                   onPressed: () => notifier.refresh(),
                 ),
               ],

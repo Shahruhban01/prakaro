@@ -536,4 +536,178 @@ void main() {
       expect(container.read(parkingMapProvider).locations.length, 1);
     });
   });
+
+  group('13. Enriched metadata parsing and resilience', () {
+    test('parses enriched metadata with pricing, hours, and parking options', () {
+      final json = {
+        'id': 'google:ch_enriched',
+        'name': 'Enriched Parking Garage',
+        'latitude': 34.0837,
+        'longitude': 74.7973,
+        'address': '789 Grand Blvd',
+        'source': 'google',
+        'accessType': 'public',
+        'ownershipType': 'public',
+        'pricingType': 'free',
+        'openingStatus': 'open',
+        'parkingOptions': {
+          'freeParkingLot': true,
+          'paidParkingLot': false,
+          'freeGarageParking': true,
+        },
+        'hourlyRate': null,
+        'currency': null,
+      };
+
+      final dto = ParkingLocationDto.fromJson(json);
+      expect(dto.pricingType, PricingType.free);
+      expect(dto.openingStatus, OpeningStatus.open);
+      expect(dto.accessType, AccessType.public);
+      expect(dto.ownershipType, OwnershipType.public);
+      expect(dto.parkingOptions.freeParkingLot, true);
+      expect(dto.parkingOptions.freeGarageParking, true);
+
+      final domain = dto.toDomain();
+      expect(domain.isConfirmedFree, true);
+      expect(domain.isConfirmedPaid, false);
+      expect(domain.isConfirmedOpen, true);
+      expect(domain.isConfirmedClosed, false);
+      expect(domain.isConfirmedPublic, true);
+    });
+
+    test('gracefully handles missing, null, or unknown metadata fields', () {
+      final json = {
+        'id': 'google:ch_minimal',
+        'name': 'Minimal Lot',
+        'latitude': 34.08,
+        'longitude': 74.79,
+        'accessType': 'UNKNOWN_VALUE',
+        'pricingType': 'SOMETHING_ELSE',
+        'openingStatus': null,
+      };
+
+      final dto = ParkingLocationDto.fromJson(json);
+      expect(dto.accessType, AccessType.unknown);
+      expect(dto.pricingType, PricingType.unknown);
+      expect(dto.openingStatus, OpeningStatus.unknown);
+      expect(dto.parkingOptions.freeParkingLot, null);
+
+      final domain = dto.toDomain();
+      expect(domain.isConfirmedFree, false);
+      expect(domain.isConfirmedPaid, false);
+      expect(domain.isConfirmedOpen, false);
+      expect(domain.isConfirmedPublic, false);
+    });
+  });
+
+  group('14. Smart filter state and mutual exclusivity', () {
+    test('selecting Free clears Paid and filters list correctly', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+      expect(container.read(parkingMapProvider).pricingFilter, PricingFilter.all);
+
+      // Select Free
+      notifier.setPricingFilter(PricingFilter.free);
+      expect(container.read(parkingMapProvider).pricingFilter, PricingFilter.free);
+
+      // Switch to Paid (mutually exclusive)
+      notifier.setPricingFilter(PricingFilter.paid);
+      expect(container.read(parkingMapProvider).pricingFilter, PricingFilter.paid);
+
+      // Back to All
+      notifier.setPricingFilter(PricingFilter.all);
+      expect(container.read(parkingMapProvider).pricingFilter, PricingFilter.all);
+    });
+
+    test('combining filters and clearing all filters', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(parkingMapProvider.notifier);
+
+      notifier.setPricingFilter(PricingFilter.free);
+      notifier.toggleOpenNow();
+      notifier.togglePublicAccess();
+
+      final state = container.read(parkingMapProvider);
+      expect(state.pricingFilter, PricingFilter.free);
+      expect(state.openNowFilter, true);
+      expect(state.publicAccessFilter, true);
+      expect(state.activeFilterCount, 3);
+      expect(state.isAnyFilterActive, true);
+
+      // Clear all
+      notifier.clearFilters();
+      final cleared = container.read(parkingMapProvider);
+      expect(cleared.pricingFilter, PricingFilter.all);
+      expect(cleared.openNowFilter, false);
+      expect(cleared.publicAccessFilter, false);
+      expect(cleared.activeFilterCount, 0);
+      expect(cleared.isAnyFilterActive, false);
+    });
+
+    test('filteredLocations correctly excludes non-matching facilities', () {
+      const freeLot = ParkingLocation(
+        id: 'loc_free',
+        name: 'Free Lot',
+        latitude: 34.08,
+        longitude: 74.79,
+        address: 'Free St',
+        source: 'google',
+        pricingType: PricingType.free,
+        openingStatus: OpeningStatus.open,
+      );
+
+      const paidLot = ParkingLocation(
+        id: 'loc_paid',
+        name: 'Paid Lot',
+        latitude: 34.09,
+        longitude: 74.80,
+        address: 'Paid St',
+        source: 'google',
+        pricingType: PricingType.paid,
+        openingStatus: OpeningStatus.closed,
+      );
+
+      const mixedLot = ParkingLocation(
+        id: 'loc_mixed',
+        name: 'Mixed Lot',
+        latitude: 34.07,
+        longitude: 74.78,
+        address: 'Mixed St',
+        source: 'google',
+        pricingType: PricingType.mixed,
+        openingStatus: OpeningStatus.open,
+      );
+
+      final state = ParkingMapState(
+        status: ParkingMapStatus.loaded,
+        locations: [freeLot, paidLot, mixedLot],
+        userLatitude: 34.08,
+        userLongitude: 74.79,
+      );
+
+      // All filters (default): all 3 present
+      expect(state.filteredLocations.length, 3);
+
+      // Free filter: includes freeLot and mixedLot
+      final freeState = state.copyWith(pricingFilter: PricingFilter.free);
+      expect(freeState.filteredLocations.map((l) => l.id).toList(), ['loc_free', 'loc_mixed']);
+
+      // Paid filter: includes paidLot and mixedLot
+      final paidState = state.copyWith(pricingFilter: PricingFilter.paid);
+      expect(paidState.filteredLocations.map((l) => l.id).toList(), ['loc_paid', 'loc_mixed']);
+
+      // Open now filter: includes freeLot and mixedLot
+      final openState = state.copyWith(openNowFilter: true);
+      expect(openState.filteredLocations.map((l) => l.id).toList(), ['loc_free', 'loc_mixed']);
+
+      // Public access filter: since none have accessType == public, returns empty and triggers isFilterEmpty
+      final publicState = state.copyWith(publicAccessFilter: true);
+      expect(publicState.filteredLocations.isEmpty, true);
+      expect(publicState.isFilterEmpty, true);
+    });
+  });
 }
