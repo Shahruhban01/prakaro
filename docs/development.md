@@ -46,8 +46,28 @@ Copy-Item .env.example .env
 | `NODE_ENV` | Runtime environment (`development`, `test`, `production`) | No | `development` |
 | `PORT` | HTTP port | No | `3000` |
 | `HOST` | Binding interface host (`0.0.0.0` binds to all local interfaces) | No | `0.0.0.0` |
-| `GOOGLE_PLACES_API_KEY` | Server-side Google Places API (New) key | Yes (for parking) | `""` |
-| `DATABASE_URL` | MySQL connection string (reserved for future migration) | No | — |
+| `GOOGLE_PLACES_API_KEY` | Server-side Google Places API (New) key | Yes (for parking & places) | `""` |
+| `DATABASE_URL` | MySQL connection string (`mysql://user:pass@127.0.0.1:3306/prakaro_db`) | Yes | — |
+| `BETTER_AUTH_SECRET` | Secret encryption key for Better Auth tokens and sessions | Yes | (32-char secret) |
+| `BETTER_AUTH_URL` | Base URL for Better Auth authentication routing | No | `http://localhost:3000` |
+
+### Database & Prisma Setup
+Prakaro uses MySQL 8+ (e.g. standard MySQL or XAMPP MySQL) and Prisma ORM:
+
+```powershell
+# 1. Start your local MySQL service (e.g., via XAMPP Control Panel or MySQL service)
+# 2. Create the development and test databases in MySQL:
+#    CREATE DATABASE prakaro_db;
+#    CREATE DATABASE prakaro_test_db;
+
+# 3. Generate Prisma client & push schema
+cd apps/api
+npx prisma generate
+npx prisma db push
+
+# For test database schema push:
+$env:DATABASE_URL="mysql://root:@127.0.0.1:3306/prakaro_test_db"; npx prisma db push
+```
 
 ### Running the Server
 ```powershell

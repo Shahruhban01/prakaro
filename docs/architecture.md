@@ -20,9 +20,12 @@ Prakaro is a parking discovery platform designed with a **strictly backend-drive
 |                          Prakaro API                            |
 |                     (Node.js / TypeScript)                      |
 |  - Fastify Web Engine & Route Handlers                          |
+|  - Better Auth Engine & Bearer Plugin (/api/auth/*)             |
 |  - Request Validation (Zod schemas)                             |
 |  - Error Handling & Structured Pino Logging                     |
 |  - Rate Limiting (@fastify/rate-limit)                          |
+|  - Cloud User Storage & Sync Service (/api/v1/users/me)         |
+|  - Places Autocomplete & Details Proxy (/api/v1/places)         |
 |  - Parking Discovery & Normalization Orchestrator               |
 +----------------+-------------------------------+----------------+
                  |                               |
@@ -30,9 +33,10 @@ Prakaro is a parking discovery platform designed with a **strictly backend-drive
 +--------------------------------+ +------------------------------+
 |       Persistence Layer        | |    External Integrations     |
 |      (MySQL 8+ / Prisma)       | |  - Google Places API (New)   |
-|  - Structured parking registry | |    (Backend secret proxy)    |
-|  - Rates & operational hours   | |  - Cloudflare R2             |
-|                                | |    (Photo storage - Future)  |
+|  - User & Better Auth Sessions | |    (Nearby, Autocomplete,    |
+|  - Saved Parking (Place IDs)   | |     Details, Proxy)          |
+|  - Recent Searches (Opt-in)    | |  - Cloudflare R2             |
+|  - User Preferences & Sync     | |    (Photo storage - Future)  |
 +--------------------------------+ +------------------------------+
 ```
 

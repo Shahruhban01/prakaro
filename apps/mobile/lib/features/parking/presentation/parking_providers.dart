@@ -13,6 +13,7 @@ import '../data/parking_repository_impl.dart';
 import '../domain/parking_location.dart';
 import '../domain/parking_repository.dart';
 import '../domain/recent_search.dart';
+import '../domain/destination_search_models.dart';
 import 'saved_providers.dart';
 
 /// Provider for Parking Remote Data Source.
@@ -126,6 +127,8 @@ class ParkingMapState {
     this.isOffline = false,
     this.isTimedOut = false,
     this.isRateLimited = false,
+    this.destinationName,
+    this.searchOriginType = SearchOriginType.currentLocation,
   });
 
   static const List<int> supportedRadiiMeters = [1000, 3000, 5000];
@@ -161,6 +164,10 @@ class ParkingMapState {
   final bool isTimedOut;
   final bool isRateLimited;
 
+  // Milestone 10 Destination search fields
+  final String? destinationName;
+  final SearchOriginType searchOriginType;
+
   bool get isLoading =>
       status == ParkingMapStatus.initializing || status == ParkingMapStatus.loading;
 
@@ -188,13 +195,22 @@ class ParkingMapState {
   }
 
   /// Compact headline context for list header.
-  String get searchContextTitle =>
-      isCustomSearchArea ? 'Selected map area' : 'Parking near you';
+  String get searchContextTitle {
+    if (searchOriginType == SearchOriginType.destination && destinationName != null) {
+      return 'Near $destinationName';
+    }
+    return isCustomSearchArea ? 'Selected map area' : 'Parking near you';
+  }
 
   /// Primary search area description badge/subtitle.
-  String get searchContextLabel => isCustomSearchArea
-      ? 'Within $searchRadiusKm km of selected map area'
-      : 'Within $searchRadiusKm km of your location';
+  String get searchContextLabel {
+    if (searchOriginType == SearchOriginType.destination && destinationName != null) {
+      return 'Within $searchRadiusKm km of $destinationName';
+    }
+    return isCustomSearchArea
+        ? 'Within $searchRadiusKm km of selected map area'
+        : 'Within $searchRadiusKm km of your location';
+  }
 
   /// Reference label explaining distance baseline.
   String get distanceReferenceNote =>
@@ -319,6 +335,9 @@ class ParkingMapState {
     bool? isOffline,
     bool? isTimedOut,
     bool? isRateLimited,
+    String? destinationName,
+    bool clearDestination = false,
+    SearchOriginType? searchOriginType,
   }) {
     return ParkingMapState(
       viewMode: viewMode ?? this.viewMode,
@@ -352,6 +371,8 @@ class ParkingMapState {
       isOffline: isOffline ?? this.isOffline,
       isTimedOut: isTimedOut ?? this.isTimedOut,
       isRateLimited: isRateLimited ?? this.isRateLimited,
+      destinationName: clearDestination ? null : (destinationName ?? this.destinationName),
+      searchOriginType: searchOriginType ?? this.searchOriginType,
     );
   }
 }
@@ -436,16 +457,56 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     final userLng = state.userLongitude;
 
     if (userLat != null && userLng != null) {
-      state = state.copyWith(isCustomSearchArea: false);
+      state = state.copyWith(
+        isCustomSearchArea: false,
+        clearDestination: true,
+        searchOriginType: SearchOriginType.currentLocation,
+      );
       await searchNearby(
         latitude: userLat,
         longitude: userLng,
         radius: state.radiusMeters,
       );
     } else {
-      state = state.copyWith(isCustomSearchArea: false);
+      state = state.copyWith(
+        isCustomSearchArea: false,
+        clearDestination: true,
+        searchOriginType: SearchOriginType.currentLocation,
+      );
       await init(force: true);
     }
+  }
+
+  /// Sets search center to a resolved destination (e.g. Connaught Place) and discovers parking.
+  Future<void> searchDestination({
+    required double latitude,
+    required double longitude,
+    required String destinationName,
+  }) async {
+    if (!ref.mounted) return;
+    _debounceTimer?.cancel();
+    AppHaptics.lightImpact();
+
+    state = state.copyWith(
+      searchCenterLatitude: latitude,
+      searchCenterLongitude: longitude,
+      cameraLatitude: latitude,
+      cameraLongitude: longitude,
+      isCustomSearchArea: true,
+      destinationName: destinationName,
+      searchOriginType: SearchOriginType.destination,
+    );
+
+    await searchNearby(
+      latitude: latitude,
+      longitude: longitude,
+      radius: state.radiusMeters,
+    );
+  }
+
+  /// Clears active destination and restores search to GPS location.
+  Future<void> clearDestination() async {
+    await searchNearUser();
   }
 
   /// Sets pricing filter (mutually exclusive free / paid / all). Local filter, no network call.

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/navigation_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/screens/profile_screen.dart';
 import '../domain/parking_location.dart';
 import '../domain/saved_parking_ref.dart';
 import 'parking_providers.dart';
@@ -169,6 +170,19 @@ class _SavedParkingScreenState extends ConsumerState<SavedParkingScreen> {
         toolbarHeight: 68,
         elevation: 0,
         scrolledUnderElevation: 2,
+        actions: [
+          IconButton(
+            tooltip: 'Account',
+            icon: const Icon(Icons.account_circle_outlined, size: 22),
+            onPressed: () {
+              AppHaptics.selection();
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Column(

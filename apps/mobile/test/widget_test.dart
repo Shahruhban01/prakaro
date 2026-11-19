@@ -387,6 +387,8 @@ void main() {
         expect(find.text('2 parking facilities found'), findsOneWidget);
         expect(find.text('Central Plaza Parking'), findsOneWidget);
         expect(find.text('North Bay Parking'), findsOneWidget);
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+        await tester.pumpAndSettle();
         expect(find.text('Powered by Google Places'), findsOneWidget);
       },
     );

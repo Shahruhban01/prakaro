@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/navigation_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../auth/presentation/widgets/auth_prompt_bottom_sheet.dart';
 import '../../domain/parking_location.dart';
 import '../parking_providers.dart';
 import '../saved_providers.dart';
@@ -180,6 +182,9 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
                     onPressed: () {
                       AppHaptics.lightImpact();
                       ref.read(savedParkingRefsProvider.notifier).toggleSave(widget.location);
+                      if (ref.read(authProvider).isGuest && !isSaved) {
+                        AuthPromptBottomSheet.show(context, facilityName: widget.location.name);
+                      }
                     },
                   ),
                 ],

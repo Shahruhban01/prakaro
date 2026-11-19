@@ -23,8 +23,10 @@
   - [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit) (Endpoint throttling)
   - [Zod](https://zod.dev/) (Environment & Contract Validation)
   - [ESLint](https://eslint.org/) (v9 Flat Config) & [Prettier](https://prettier.io/)
-- **Database & Persistence (Reserved)**:
+- **Database & Persistence**:
   - MySQL 8+ & [Prisma ORM](https://www.prisma.io/)
+- **Authentication**:
+  - [Better Auth](https://www.better-auth.com/) with Bearer Plugin & Prisma adapter
 
 ---
 
@@ -43,40 +45,49 @@ prakaro/
 │   │   │   ├── core/                         # Shared core infrastructure
 │   │   │   │   ├── config/                   # Compile-time app config & Dart defines
 │   │   │   │   ├── errors/                   # AppException & NetworkException
-│   │   │   │   ├── network/                  # Dio ApiClient & error translation
+│   │   │   │   ├── network/                  # Dio ApiClient, Bearer token interceptor, 401 handling
+│   │   │   │   ├── storage/                  # SecureStorageService (FlutterSecureStorage) & LocalStorageService
 │   │   │   │   ├── services/                 # LocationService (GPS) & NavigationService
 │   │   │   │   └── theme/                    # Material 3 light/dark theme definitions
 │   │   │   ├── features/
+│   │   │   │   ├── auth/                     # Milestone 10 Better Auth module
+│   │   │   │   │   ├── data/                 # AuthRepository & AuthRemoteDataSource
+│   │   │   │   │   ├── domain/               # AppUser, UserPreferences & AuthState
+│   │   │   │   │   └── presentation/         # Login, Register, Profile, Welcome, Guest prompt dialogs
 │   │   │   │   └── parking/                  # Parking feature domain slices
-│   │   │   │       ├── data/                 # ParkingLocationDto & ParkingRemoteDataSource
-│   │   │   │       ├── domain/               # ParkingLocation entity & ParkingRepository
+│   │   │   │       ├── data/                 # ParkingRemoteDataSource, PlacesRemoteDataSource
+│   │   │   │       ├── domain/               # ParkingLocation, DestinationSuggestion, ResolvedDestination
 │   │   │   │       └── presentation/         # ParkingHomeScreen, ParkingListScreen (Default),
-│   │   │   │                                 # ParkingMapScreen, ParkingViewSwitcher, ParkingCard,
-│   │   │   │                                 # ParkingFilterBar, ParkingRadiusSelector, ParkingDetailsSheet,
-│   │   │   │                                 # ParkingEmptyState, ParkingLoadingState
+│   │   │   │                                 # ParkingMapScreen, DestinationSearchScreen, SavedParkingScreen,
+│   │   │   │                                 # ParkingViewSwitcher, ParkingCard, ParkingFilterBar, ParkingRadiusSelector
 │   │   │   └── main.dart                     # App entry point (ProviderScope root)
-│   │   ├── test/                             # Unit, repository, filter, radius, and widget tests (55 tests)
+│   │   ├── test/                             # Unit, repository, filter, radius, widget & auth tests (102 tests)
 │   │   └── pubspec.yaml
 │   │
 │   └── api/                                  # Fastify TypeScript backend service
-│       ├── prisma/                           # Database schema definitions
+│       ├── prisma/                           # Database schema definitions (Better Auth + Prakaro models)
 │       │   └── schema.prisma
 │       ├── src/
-│       │   ├── common/                       # Centralized errors & middleware
-│       │   ├── config/                       # Zod-validated environment config
+│       │   ├── common/                       # Centralized errors, middleware (requireAuth), database (prisma)
+│       │   ├── config/                       # Zod-validated environment config & Better Auth config
 │       │   ├── integrations/
-│       │   │   └── google-places/            # Google Places API client & mapper
+│       │   │   └── google-places/            # Google Places API client (Nearby, Autocomplete, Details) & mapper
 │       │   ├── modules/
-│       │   │   └── parking/                  # Parking discovery routes & controller
-│       │   ├── app.ts                        # Fastify application factory
+│       │   │   ├── parking/                  # Parking discovery routes & controller
+│       │   │   ├── places/                   # Milestone 10 destination autocomplete & resolve proxy
+│       │   │   └── user/                     # Milestone 10 cloud saved parking, recent searches & preferences
+│       │   ├── app.ts                        # Fastify application factory (/api/auth/* catch-all)
 │       │   └── server.ts                     # Server entry point & graceful shutdown
-│       ├── tests/                            # API integration tests (health & parking)
+│       ├── tests/                            # API integration tests (35 tests: health, parking, auth-and-cloud)
 │       ├── .env.example                      # Sample environment variables
 │       ├── package.json
 │       └── tsconfig.json
 │
 ├── docs/
 │   ├── architecture.md                       # Architectural principles & boundaries
+│   ├── authentication.md                     # Better Auth, Bearer plugin & mobile lifecycle
+│   ├── database.md                           # MySQL schema, Prisma models & Google compliance
+│   ├── destination-search.md                 # Destination search architecture & session token proxy
 │   ├── development.md                        # Local Windows development & networking guide
 │   └── api-contract.md                       # REST API specification & setup guide
 ├── .editorconfig                             # Cross-editor formatting standards

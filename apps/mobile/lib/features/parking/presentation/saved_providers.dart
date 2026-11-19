@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_exception.dart';
 import '../../../core/storage/local_storage_service.dart';
+import '../../auth/data/auth_remote_data_source.dart';
+import '../../auth/presentation/providers/auth_providers.dart';
 import '../domain/parking_location.dart';
 import '../domain/parking_repository.dart';
 import '../domain/recent_search.dart';
@@ -226,6 +228,8 @@ final savedFacilityResolverProvider =
 /// Notifier managing user-saved parking references.
 class SavedParkingRefsNotifier extends Notifier<List<SavedParkingRef>> {
   LocalStorageService get _storage => ref.read(localStorageServiceProvider);
+  AuthRemoteDataSource get _remoteSource => ref.read(authRemoteDataSourceProvider);
+  bool get _isAuthenticated => ref.read(authProvider).isAuthenticated;
   bool _initialized = false;
 
   @override
@@ -235,14 +239,43 @@ class SavedParkingRefsNotifier extends Notifier<List<SavedParkingRef>> {
   }
 
   Future<void> _loadInitialRefs() async {
-    final refs = await _storage.getSavedParkingRefs();
+    final localRefs = await _storage.getSavedParkingRefs();
+    if (!ref.mounted) return;
+
+    List<SavedParkingRef> cloudRefs = [];
+    final isAuth = ref.read(authProvider).isAuthenticated;
+
+    if (isAuth) {
+      try {
+        final cloudList = await _remoteSource.getCloudSavedParking();
+        if (!ref.mounted) return;
+        cloudRefs = cloudList.map((item) {
+          final placeId = item['providerPlaceId']?.toString() ?? '';
+          final provider = item['provider']?.toString() ?? 'google';
+          final createdAt = item['createdAt'] != null
+              ? DateTime.tryParse(item['createdAt'].toString()) ?? DateTime.now()
+              : DateTime.now();
+          return SavedParkingRef(
+            id: placeId.contains(':') ? placeId : '$provider:$placeId',
+            provider: provider,
+            providerPlaceId: placeId,
+            savedAt: createdAt,
+          );
+        }).toList();
+      } catch (_) {}
+    }
+
     if (ref.mounted && !_initialized) {
       _initialized = true;
-      final merged = [
-        ...state,
-        ...refs.where((r) => !state.any((s) => s.id == r.id)),
-      ];
-      state = merged;
+      final Set<String> seenIds = {};
+      final List<SavedParkingRef> combined = [];
+
+      for (final r in [...cloudRefs, ...localRefs]) {
+        if (r.id.isNotEmpty && seenIds.add(r.id)) {
+          combined.add(r);
+        }
+      }
+      state = combined;
     }
   }
 
@@ -273,6 +306,17 @@ class SavedParkingRefsNotifier extends Notifier<List<SavedParkingRef>> {
         state = previous;
         return false;
       }
+
+      // Sync to cloud if authenticated
+      if (_isAuthenticated) {
+        try {
+          await _remoteSource.saveCloudParking(
+            providerPlaceId: location.id,
+            provider: location.source,
+          );
+        } catch (_) {}
+      }
+
       return true;
     }
   }
@@ -287,17 +331,32 @@ class SavedParkingRefsNotifier extends Notifier<List<SavedParkingRef>> {
     if (!ok) {
       state = previous;
     }
+
+    if (_isAuthenticated) {
+      try {
+        await _remoteSource.deleteCloudSavedParking(id);
+      } catch (_) {}
+    }
   }
 
   Future<void> clearAll() async {
     _initialized = true;
     final previous = state;
+    final idsToRemove = state.map((r) => r.id).toList();
     state = const [];
     ref.read(savedFacilityResolverProvider.notifier).clearAll();
 
     final ok = await _storage.clearAllSavedParkingRefs();
     if (!ok) {
       state = previous;
+    }
+
+    if (_isAuthenticated) {
+      for (final id in idsToRemove) {
+        try {
+          await _remoteSource.deleteCloudSavedParking(id);
+        } catch (_) {}
+      }
     }
   }
 
@@ -340,6 +399,8 @@ class RecentSearchesState {
 /// Notifier managing recent search areas and privacy preferences.
 class RecentSearchesNotifier extends Notifier<RecentSearchesState> {
   LocalStorageService get _storage => ref.read(localStorageServiceProvider);
+  AuthRemoteDataSource get _remoteSource => ref.read(authRemoteDataSourceProvider);
+  bool get _isAuthenticated => ref.read(authProvider).isAuthenticated;
   bool _initialized = false;
 
   @override
@@ -349,7 +410,12 @@ class RecentSearchesNotifier extends Notifier<RecentSearchesState> {
   }
 
   Future<void> _loadInitial() async {
-    final enabled = await _storage.isRecentSearchRecordingEnabled();
+    final localEnabled = await _storage.isRecentSearchRecordingEnabled();
+    if (!ref.mounted) return;
+
+    final authPrefs = ref.read(authProvider).preferences;
+    final enabled = _isAuthenticated ? authPrefs.recentSearchEnabled : localEnabled;
+
     final searches = enabled ? await _storage.getRecentSearches() : const <RecentSearch>[];
     if (ref.mounted && !_initialized) {
       _initialized = true;
@@ -375,6 +441,10 @@ class RecentSearchesNotifier extends Notifier<RecentSearchesState> {
       return;
     }
 
+    if (_isAuthenticated) {
+      ref.read(authProvider.notifier).updatePreferences(recentSearchEnabled: enabled);
+    }
+
     if (enabled) {
       final searches = await _storage.getRecentSearches();
       state = state.copyWith(searches: searches);
@@ -389,6 +459,8 @@ class RecentSearchesNotifier extends Notifier<RecentSearchesState> {
     required double longitude,
     required int radiusMeters,
     RecentSearchOriginType originType = RecentSearchOriginType.explicitAreaSearch,
+    String? destinationLabel,
+    String? providerPlaceId,
   }) async {
     if (!state.isRecordingEnabled) {
       return;
@@ -409,6 +481,19 @@ class RecentSearchesNotifier extends Notifier<RecentSearchesState> {
 
     state = state.copyWith(searches: updated);
     await _storage.saveRecentSearch(newSearch);
+
+    if (_isAuthenticated) {
+      try {
+        await _remoteSource.createCloudRecentSearch({
+          'latitude': latitude,
+          'longitude': longitude,
+          'radiusMeters': radiusMeters,
+          'originType': originType.name,
+          'destinationLabel': ?destinationLabel,
+          'providerPlaceId': ?providerPlaceId,
+        });
+      } catch (_) {}
+    }
   }
 
   Future<void> remove(String id) async {
@@ -431,6 +516,12 @@ class RecentSearchesNotifier extends Notifier<RecentSearchesState> {
     final ok = await _storage.clearAllRecentSearches();
     if (!ok) {
       state = previous;
+    }
+
+    if (_isAuthenticated) {
+      try {
+        await _remoteSource.clearCloudRecentSearches();
+      } catch (_) {}
     }
   }
 }

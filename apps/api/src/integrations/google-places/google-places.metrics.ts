@@ -21,6 +21,22 @@ export interface GooglePlacesMetricsSnapshot {
     rateLimited: number;
     successRate: number;
   };
+  autocomplete: {
+    attempts: number;
+    success: number;
+    failures: number;
+    timeouts: number;
+    rateLimited: number;
+    successRate: number;
+  };
+  destinationResolve: {
+    attempts: number;
+    success: number;
+    failures: number;
+    timeouts: number;
+    rateLimited: number;
+    successRate: number;
+  };
   totals: {
     totalUpstreamRequests: number;
     totalSuccess: number;
@@ -51,6 +67,18 @@ export class GooglePlacesMetrics {
   private detailsFailures = 0;
   private detailsTimeouts = 0;
   private detailsRateLimited = 0;
+
+  private autocompleteAttempts = 0;
+  private autocompleteSuccess = 0;
+  private autocompleteFailures = 0;
+  private autocompleteTimeouts = 0;
+  private autocompleteRateLimited = 0;
+
+  private resolveAttempts = 0;
+  private resolveSuccess = 0;
+  private resolveFailures = 0;
+  private resolveTimeouts = 0;
+  private resolveRateLimited = 0;
 
   private totalDurationMs = 0;
 
@@ -98,10 +126,60 @@ export class GooglePlacesMetrics {
     if (options?.isRateLimit) this.detailsRateLimited++;
   }
 
+  public recordAutocompleteAttempt(): void {
+    this.autocompleteAttempts++;
+  }
+
+  public recordAutocompleteSuccess(durationMs: number): void {
+    this.autocompleteSuccess++;
+    this.totalDurationMs += Math.max(0, durationMs);
+  }
+
+  public recordAutocompleteFailure(
+    durationMs: number,
+    options?: { isTimeout?: boolean; isRateLimit?: boolean },
+  ): void {
+    this.autocompleteFailures++;
+    this.totalDurationMs += Math.max(0, durationMs);
+    if (options?.isTimeout) this.autocompleteTimeouts++;
+    if (options?.isRateLimit) this.autocompleteRateLimited++;
+  }
+
+  public recordResolveAttempt(): void {
+    this.resolveAttempts++;
+  }
+
+  public recordResolveSuccess(durationMs: number): void {
+    this.resolveSuccess++;
+    this.totalDurationMs += Math.max(0, durationMs);
+  }
+
+  public recordResolveFailure(
+    durationMs: number,
+    options?: { isTimeout?: boolean; isRateLimit?: boolean },
+  ): void {
+    this.resolveFailures++;
+    this.totalDurationMs += Math.max(0, durationMs);
+    if (options?.isTimeout) this.resolveTimeouts++;
+    if (options?.isRateLimit) this.resolveRateLimited++;
+  }
+
   public getMetricsSnapshot(): GooglePlacesMetricsSnapshot {
-    const totalRequests = this.nearbyAttempts + this.detailsAttempts;
-    const totalSuccess = this.nearbySuccess + this.detailsSuccess;
-    const totalFailures = this.nearbyFailures + this.detailsFailures;
+    const totalRequests =
+      this.nearbyAttempts +
+      this.detailsAttempts +
+      this.autocompleteAttempts +
+      this.resolveAttempts;
+    const totalSuccess =
+      this.nearbySuccess +
+      this.detailsSuccess +
+      this.autocompleteSuccess +
+      this.resolveSuccess;
+    const totalFailures =
+      this.nearbyFailures +
+      this.detailsFailures +
+      this.autocompleteFailures +
+      this.resolveFailures;
 
     const nearbySuccessRate =
       this.nearbyAttempts > 0
@@ -111,6 +189,16 @@ export class GooglePlacesMetrics {
     const detailsSuccessRate =
       this.detailsAttempts > 0
         ? Number(((this.detailsSuccess / this.detailsAttempts) * 100).toFixed(1))
+        : 100.0;
+
+    const autocompleteSuccessRate =
+      this.autocompleteAttempts > 0
+        ? Number(((this.autocompleteSuccess / this.autocompleteAttempts) * 100).toFixed(1))
+        : 100.0;
+
+    const resolveSuccessRate =
+      this.resolveAttempts > 0
+        ? Number(((this.resolveSuccess / this.resolveAttempts) * 100).toFixed(1))
         : 100.0;
 
     const averageDurationMs =
@@ -132,6 +220,22 @@ export class GooglePlacesMetrics {
         timeouts: this.detailsTimeouts,
         rateLimited: this.detailsRateLimited,
         successRate: detailsSuccessRate,
+      },
+      autocomplete: {
+        attempts: this.autocompleteAttempts,
+        success: this.autocompleteSuccess,
+        failures: this.autocompleteFailures,
+        timeouts: this.autocompleteTimeouts,
+        rateLimited: this.autocompleteRateLimited,
+        successRate: autocompleteSuccessRate,
+      },
+      destinationResolve: {
+        attempts: this.resolveAttempts,
+        success: this.resolveSuccess,
+        failures: this.resolveFailures,
+        timeouts: this.resolveTimeouts,
+        rateLimited: this.resolveRateLimited,
+        successRate: resolveSuccessRate,
       },
       totals: {
         totalUpstreamRequests: totalRequests,
@@ -164,6 +268,18 @@ export class GooglePlacesMetrics {
     this.detailsFailures = 0;
     this.detailsTimeouts = 0;
     this.detailsRateLimited = 0;
+
+    this.autocompleteAttempts = 0;
+    this.autocompleteSuccess = 0;
+    this.autocompleteFailures = 0;
+    this.autocompleteTimeouts = 0;
+    this.autocompleteRateLimited = 0;
+
+    this.resolveAttempts = 0;
+    this.resolveSuccess = 0;
+    this.resolveFailures = 0;
+    this.resolveTimeouts = 0;
+    this.resolveRateLimited = 0;
 
     this.totalDurationMs = 0;
   }

@@ -74,3 +74,21 @@ class UpstreamServiceException extends NetworkException {
     super.cause,
   });
 }
+
+/// Unauthorized error representation (401 from Better Auth or protected routes).
+class UnauthorizedException extends NetworkException {
+  const UnauthorizedException({
+    super.message = 'Authentication required to access this resource.',
+    super.statusCode = 401,
+    super.cause,
+  });
+}
+
+/// Validation error representation (400 bad request).
+class ValidationException extends NetworkException {
+  const ValidationException({
+    super.message = 'Invalid request parameters.',
+    super.statusCode = 400,
+    super.cause,
+  });
+}

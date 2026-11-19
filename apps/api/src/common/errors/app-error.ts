@@ -46,6 +46,20 @@ export class UpstreamRateLimitError extends AppError {
   }
 }
 
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Authentication required to access this resource.', details?: unknown) {
+    super(401, 'UNAUTHORIZED', message, details);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'You do not have permission to access this resource.', details?: unknown) {
+    super(403, 'FORBIDDEN', message, details);
+    this.name = 'ForbiddenError';
+  }
+}
+
 export class ConfigurationError extends AppError {
   constructor(
     message = 'Parking discovery service is not configured. Missing Google Places API credentials.',

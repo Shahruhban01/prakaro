@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
 import '../errors/app_exception.dart';
+import '../storage/secure_storage_service.dart';
 
-/// Provider for the singleton Dio HTTP client instance.
+/// Provider for the singleton Dio HTTP client instance with auth interceptor.
 final apiClientProvider = Provider<ApiClient>((ref) {
+  final secureStorage = ref.watch(secureStorageServiceProvider);
+
   final dio = Dio(
     BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
@@ -14,6 +17,18 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       headers: const {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+      },
+    ),
+  );
+
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await secureStorage.getAuthToken();
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
       },
     ),
   );
@@ -97,6 +112,55 @@ class ApiClient {
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
+      if (e is AppException) rethrow;
+      throw AppException(message: 'Unexpected network error: $e', cause: e);
+    }
+  }
+
+  /// Perform a PATCH request with unified error translation.
+  Future<Response<T>> patch<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await _dio.patch<T>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw AppException(message: 'Unexpected network error: $e', cause: e);
+    }
+  }
+
+  /// Perform a DELETE request with unified error translation.
+  Future<Response<T>> delete<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await _dio.delete<T>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      if (e is AppException) rethrow;
       throw AppException(message: 'Unexpected network error: $e', cause: e);
     }
   }
@@ -127,6 +191,20 @@ class ApiClient {
       } else if (responseData['message'] != null) {
         extractedMessage = responseData['message'].toString();
       }
+    }
+
+    if (statusCode == 400) {
+      return ValidationException(
+        message: extractedMessage ?? 'Invalid request parameters.',
+        cause: error,
+      );
+    }
+
+    if (statusCode == 401) {
+      return UnauthorizedException(
+        message: extractedMessage ?? 'Authentication required to access this resource.',
+        cause: error,
+      );
     }
 
     if (statusCode == 404) {

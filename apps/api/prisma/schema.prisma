@@ -1,5 +1,5 @@
 // Prisma schema for Prakaro Backend
-// Integration will be expanded as parking discovery schema models are introduced.
+// Supports Better Auth authentication models and Prakaro application models.
 
 generator client {
   provider = "prisma-client-js"
@@ -8,4 +8,122 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------
+// Better Auth Authentication Models
+// ----------------------------------------------------
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  // Prakaro Relations
+  savedParkings  SavedParking[]
+  recentSearches RecentSearch[]
+  preference     UserPreference?
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ----------------------------------------------------
+// Prakaro Application Models (Cloud Sync)
+// ----------------------------------------------------
+
+model SavedParking {
+  id              String   @id @default(uuid())
+  userId          String
+  provider        String   @default("google")
+  providerPlaceId String
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, providerPlaceId])
+  @@index([userId])
+  @@map("saved_parking")
+}
+
+model RecentSearch {
+  id               String   @id @default(uuid())
+  userId           String
+  latitude         Float?
+  longitude        Float?
+  radiusMeters     Int      @default(3000)
+  originType       String   @default("explicitAreaSearch")
+  providerPlaceId  String?
+  destinationLabel String?
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("recent_search")
+}
+
+model UserPreference {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  recentSearchEnabled Boolean  @default(false)
+  defaultRadiusMeters Int      @default(3000)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preference")
 }

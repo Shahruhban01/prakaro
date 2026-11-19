@@ -4,7 +4,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/services/location_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/screens/profile_screen.dart';
 import '../domain/parking_location.dart';
+import 'destination_search_screen.dart';
 import 'parking_providers.dart';
 import 'widgets/parking_details_sheet.dart';
 import 'widgets/parking_filter_bar.dart';
@@ -105,7 +107,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Center map once user location becomes available
+    // Center map once user location becomes available or when search center changes
     ref.listen<ParkingMapState>(parkingMapProvider, (previous, next) {
       if (!_hasCenteredOnUser &&
           next.userLatitude != null &&
@@ -113,6 +115,14 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
           _mapController != null) {
         _animateToPosition(next.userLatitude!, next.userLongitude!);
         _hasCenteredOnUser = true;
+      }
+
+      // Animate map when destination search center changes
+      if (previous?.searchCenterLatitude != next.searchCenterLatitude ||
+          previous?.searchCenterLongitude != next.searchCenterLongitude) {
+        if (next.searchCenterLatitude != null && next.searchCenterLongitude != null) {
+          _animateToPosition(next.searchCenterLatitude!, next.searchCenterLongitude!);
+        }
       }
     });
 
@@ -165,55 +175,90 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Row 1: Brand badge & View switcher
+                  // Row 1: Brand badge, Account button & View switcher
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Compact Branding Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'P',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Compact Branding Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface.withValues(alpha: 0.95),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
                                 ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'P',
+                                    style: TextStyle(
+                                      color: colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Prakaro',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.3,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // Profile / Account Button
+                          GestureDetector(
+                            onTap: () {
+                              AppHaptics.selection();
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+                              );
+                            },
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: colorScheme.surface.withValues(alpha: 0.95),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.person_outline_rounded,
+                                size: 18,
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Prakaro',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.3,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
 
                       // View Switcher (List / Map)
@@ -222,6 +267,88 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                         onModeChanged: (mode) => notifier.setViewMode(mode),
                       ),
                     ],
+                  ),
+
+                  // Floating Destination Search Bar
+                  GestureDetector(
+                    onTap: () {
+                      AppHaptics.selection();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const DestinationSearchScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: state.destinationName != null
+                              ? colorScheme.primary.withValues(alpha: 0.6)
+                              : colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            state.destinationName != null
+                                ? Icons.place_rounded
+                                : Icons.search_rounded,
+                            size: 18,
+                            color: state.destinationName != null
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              state.destinationName != null
+                                  ? state.destinationName!
+                                  : 'Search destination...',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: state.destinationName != null
+                                    ? colorScheme.onSurface
+                                    : colorScheme.onSurfaceVariant,
+                                fontWeight: state.destinationName != null
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (state.destinationName != null)
+                            GestureDetector(
+                              onTap: () {
+                                AppHaptics.selection();
+                                notifier.clearDestination();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 14,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 8),

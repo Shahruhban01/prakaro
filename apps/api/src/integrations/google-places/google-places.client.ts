@@ -8,6 +8,9 @@ import {
   GooglePlaceItem,
   GooglePlacesSearchNearbyParams,
   GooglePlacesSearchNearbyResponse,
+  GooglePlacesAutocompleteResponse,
+  DestinationSuggestion,
+  ResolvedDestination,
 } from './google-places.types';
 import {
   GooglePlacesMetrics,
@@ -19,6 +22,10 @@ export class GooglePlacesClient {
     'https://places.googleapis.com/v1/places:searchNearby';
   private static readonly DEFAULT_DETAILS_BASE_URL =
     'https://places.googleapis.com/v1/places';
+  private static readonly DEFAULT_AUTOCOMPLETE_BASE_URL =
+    'https://places.googleapis.com/v1/places:autocomplete';
+  private static readonly DESTINATION_FIELD_MASK =
+    'id,displayName,formattedAddress,location';
   private static readonly DEFAULT_TIMEOUT_MS = 8000;
   private static readonly SEARCH_FIELD_MASK =
     GooglePlacesMetrics.SEARCH_FIELD_MASK;
@@ -202,6 +209,204 @@ export class GooglePlacesClient {
     } catch {
       this.metrics.recordDetailsFailure(durationMs);
       throw new UpstreamError('Failed to parse upstream place details data.');
+    }
+  }
+
+  /**
+   * Destination Autocomplete: Discovers destination suggestions as the user types.
+   */
+  public async autocomplete(
+    params: { input: string; sessionToken?: string },
+    callerSignal?: AbortSignal,
+  ): Promise<DestinationSuggestion[]> {
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new ConfigurationError();
+    }
+
+    if (!params.input || params.input.trim() === '') {
+      return [];
+    }
+
+    this.metrics.recordAutocompleteAttempt();
+    const startTime = Date.now();
+
+    const payload: Record<string, unknown> = {
+      input: params.input.trim(),
+    };
+    if (params.sessionToken && params.sessionToken.trim() !== '') {
+      payload.sessionToken = params.sessionToken.trim();
+    }
+
+    const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
+    const combinedSignal = callerSignal
+      ? AbortSignal.any([timeoutSignal, callerSignal])
+      : timeoutSignal;
+
+    let response: Response;
+    try {
+      response = await this.fetchFn(GooglePlacesClient.DEFAULT_AUTOCOMPLETE_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': this.apiKey,
+        },
+        body: JSON.stringify(payload),
+        signal: combinedSignal,
+      });
+    } catch (err: unknown) {
+      const durationMs = Date.now() - startTime;
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === 'TimeoutError' ||
+          err.name === 'AbortError' ||
+          err.message.toLowerCase().includes('timeout') ||
+          err.message.toLowerCase().includes('aborted'));
+
+      this.metrics.recordAutocompleteFailure(durationMs, { isTimeout });
+
+      if (isTimeout) {
+        throw new UpstreamTimeoutError();
+      }
+      throw new UpstreamError();
+    }
+
+    const durationMs = Date.now() - startTime;
+
+    if (response.status === 429) {
+      this.metrics.recordAutocompleteFailure(durationMs, { isRateLimit: true });
+      throw new UpstreamRateLimitError();
+    }
+
+    if (!response.ok) {
+      this.metrics.recordAutocompleteFailure(durationMs);
+      throw new UpstreamError();
+    }
+
+    try {
+      const data = (await response.json()) as GooglePlacesAutocompleteResponse;
+      this.metrics.recordAutocompleteSuccess(durationMs);
+
+      const list = data.suggestions ?? [];
+      const suggestions: DestinationSuggestion[] = [];
+
+      for (const item of list) {
+        const pred = item.placePrediction;
+        if (!pred) continue;
+        const placeId =
+          pred.placeId ?? (pred.place ? pred.place.replace(/^places\//, '') : '');
+        if (!placeId) continue;
+
+        const mainText = pred.structuredFormat?.mainText?.text ?? pred.text?.text ?? '';
+        const secondaryText = pred.structuredFormat?.secondaryText?.text ?? '';
+        const fullText = pred.text?.text ?? mainText;
+
+        suggestions.push({
+          placeId,
+          text: fullText,
+          primaryText: mainText,
+          secondaryText,
+        });
+      }
+
+      return suggestions;
+    } catch {
+      this.metrics.recordAutocompleteFailure(durationMs);
+      throw new UpstreamError('Failed to parse upstream autocomplete data.');
+    }
+  }
+
+  /**
+   * Destination Resolve: Resolves selected destination placeId to geographic coordinates and address.
+   */
+  public async resolveDestination(
+    params: { placeId: string; sessionToken?: string },
+    callerSignal?: AbortSignal,
+  ): Promise<ResolvedDestination | null> {
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new ConfigurationError();
+    }
+
+    const cleanId = params.placeId.replace(/^google:/, '').trim();
+    if (!cleanId) {
+      return null;
+    }
+
+    this.metrics.recordResolveAttempt();
+    const startTime = Date.now();
+
+    let url = `${this.detailsBaseUrl}/${encodeURIComponent(cleanId)}`;
+    if (params.sessionToken && params.sessionToken.trim() !== '') {
+      url += `?sessionToken=${encodeURIComponent(params.sessionToken.trim())}`;
+    }
+
+    const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
+    const combinedSignal = callerSignal
+      ? AbortSignal.any([timeoutSignal, callerSignal])
+      : timeoutSignal;
+
+    let response: Response;
+    try {
+      response = await this.fetchFn(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': GooglePlacesClient.DESTINATION_FIELD_MASK,
+        },
+        signal: combinedSignal,
+      });
+    } catch (err: unknown) {
+      const durationMs = Date.now() - startTime;
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === 'TimeoutError' ||
+          err.name === 'AbortError' ||
+          err.message.toLowerCase().includes('timeout') ||
+          err.message.toLowerCase().includes('aborted'));
+
+      this.metrics.recordResolveFailure(durationMs, { isTimeout });
+
+      if (isTimeout) {
+        throw new UpstreamTimeoutError();
+      }
+      throw new UpstreamError();
+    }
+
+    const durationMs = Date.now() - startTime;
+
+    if (response.status === 404) {
+      this.metrics.recordResolveSuccess(durationMs);
+      return null;
+    }
+
+    if (response.status === 429) {
+      this.metrics.recordResolveFailure(durationMs, { isRateLimit: true });
+      throw new UpstreamRateLimitError();
+    }
+
+    if (!response.ok) {
+      this.metrics.recordResolveFailure(durationMs);
+      throw new UpstreamError();
+    }
+
+    try {
+      const data = (await response.json()) as GooglePlaceItem;
+      this.metrics.recordResolveSuccess(durationMs);
+
+      if (!data.location?.latitude || !data.location?.longitude) {
+        return null;
+      }
+
+      return {
+        placeId: data.id ?? cleanId,
+        name: data.displayName?.text ?? 'Destination',
+        address: data.formattedAddress ?? '',
+        latitude: data.location.latitude,
+        longitude: data.location.longitude,
+      };
+    } catch {
+      this.metrics.recordResolveFailure(durationMs);
+      throw new UpstreamError('Failed to parse upstream destination details.');
     }
   }
 }

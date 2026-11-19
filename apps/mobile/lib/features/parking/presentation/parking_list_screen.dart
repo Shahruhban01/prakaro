@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/location_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/screens/profile_screen.dart';
 import '../domain/parking_location.dart';
+import 'destination_search_screen.dart';
 import 'parking_providers.dart';
 import 'widgets/google_attribution.dart';
 import 'widgets/parking_card.dart';
@@ -78,11 +80,31 @@ class ParkingListScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            tooltip: 'Search destination',
+            icon: const Icon(Icons.search_rounded, size: 22),
+            onPressed: () {
+              AppHaptics.selection();
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const DestinationSearchScreen()),
+              );
+            },
+          ),
+          IconButton(
             tooltip: 'Refresh nearby parking',
             icon: const Icon(Icons.my_location_rounded, size: 20),
             onPressed: () => notifier.refresh(),
           ),
-          const SizedBox(width: 6),
+          IconButton(
+            tooltip: 'Account',
+            icon: const Icon(Icons.account_circle_outlined, size: 22),
+            onPressed: () {
+              AppHaptics.selection();
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: RefreshIndicator(
@@ -91,13 +113,88 @@ class ParkingListScreen extends ConsumerWidget {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // 1. Compact Header, View Switcher & Search Radius Section
+            // 1. Destination Search Bar, View Switcher & Search Radius Section
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Destination Search Bar Tap Target
+                    GestureDetector(
+                      onTap: () {
+                        AppHaptics.selection();
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const DestinationSearchScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                          border: Border.all(
+                            color: state.destinationName != null
+                                ? colorScheme.primary.withValues(alpha: 0.5)
+                                : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              state.destinationName != null
+                                  ? Icons.place_rounded
+                                  : Icons.search_rounded,
+                              size: 20,
+                              color: state.destinationName != null
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                state.destinationName != null
+                                    ? state.destinationName!
+                                    : 'Search a destination or address...',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: state.destinationName != null
+                                      ? colorScheme.onSurface
+                                      : colorScheme.onSurfaceVariant,
+                                  fontWeight: state.destinationName != null
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (state.destinationName != null)
+                              GestureDetector(
+                                onTap: () {
+                                  AppHaptics.selection();
+                                  notifier.clearDestination();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 16,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                     // Context headline and view switcher
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

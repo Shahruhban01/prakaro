@@ -49,6 +49,43 @@ export interface GooglePlacesSearchNearbyResponse {
   places?: GooglePlaceItem[];
 }
 
+export interface GooglePlacesAutocompleteSuggestion {
+  placePrediction?: {
+    place?: string;
+    placeId?: string;
+    text?: {
+      text?: string;
+    };
+    structuredFormat?: {
+      mainText?: {
+        text?: string;
+      };
+      secondaryText?: {
+        text?: string;
+      };
+    };
+  };
+}
+
+export interface GooglePlacesAutocompleteResponse {
+  suggestions?: GooglePlacesAutocompleteSuggestion[];
+}
+
+export interface DestinationSuggestion {
+  placeId: string;
+  text: string;
+  primaryText: string;
+  secondaryText: string;
+}
+
+export interface ResolvedDestination {
+  placeId: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface GooglePlacesSearchNearbyParams {
   latitude: number;
   longitude: number;

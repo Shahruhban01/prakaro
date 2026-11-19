@@ -233,8 +233,130 @@ Returns aggregate runtime usage counters for upstream Google Places requests wit
 | HTTP Status | Error Code | Description |
 | :--- | :--- | :--- |
 | `400 Bad Request` | `INVALID_QUERY_PARAMS` | Query parameter failed validation |
-| `404 Not Found` | `NOT_FOUND` | Facility ID not found |
+| `401 Unauthorized` | `UNAUTHORIZED` | Bearer token missing, invalid, or expired |
+| `403 Forbidden` | `FORBIDDEN` | Access denied for the authenticated user |
+| `404 Not Found` | `NOT_FOUND` | Facility ID, user, or resource not found |
+| `409 Conflict` | `CONFLICT` | Resource already exists or uniqueness violated |
 | `429 Too Many Requests` | `RATE_LIMIT_EXCEEDED` | Request threshold exceeded |
 | `502 Bad Gateway` | `UPSTREAM_ERROR` | Google Places API error |
 | `503 Service Unavailable` | `CONFIGURATION_ERROR` | Server missing Google Places API key |
 | `504 Gateway Timeout` | `UPSTREAM_TIMEOUT` | Google Places request timed out |
+
+---
+
+## 5. Better Auth Endpoints (`/api/auth/*`)
+
+Managed via official Better Auth engine with Bearer plugin.
+
+### A. Sign Up
+- **URL**: `/api/auth/sign-up/email`
+- **Method**: `POST`
+- **Body**: `{ "email": "user@example.com", "password": "securepassword123", "name": "Jane Doe" }`
+- **Success (`200 OK`)**: `{ "user": { "id": "...", "email": "...", "name": "..." }, "token": "<session_token>" }`
+
+### B. Sign In
+- **URL**: `/api/auth/sign-in/email`
+- **Method**: `POST`
+- **Body**: `{ "email": "user@example.com", "password": "securepassword123" }`
+- **Success (`200 OK`)**: `{ "user": { "id": "...", "email": "...", "name": "..." }, "token": "<session_token>" }`
+
+### C. Sign Out
+- **URL**: `/api/auth/sign-out`
+- **Method**: `POST`
+- **Headers**: `Authorization: Bearer <session_token>`
+- **Success (`200 OK`)**: `{ "success": true }`
+
+### D. Get Active Session
+- **URL**: `/api/auth/get-session`
+- **Method**: `GET`
+- **Headers**: `Authorization: Bearer <session_token>`
+- **Success (`200 OK`)**: `{ "session": { ... }, "user": { ... } }`
+
+---
+
+## 6. User Cloud Management Endpoints (`/api/v1/users/me`)
+
+Protected endpoints requiring `Authorization: Bearer <token>`.
+
+### A. Profile & Account
+- **`GET /api/v1/users/me`**: Returns profile, cloud item counts, and preferences.
+- **`DELETE /api/v1/users/me`**: Permanently deletes user account, cascading delete to all sessions, saved parking, recent searches, and preferences.
+
+### B. Cloud Saved Parking
+- **`GET /api/v1/users/me/saved-parking`**: Returns array of user's saved parking bookmarks (place IDs only).
+- **`POST /api/v1/users/me/saved-parking`**:
+  - Body: `{ "providerPlaceId": "ChIJb_28z_rkDDkR7Lh4jZ0Z_a0", "customName": "My Work Parking", "notes": "Level 2" }`
+  - Upserts saved bookmark.
+- **`DELETE /api/v1/users/me/saved-parking/:id`**: Deletes saved bookmark by its database record ID.
+
+### C. Cloud Recent Searches
+- **`GET /api/v1/users/me/recent-searches`**: Returns user's recent searches, chronologically sorted, max 10.
+- **`POST /api/v1/users/me/recent-searches`**:
+  - Body: `{ "query": "Connaught Place", "latitude": 28.6315, "longitude": 77.2167, "radiusMeters": 3000, "searchOriginType": "destination" }`
+  - **Note**: Will be silently ignored if user has not opted into `recordRecentSearches`.
+- **`DELETE /api/v1/users/me/recent-searches`**: Clears all recent searches for the authenticated user.
+
+### D. User Preferences
+- **`GET /api/v1/users/me/preferences`**: Retrieves user sync and privacy preferences.
+- **`PATCH /api/v1/users/me/preferences`**:
+  - Body: `{ "recordRecentSearches": true, "syncSavedParking": true, "defaultRadiusMeters": 3000 }`
+  - Updates preferences.
+
+---
+
+## 7. Destination Search Endpoints (`/api/v1/places`)
+
+Proxied Google Places Autocomplete & Details resolution.
+
+### A. Autocomplete Predictions
+- **URL**: `/api/v1/places/autocomplete`
+- **Method**: `POST`
+- **Body**:
+  ```json
+  {
+    "input": "Connaught Place",
+    "sessionToken": "4bbd0541-69cb-4c57-897c-9b5cfb5fbc35",
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "radiusMeters": 50000
+  }
+  ```
+- **Success (`200 OK`)**:
+  ```json
+  {
+    "data": [
+      {
+        "placeId": "ChIJb_28z_rkDDkR7Lh4jZ0Z_a0",
+        "text": "Connaught Place, New Delhi, Delhi, India",
+        "primaryText": "Connaught Place",
+        "secondaryText": "New Delhi, Delhi, India"
+      }
+    ],
+    "meta": { "count": 1, "sessionActive": true }
+  }
+  ```
+
+### B. Destination Resolution
+- **URL**: `/api/v1/places/resolve`
+- **Method**: `POST`
+- **Body**:
+  ```json
+  {
+    "placeId": "ChIJb_28z_rkDDkR7Lh4jZ0Z_a0",
+    "sessionToken": "4bbd0541-69cb-4c57-897c-9b5cfb5fbc35"
+  }
+  ```
+- **Success (`200 OK`)**:
+  ```json
+  {
+    "data": {
+      "placeId": "ChIJb_28z_rkDDkR7Lh4jZ0Z_a0",
+      "name": "Connaught Place",
+      "formattedAddress": "Connaught Place, New Delhi, Delhi 110001, India",
+      "latitude": 28.6315,
+      "longitude": 77.2167
+    },
+    "meta": { "sessionConcluded": true }
+  }
+  ```
+

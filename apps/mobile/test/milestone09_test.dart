@@ -402,6 +402,12 @@ void main() {
       await tester.tap(find.byTooltip('Save parking'));
       await tester.pumpAndSettle();
 
+      // If Auth prompt bottom sheet appeared for guest mode (Milestone 10), dismiss by continuing as guest
+      if (find.text('Continue as Guest').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Continue as Guest'));
+        await tester.pumpAndSettle();
+      }
+
       // Now bookmark is filled (saved)
       expect(find.byIcon(Icons.bookmark_rounded), findsOneWidget);
       expect(find.byTooltip('Remove from saved'), findsOneWidget);
@@ -441,6 +447,12 @@ void main() {
 
       await tester.tap(find.byTooltip('Save parking'));
       await tester.pumpAndSettle();
+
+      // If Auth prompt bottom sheet appeared for guest mode (Milestone 10), dismiss by continuing as guest
+      if (find.text('Continue as Guest').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Continue as Guest'));
+        await tester.pumpAndSettle();
+      }
 
       expect(find.byTooltip('Remove from saved'), findsOneWidget);
     });
