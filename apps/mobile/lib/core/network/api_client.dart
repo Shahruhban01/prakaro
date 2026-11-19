@@ -74,9 +74,18 @@ class ApiClient {
   AppException _handleDioError(DioException error) {
     final statusCode = error.response?.statusCode;
     final dynamic responseData = error.response?.data;
-    final message = (responseData is Map<String, dynamic> && responseData['message'] != null)
-        ? responseData['message'].toString()
-        : error.message ?? 'Network connection failure';
+
+    String? extractedMessage;
+    if (responseData is Map<String, dynamic>) {
+      if (responseData['error'] is Map<String, dynamic> &&
+          responseData['error']['message'] != null) {
+        extractedMessage = responseData['error']['message'].toString();
+      } else if (responseData['message'] != null) {
+        extractedMessage = responseData['message'].toString();
+      }
+    }
+
+    final message = extractedMessage ?? error.message ?? 'Network connection failure';
 
     return NetworkException(
       message: message,

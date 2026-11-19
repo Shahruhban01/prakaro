@@ -41,13 +41,13 @@ cd apps/api
 Copy-Item .env.example .env
 ```
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `NODE_ENV` | Runtime environment (`development`, `test`, `production`) | `development` |
-| `PORT` | HTTP port | `3000` |
-| `HOST` | Binding interface host (`0.0.0.0` binds to all local interfaces) | `0.0.0.0` |
-| `DATABASE_URL` | MySQL connection string (reserved for future migration) | Optional at initial startup |
-| `GOOGLE_PLACES_API_KEY` | Google Places API secret (reserved) | Optional at initial startup |
+| Variable | Description | Required | Default |
+| :--- | :--- | :--- | :--- |
+| `NODE_ENV` | Runtime environment (`development`, `test`, `production`) | No | `development` |
+| `PORT` | HTTP port | No | `3000` |
+| `HOST` | Binding interface host (`0.0.0.0` binds to all local interfaces) | No | `0.0.0.0` |
+| `GOOGLE_PLACES_API_KEY` | Server-side Google Places API (New) key | Yes (for parking) | `""` |
+| `DATABASE_URL` | MySQL connection string (reserved for future migration) | No | — |
 
 ### Running the Server
 ```powershell
@@ -61,26 +61,54 @@ npm run api:start
 
 ### Verification
 ```powershell
-# Test health check endpoint
+# Health check endpoint
 Invoke-RestMethod -Uri http://127.0.0.1:3000/health
+
+# Parking discovery endpoint (requires GOOGLE_PLACES_API_KEY)
+Invoke-RestMethod -Uri "http://127.0.0.1:3000/api/v1/parking/nearby?latitude=34.0837&longitude=74.7973&radius=3000"
 ```
 
 ---
 
-## 3. Flutter & Android Setup (`apps/mobile`)
+## 3. Mobile Setup & Google Maps Configuration (`apps/mobile`)
 
-### Dependency Installation
+### A. Google Maps Android SDK Setup
+
+1. **Enable Maps SDK for Android**:
+   - Open [Google Cloud Console](https://console.cloud.google.com/).
+   - Go to **APIs & Services > Library**.
+   - Search for **Maps SDK for Android** and click **Enable**.
+2. **Generate and Restrict the Android API Key**:
+   - Navigate to **APIs & Services > Credentials > Create Credentials > API Key**.
+   - Under **API restrictions**, select **Restrict key** and check **Maps SDK for Android** only.
+   - Under **Application restrictions**, select **Android apps**.
+   - Add your package name: `com.prakaro.app`.
+   - Add your debug SHA-1 certificate fingerprint.
+3. **Obtain Debug SHA-1 Fingerprint on Windows**:
+   ```powershell
+   keytool -list -v -keystore "$env:USERPROFILE\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
+   ```
+   Look for the `SHA1:` line (e.g., `DA:39:A3:EE:...`).
+4. **Configure the Key Locally**:
+   Add `MAPS_API_KEY` to `apps/mobile/android/local.properties` (which is git-ignored):
+   ```properties
+   MAPS_API_KEY=AIzaSyYourAndroidMapsSdkKey...
+   ```
+   Or set the environment variable:
+   ```powershell
+   $env:MAPS_API_KEY="AIzaSyYourAndroidMapsSdkKey..."
+   ```
+   The Gradle build configuration in `apps/mobile/android/app/build.gradle.kts` automatically injects this value into `AndroidManifest.xml` via `manifestPlaceholders["mapsApiKey"]`.
+
+### B. Dependency Installation & Tests
 ```powershell
 cd apps/mobile
 flutter pub get
-```
 
-### Static Analysis & Unit Tests
-```powershell
-# Run code analysis
+# Run static analysis
 flutter analyze
 
-# Run unit and widget tests
+# Run all automated tests
 flutter test
 ```
 
@@ -117,37 +145,59 @@ When using a physical Android device connected via USB or Wi-Fi:
    cd apps/mobile
    flutter run -d <device-id> --dart-define=API_BASE_URL=http://192.168.1.50:3000
    ```
-5. **Alternative via ADB reverse**:
-   If connected over USB, forward the device port to host:
+5. **Alternative via ADB reverse** (USB tethered):
+   Forward the device port to the host:
    ```powershell
    adb reverse tcp:3000 tcp:3000
    flutter run -d <device-id> --dart-define=API_BASE_URL=http://localhost:3000
    ```
 
-### C. Desktop / Web Development
+---
+
+## 5. Running Backend and Mobile Together
+
+To test live parking discovery end-to-end:
+
+### Terminal 1: Backend
+```powershell
+# In workspace root
+npm run api:dev
+```
+Verify the server starts and logs:
+`Prakaro API server listening at http://0.0.0.0:3000`
+
+### Terminal 2: Flutter App
 ```powershell
 cd apps/mobile
-flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 ```
+
+1. The app boots with the **Parking List View** as the default home screen.
+2. An Android location dialog will request foreground location access.
+3. Upon granting permission, Prakaro queries `GET /api/v1/parking/nearby` on your backend.
+4. Nearby parking locations appear as polished cards sorted by ascending straight-line distance.
+5. Tap **Directions** on any card to launch external navigation.
+6. Toggle the **List / Map** view switcher at any time to inspect locations on the interactive Google Map with markers and "Search this area" support without triggering duplicate network queries.
 
 ---
 
-## 5. Common Troubleshooting Scenarios
+## 6. Common Troubleshooting Scenarios
 
-### 1. `Some Android licenses not accepted`
+### 1. Google Map Shows Blank Grid (No Tiles)
+- Ensure the **Maps SDK for Android** is enabled in your Google Cloud project.
+- Check that `MAPS_API_KEY` is defined in `apps/mobile/android/local.properties`.
+- Check that your package name (`com.prakaro.app`) and debug SHA-1 fingerprint match the key's restriction settings in Google Cloud Console.
+
+### 2. `Some Android licenses not accepted`
 Run the license manager and accept prompts:
 ```powershell
 flutter doctor --android-licenses
 ```
 
-### 2. Backend Fails to Start with `EADDRINUSE`
-Port 3000 is occupied by another process:
-```powershell
-Get-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess | Stop-Process -Force
-```
-Or change `PORT=3001` in `apps/api/.env`.
+### 3. Backend Fails with `CONFIGURATION_ERROR` (503)
+The backend does not have `GOOGLE_PLACES_API_KEY` defined in `apps/api/.env`. Set your Places API key in `apps/api/.env` and restart the backend.
 
-### 3. Flutter `Connection refused` When Invoking API
+### 4. Flutter `Connection refused` When Invoking API
 - Check if backend is bound to `0.0.0.0` (not strictly `127.0.0.1`).
 - Ensure emulator uses `10.0.2.2:3000` instead of `localhost:3000`.
 - Verify Windows Defender Firewall is not blocking the Node process on private networks.

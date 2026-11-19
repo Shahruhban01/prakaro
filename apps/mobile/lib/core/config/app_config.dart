@@ -17,7 +17,7 @@ class AppConfig {
   /// Base URL for Prakaro Backend API service.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000',
+    defaultValue: 'http://100.111.54.111:3000',
   );
 
   static const Duration connectTimeout = Duration(seconds: 10);

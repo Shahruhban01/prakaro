@@ -2,27 +2,29 @@
 
 > Parking discovery, simplified.
 
-**Prakaro** is an Android-first mobile application that enables users to effortlessly discover nearby parking facilities in real-time. The system implements a **strictly backend-driven architecture**, ensuring client lightweightness, centralized business logic, and airtight security for third-party commercial API credentials.
+**Prakaro** is an Android-first mobile application that enables users to effortlessly discover nearby parking facilities in real time. The system implements a **strictly backend-driven architecture**, ensuring client lightweightness, centralized business logic, and airtight security for commercial third-party API credentials.
 
 ---
 
 ## Technology Stack
 
-- **Mobile Application**:
-  - [Flutter](https://flutter.dev/) (Channel stable, 3.44+)
-  - [Dart](https://dart.dev/) (3.12+)
-  - [Riverpod](https://riverpod.dev/) (v3.5+ State Management)
+- **Mobile Application (`apps/mobile`)**:
+  - [Flutter](https://flutter.dev/) (Channel stable, 3.44+) & [Dart](https://dart.dev/) (3.12+)
+  - [Google Maps Flutter](https://pub.dev/packages/google_maps_flutter) (Map viewport, camera control & custom markers)
+  - [Geolocator](https://pub.dev/packages/geolocator) (Foreground GPS location & permissions)
+  - [URL Launcher](https://pub.dev/packages/url_launcher) (External navigation dispatch)
+  - [Riverpod](https://riverpod.dev/) (v3.5+ State Management via `Notifier`)
   - [Dio](https://pub.dev/packages/dio) (v5.11+ HTTP Client)
   - [Material 3](https://m3.material.io/)
-- **Backend API Service**:
-  - [Node.js](https://nodejs.org/) (v20+ LTS)
-  - [TypeScript](https://www.typescriptlang.org/) (Strict Mode)
+- **Backend API Service (`apps/api`)**:
+  - [Node.js](https://nodejs.org/) (v20+ LTS) & [TypeScript](https://www.typescriptlang.org/) (Strict Mode)
   - [Fastify](https://fastify.dev/) (v4.28+)
+  - [Google Places API (New)](https://developers.google.com/maps/documentation/places/web-service/op-overview)
+  - [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit) (Endpoint throttling)
   - [Zod](https://zod.dev/) (Environment & Contract Validation)
   - [ESLint](https://eslint.org/) (v9 Flat Config) & [Prettier](https://prettier.io/)
 - **Database & Persistence (Reserved)**:
-  - MySQL 8+
-  - [Prisma ORM](https://www.prisma.io/) (v5.22+)
+  - MySQL 8+ & [Prisma ORM](https://www.prisma.io/)
 
 ---
 
@@ -33,20 +35,25 @@ prakaro/
 ├── apps/
 │   ├── mobile/                               # Flutter Android-first mobile application
 │   │   ├── android/                          # Native Android platform host
+│   │   │   ├── app/
+│   │   │   │   ├── build.gradle.kts          # Injects mapsApiKey, app ID: com.prakaro.app
+│   │   │   │   └── src/main/AndroidManifest.xml # Permissions & Google Maps meta-data
 │   │   ├── lib/
-│   │   │   ├── app/                          # App root & placeholder UI
+│   │   │   ├── app/                          # PrakaroApp root widget
 │   │   │   ├── core/                         # Shared core infrastructure
 │   │   │   │   ├── config/                   # Compile-time app config & Dart defines
-│   │   │   │   ├── errors/                   # App exceptions & network errors
-│   │   │   │   ├── network/                  # Dio ApiClient & HTTP interceptors
+│   │   │   │   ├── errors/                   # AppException & NetworkException
+│   │   │   │   ├── network/                  # Dio ApiClient & error translation
+│   │   │   │   ├── services/                 # LocationService (GPS) & NavigationService
 │   │   │   │   └── theme/                    # Material 3 light/dark theme definitions
 │   │   │   ├── features/
 │   │   │   │   └── parking/                  # Parking feature domain slices
-│   │   │   │       ├── data/                 # Repositories & DTOs
-│   │   │   │       ├── domain/               # Domain models & interfaces
-│   │   │   │       └── presentation/         # View widgets & Riverpod providers
+│   │   │   │       ├── data/                 # ParkingLocationDto & ParkingRemoteDataSource
+│   │   │   │       ├── domain/               # ParkingLocation entity & ParkingRepository
+│   │   │   │       └── presentation/         # ParkingHomeScreen, ParkingListScreen (Default),
+│   │   │   │                                 # ParkingMapScreen, ParkingViewSwitcher, ParkingCard
 │   │   │   └── main.dart                     # App entry point (ProviderScope root)
-│   │   ├── test/                             # Flutter widget & unit tests
+│   │   ├── test/                             # Unit, repository, and widget tests
 │   │   └── pubspec.yaml
 │   │
 │   └── api/                                  # Fastify TypeScript backend service
@@ -54,23 +61,22 @@ prakaro/
 │       │   └── schema.prisma
 │       ├── src/
 │       │   ├── common/                       # Centralized errors & middleware
-│       │   │   ├── errors/
-│       │   │   └── middleware/
 │       │   ├── config/                       # Zod-validated environment config
-│       │   ├── integrations/                 # Google Places & R2 external adapters
+│       │   ├── integrations/
+│       │   │   └── google-places/            # Google Places API client & mapper
 │       │   ├── modules/
-│       │   │   └── parking/                  # Parking search domain & controllers
+│       │   │   └── parking/                  # Parking discovery routes & controller
 │       │   ├── app.ts                        # Fastify application factory
 │       │   └── server.ts                     # Server entry point & graceful shutdown
-│       ├── tests/                            # API integration tests
+│       ├── tests/                            # API integration tests (health & parking)
 │       ├── .env.example                      # Sample environment variables
 │       ├── package.json
 │       └── tsconfig.json
 │
 ├── docs/
 │   ├── architecture.md                       # Architectural principles & boundaries
-│   ├── development.md                        # Local Windows development guide
-│   └── api-contract.md                       # REST API specification
+│   ├── development.md                        # Local Windows development & networking guide
+│   └── api-contract.md                       # REST API specification & setup guide
 ├── .editorconfig                             # Cross-editor formatting standards
 ├── .gitignore                                # Comprehensive root gitignore
 ├── package.json                              # Workspace root scripts
@@ -79,88 +85,52 @@ prakaro/
 
 ---
 
-## Prerequisites
-
-- **Node.js**: `v20.x` LTS or newer
-- **npm**: `v10.x` or newer
-- **Flutter SDK**: `3.22.x` (or newer stable release, e.g. `3.44.0`)
-- **Android SDK & Toolchain**: Android API 34+ and Command-line Tools / Android Studio
-- **Git**
-
----
-
 ## Quick Start & Installation
 
-### 1. Clone the repository
+### 1. Install Backend Dependencies
 ```powershell
-git clone <repo-url> prakaro
-cd prakaro
-```
-
-### 2. Install Dependencies
-
-```powershell
-# Install backend dependencies from root
 npm run api:install
-
-# Install mobile dependencies
-cd apps/mobile
-flutter pub get
-cd ../..
+npm run api:build
 ```
 
----
-
-## How to Start the Backend
-
-### Environment Configuration
-Create the local `.env` file from `.env.example`:
-
+### 2. Configure Backend Environment
 ```powershell
 cd apps/api
 Copy-Item .env.example .env
+# Open .env and add your GOOGLE_PLACES_API_KEY
 ```
 
-### Running the Backend
-
+### 3. Install Mobile Dependencies
 ```powershell
-# Development mode with hot reload (from root)
-npm run api:dev
-
-# Or production build & start
-npm run api:build
-npm run api:start
+cd apps/mobile
+flutter pub get
 ```
 
-The API will bind by default to `http://0.0.0.0:3000`.
-
-### Health Check Verification
-```powershell
-curl http://localhost:3000/health
-# Output: {"status":"ok","service":"prakaro-api"}
+### 4. Configure Android Maps API Key
+Add your Android-restricted Google Maps key to `apps/mobile/android/local.properties`:
+```properties
+MAPS_API_KEY=AIzaSyYourAndroidMapsSdkKey...
 ```
 
 ---
 
-## How to Run Flutter
+## How to Run Backend and Mobile Together
 
-### Running on Android Emulator
+### Step 1: Start the Backend API
 ```powershell
-cd apps/mobile
-flutter run -d <emulator-id> --dart-define=API_BASE_URL=http://10.0.2.2:3000
+# From workspace root
+npm run api:dev
 ```
+The server will start listening at `http://0.0.0.0:3000`.
 
-### Running on Physical Android Device
-Ensure your phone and computer share the same local network:
+### Step 2: Run Flutter on Android
 ```powershell
+# Running on Android Emulator
 cd apps/mobile
-flutter run -d <device-id> --dart-define=API_BASE_URL=http://<YOUR_COMPUTER_LAN_IP>:3000
-```
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 
-### Running on Windows Desktop (Quick UI testing)
-```powershell
-cd apps/mobile
-flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000
+# Running on Physical Android Device (over Wi-Fi)
+flutter run --dart-define=API_BASE_URL=http://<YOUR_COMPUTER_LAN_IP>:3000
 ```
 
 ---
@@ -171,10 +141,9 @@ flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000
 | :--- | :--- |
 | `npm run api:build` | Compiles TypeScript backend in strict mode |
 | `npm run api:lint` | Runs ESLint across the backend codebase |
-| `npm run api:format` | Formats backend code with Prettier |
-| `npm run api:test` | Executes backend test suite (Fastify health test) |
-| `flutter analyze` | Runs Dart analyzer across the mobile app |
-| `flutter test` | Executes Flutter unit & widget tests |
+| `npm run api:test` | Executes backend test suite (13 integration tests) |
+| `flutter analyze` | Runs Dart static analysis across the mobile codebase |
+| `flutter test` | Executes Flutter unit, DTO, repository, and widget tests |
 
 ---
 
