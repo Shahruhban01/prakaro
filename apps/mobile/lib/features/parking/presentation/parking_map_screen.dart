@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/services/location_service.dart';
+import '../../../core/theme/app_theme.dart';
 import '../domain/parking_location.dart';
 import 'parking_providers.dart';
 import 'widgets/parking_details_sheet.dart';
@@ -62,7 +63,9 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
           snippet: loc.address,
         ),
         onTap: () {
+          AppHaptics.lightImpact();
           ref.read(parkingMapProvider.notifier).selectLocation(loc);
+          _animateToPosition(loc.latitude, loc.longitude);
         },
       );
     }).toSet();
@@ -134,16 +137,16 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Branding Badge
+                      // Compact Branding Badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: colorScheme.surface.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 8,
+                              blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
                           ],
@@ -151,16 +154,29 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.local_parking_rounded,
-                              size: 20,
-                              color: colorScheme.primary,
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'P',
+                                style: TextStyle(
+                                  color: colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Prakaro',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
                                 color: colorScheme.onSurface,
                               ),
                             ),
@@ -176,59 +192,36 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                     ],
                   ),
 
-                  // Spots count badge
-                  if (state.status == ParkingMapStatus.loaded && state.locations.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        '${state.locations.length} spots nearby',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-
                   // "Search this area" Button
                   if (state.canSearchArea && !state.isLoading) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
                       label: const Text('Search this area'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: colorScheme.surface,
                         foregroundColor: colorScheme.primary,
-                        elevation: 4,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        elevation: 3,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         ),
                       ),
-                      onPressed: () => notifier.searchCurrentArea(),
+                      onPressed: () {
+                        AppHaptics.lightImpact();
+                        notifier.searchCurrentArea();
+                      },
                     ),
                   ],
 
                   // Loading Indicator
                   if (state.isLoading) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(20),
+                        color: colorScheme.surface.withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.06),
@@ -248,12 +241,12 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                               color: colorScheme.primary,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Text(
-                            'Finding parking spots...',
+                            'Finding parking facilities...',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -265,18 +258,21 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             ),
           ),
 
-          // 3. Recenter Floating Button
-          Positioned(
+          // 3. Recenter Floating Button (animated above the details sheet if open)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
             right: 16,
-            bottom: state.selectedLocation != null ? 220 : 32,
+            bottom: state.selectedLocation != null ? 240 : 28,
             child: FloatingActionButton.small(
               heroTag: 'recenter_fab',
               backgroundColor: colorScheme.surface,
               foregroundColor: colorScheme.primary,
-              elevation: 4,
+              elevation: 3,
               tooltip: 'Re-center on my location',
-              child: const Icon(Icons.my_location_rounded),
+              child: const Icon(Icons.my_location_rounded, size: 20),
               onPressed: () {
+                AppHaptics.lightImpact();
                 final userLat = state.userLatitude;
                 final userLng = state.userLongitude;
                 if (userLat != null && userLng != null) {
@@ -330,25 +326,28 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
       child: Card(
         color: colorScheme.surface,
         elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.location_off_rounded, size: 36, color: colorScheme.error),
+              Icon(Icons.location_on_outlined, size: 32, color: colorScheme.primary),
               const SizedBox(height: 8),
               Text(
-                'Location Permission Required',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                'Find parking near you',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Prakaro needs foreground location access to find nearby parking facilities around you.',
+                'Allow location access to discover nearby parking facilities around your current position.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -359,7 +358,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
                   const SizedBox(width: 12),
                   FilledButton(
                     onPressed: () => notifier.init(force: true),
-                    child: const Text('Grant Access'),
+                    child: const Text('Allow Access'),
                   ),
                 ],
               ),
@@ -383,25 +382,28 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
       child: Card(
         color: colorScheme.surface,
         elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.gps_off_rounded, size: 36, color: colorScheme.error),
+              Icon(Icons.gps_off_rounded, size: 32, color: colorScheme.error),
               const SizedBox(height: 8),
               Text(
-                'Device Location Disabled',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                'Turn on location',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Please enable GPS / location services on your device to discover parking spots.',
+                'Turn on device location to find nearby parking facilities.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               FilledButton(
                 onPressed: () => ref.read(locationServiceProvider).openLocationSettings(),
                 child: const Text('Enable Location'),
@@ -416,13 +418,13 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
   Widget _buildEmptyStateToast(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
     return Positioned(
       bottom: 24,
-      left: 32,
-      right: 32,
+      left: 24,
+      right: 24,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: colorScheme.inverseSurface.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(24),
+          color: colorScheme.inverseSurface.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.12),
@@ -436,9 +438,12 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
           children: [
             Icon(Icons.info_outline_rounded, size: 18, color: colorScheme.onInverseSurface),
             const SizedBox(width: 8),
-            Text(
-              'No parking facilities found in this area.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onInverseSurface),
+            Flexible(
+              child: Text(
+                'No parking facilities found in this area.',
+                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onInverseSurface),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -454,11 +459,11 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
   ) {
     return Positioned(
       bottom: 24,
-      left: 20,
-      right: 20,
+      left: 16,
+      right: 16,
       child: Card(
-        color: colorScheme.errorContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: colorScheme.errorContainer.withValues(alpha: 0.9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(

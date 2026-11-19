@@ -37,7 +37,7 @@ class LocationService {
       if (!isServiceEnabled) {
         return const LocationFailure(
           LocationFailureReason.serviceDisabled,
-          'Location services are disabled on your device.',
+          'Turn on location to find nearby parking.',
         );
       }
 
@@ -47,7 +47,7 @@ class LocationService {
         if (permission == LocationPermission.denied) {
           return const LocationFailure(
             LocationFailureReason.permissionDenied,
-            'Location permission was denied.',
+            'Allow location access to discover nearby parking.',
           );
         }
       }
@@ -55,7 +55,7 @@ class LocationService {
       if (permission == LocationPermission.deniedForever) {
         return const LocationFailure(
           LocationFailureReason.permissionPermanentlyDenied,
-          'Location permission is permanently denied. Please enable it in App Settings.',
+          'Location access is disabled. You can enable it in device settings.',
         );
       }
 
@@ -67,10 +67,10 @@ class LocationService {
       );
 
       return LocationSuccess(position.latitude, position.longitude);
-    } catch (e) {
-      return LocationFailure(
+    } catch (_) {
+      return const LocationFailure(
         LocationFailureReason.unknown,
-        'Failed to obtain location: $e',
+        'Unable to detect your location. Please check your GPS and try again.',
       );
     }
   }

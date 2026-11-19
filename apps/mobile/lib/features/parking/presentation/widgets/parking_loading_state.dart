@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Skeleton placeholder cards rendered while nearby parking data is loading.
+import '../../../../core/theme/app_theme.dart';
+
+/// Lightweight, calming skeleton placeholder rendered during initial parking discovery.
 class ParkingLoadingState extends StatefulWidget {
-  const ParkingLoadingState({super.key, this.itemCount = 4});
+  const ParkingLoadingState({super.key, this.itemCount = 3});
 
   final int itemCount;
 
@@ -20,10 +22,10 @@ class _ParkingLoadingStateState extends State<ParkingLoadingState>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
 
-    _opacityAnimation = Tween<double>(begin: 0.35, end: 0.75).animate(
+    _opacityAnimation = Tween<double>(begin: 0.35, end: 0.7).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -36,6 +38,21 @@ class _ParkingLoadingStateState extends State<ParkingLoadingState>
 
   @override
   Widget build(BuildContext context) {
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+
+    Widget content = ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: widget.itemCount,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, _) => const _SkeletonParkingCard(),
+    );
+
+    if (disableAnimations) {
+      return Opacity(opacity: 0.5, child: content);
+    }
+
     return AnimatedBuilder(
       animation: _opacityAnimation,
       builder: (context, child) {
@@ -44,14 +61,7 @@ class _ParkingLoadingStateState extends State<ParkingLoadingState>
           child: child,
         );
       },
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        itemCount: widget.itemCount,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, _) => const _SkeletonParkingCard(),
-      ),
+      child: content,
     );
   }
 }
@@ -74,11 +84,11 @@ class _SkeletonParkingCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: placeholderColor,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -91,16 +101,16 @@ class _SkeletonParkingCard extends StatelessWidget {
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color: placeholderColor,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                         ),
                       ),
                       const SizedBox(height: 8),
                       Container(
                         height: 12,
-                        width: 180,
+                        width: 170,
                         decoration: BoxDecoration(
                           color: placeholderColor,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                         ),
                       ),
                     ],
@@ -108,24 +118,24 @@ class _SkeletonParkingCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
                   height: 12,
-                  width: 100,
+                  width: 90,
                   decoration: BoxDecoration(
                     color: placeholderColor,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                   ),
                 ),
                 Container(
-                  height: 32,
-                  width: 96,
+                  height: 34,
+                  width: 90,
                   decoration: BoxDecoration(
                     color: placeholderColor,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   ),
                 ),
               ],

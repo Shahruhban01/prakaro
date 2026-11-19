@@ -70,6 +70,8 @@ class FakeParkingRepository implements ParkingRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('1. Parking DTO parsing', () {
     test('parses complete valid json and converts to domain', () {
       final json = {

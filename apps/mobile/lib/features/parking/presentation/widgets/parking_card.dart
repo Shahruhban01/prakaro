@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/navigation_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/parking_location.dart';
 import '../parking_providers.dart';
 
-/// Professional, modern Material 3 card displaying nearby parking facility details.
-class ParkingCard extends ConsumerWidget {
+/// Refined, accessible card displaying a single discovered parking facility.
+class ParkingCard extends ConsumerStatefulWidget {
   const ParkingCard({
     super.key,
     required this.location,
@@ -19,43 +20,96 @@ class ParkingCard extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ParkingCard> createState() => _ParkingCardState();
+}
+
+class _ParkingCardState extends ConsumerState<ParkingCard> {
+  DateTime? _lastLaunchTime;
+  bool _isLaunching = false;
+
+  Future<void> _handleDirections() async {
+    final now = DateTime.now();
+    if (_lastLaunchTime != null && now.difference(_lastLaunchTime!).inMilliseconds < 1200) {
+      return;
+    }
+    _lastLaunchTime = now;
+
+    if (_isLaunching) return;
+    setState(() => _isLaunching = true);
+
+    AppHaptics.lightImpact();
+
+    try {
+      final nav = ref.read(navigationServiceProvider);
+      final launched = await nav.openDirections(
+        destinationLatitude: widget.location.latitude,
+        destinationLongitude: widget.location.longitude,
+        destinationLabel: widget.location.name,
+      );
+
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open external navigation application.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLaunching = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final displayAddress =
-        location.address.trim().isEmpty ? 'Address unavailable' : location.address;
+    final displayName = widget.location.name.trim().isEmpty
+        ? 'Parking Facility'
+        : widget.location.name.trim();
 
-    final formattedDistance = distanceMeters != null
-        ? '${ParkingMapState.formatDistance(distanceMeters)} (straight-line)'
+    final displayAddress = widget.location.address.trim().isEmpty
+        ? 'Address unavailable'
+        : widget.location.address.trim();
+
+    final formattedDistance = widget.distanceMeters != null
+        ? '${ParkingMapState.formatDistance(widget.distanceMeters)} (straight-line)'
         : 'Distance unavailable';
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Top Row: Parking Icon, Facility Name, and Optional Source Tag
+              // 1. Facility Header: Parking Emblem + Name
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Recognizable Parking Badge
+                  // High-contrast recognizable parking badge
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
-                    child: Icon(
-                      Icons.local_parking_rounded,
-                      size: 26,
-                      color: colorScheme.onPrimaryContainer,
+                    child: Text(
+                      'P',
+                      style: TextStyle(
+                        color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 20,
+                        letterSpacing: -0.5,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -66,11 +120,12 @@ class ParkingCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          location.name.trim().isEmpty ? 'Parking Facility' : location.name,
+                          displayName,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
+                            letterSpacing: -0.3,
                             color: colorScheme.onSurface,
+                            height: 1.25,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -107,60 +162,64 @@ class ParkingCard extends ConsumerWidget {
                 ],
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-              // Bottom Row: Distance & Directions Action
+              // 2. Metadata & Action Row: Distance + Directions Button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Approximate straight-line distance indicator
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.near_me_outlined,
-                        size: 14,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        formattedDistance,
-                        style: theme.textTheme.labelMedium?.copyWith(
+                  // Distance label (scannable & clear)
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.near_me_outlined,
+                          size: 14,
                           color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            formattedDistance,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.1,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
-                  // Clear "Directions" action button
+                  const SizedBox(width: 12),
+
+                  // Directions Action Button
                   FilledButton.tonalIcon(
-                    icon: const Icon(Icons.directions_rounded, size: 16),
+                    icon: _isLaunching
+                        ? SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colorScheme.onSecondaryContainer,
+                            ),
+                          )
+                        : const Icon(Icons.directions_rounded, size: 16),
                     label: const Text('Directions'),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      minimumSize: const Size(0, 36),
+                      minimumSize: const Size(0, 38),
                       textStyle: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    onPressed: () async {
-                      final nav = ref.read(navigationServiceProvider);
-                      final launched = await nav.openDirections(
-                        destinationLatitude: location.latitude,
-                        destinationLongitude: location.longitude,
-                        destinationLabel: location.name,
-                      );
-
-                      if (!launched && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Could not open external navigation application.'),
-                          ),
-                        );
-                      }
-                    },
+                    onPressed: _isLaunching ? null : () => _handleDirections(),
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/location_service.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/parking_remote_data_source.dart';
 import '../data/parking_repository_impl.dart';
 import '../domain/parking_location.dart';
@@ -55,6 +56,7 @@ class ParkingMapState {
   const ParkingMapState({
     this.viewMode = ParkingViewMode.list,
     this.status = ParkingMapStatus.initializing,
+    this.isRefreshing = false,
     this.userLatitude,
     this.userLongitude,
     this.cameraLatitude,
@@ -70,6 +72,7 @@ class ParkingMapState {
 
   final ParkingViewMode viewMode;
   final ParkingMapStatus status;
+  final bool isRefreshing;
   final double? userLatitude;
   final double? userLongitude;
   final double? cameraLatitude;
@@ -126,9 +129,16 @@ class ParkingMapState {
     return '${km.toStringAsFixed(1)} km';
   }
 
+  /// Compact formatted label indicating straight-line approximation.
+  static String formatDistanceLabel(double? meters) {
+    if (meters == null) return 'Distance unavailable';
+    return '${formatDistance(meters)} away (straight-line)';
+  }
+
   ParkingMapState copyWith({
     ParkingViewMode? viewMode,
     ParkingMapStatus? status,
+    bool? isRefreshing,
     double? userLatitude,
     double? userLongitude,
     double? cameraLatitude,
@@ -145,6 +155,7 @@ class ParkingMapState {
     return ParkingMapState(
       viewMode: viewMode ?? this.viewMode,
       status: status ?? this.status,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
       userLatitude: userLatitude ?? this.userLatitude,
       userLongitude: userLongitude ?? this.userLongitude,
       cameraLatitude: cameraLatitude ?? this.cameraLatitude,
@@ -176,6 +187,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
   void setViewMode(ParkingViewMode mode) {
     if (!ref.mounted) return;
     if (state.viewMode == mode) return;
+    AppHaptics.selection();
     state = state.copyWith(viewMode: mode);
   }
 
@@ -221,11 +233,16 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
 
   /// Pull-to-refresh or user-triggered refresh of parking results.
   Future<void> refresh() async {
+    AppHaptics.lightImpact();
     final userLat = state.userLatitude;
     final userLng = state.userLongitude;
 
     if (userLat != null && userLng != null) {
-      await searchNearby(latitude: userLat, longitude: userLng);
+      await searchNearby(
+        latitude: userLat,
+        longitude: userLng,
+        isRefresh: true,
+      );
     } else {
       await init(force: true);
     }
@@ -236,18 +253,31 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     required double latitude,
     required double longitude,
     int? radius,
+    bool isRefresh = false,
   }) async {
     if (!ref.mounted) return;
     final effectiveRadius = radius ?? state.radiusMeters;
 
-    state = state.copyWith(
-      status: ParkingMapStatus.loading,
-      canSearchArea: false,
-      lastSearchedLatitude: latitude,
-      lastSearchedLongitude: longitude,
-      radiusMeters: effectiveRadius,
-      clearSelectedLocation: true,
-    );
+    // Retain existing locations during pull-to-refresh to prevent UI jump
+    if (isRefresh && state.locations.isNotEmpty) {
+      state = state.copyWith(
+        isRefreshing: true,
+        canSearchArea: false,
+        lastSearchedLatitude: latitude,
+        lastSearchedLongitude: longitude,
+        radiusMeters: effectiveRadius,
+      );
+    } else {
+      state = state.copyWith(
+        status: ParkingMapStatus.loading,
+        isRefreshing: false,
+        canSearchArea: false,
+        lastSearchedLatitude: latitude,
+        lastSearchedLongitude: longitude,
+        radiusMeters: effectiveRadius,
+        clearSelectedLocation: true,
+      );
+    }
 
     try {
       final results = await parkingRepository.getNearbyParking(
@@ -261,11 +291,13 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
       if (results.isEmpty) {
         state = state.copyWith(
           status: ParkingMapStatus.empty,
+          isRefreshing: false,
           locations: const [],
         );
       } else {
         state = state.copyWith(
           status: ParkingMapStatus.loaded,
+          isRefreshing: false,
           locations: results,
         );
       }
@@ -276,18 +308,32 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
           e.statusCode == 502 ||
           e.statusCode == 504;
 
-      state = state.copyWith(
-        status: isBackendUnreachable
-            ? ParkingMapStatus.backendUnavailable
-            : ParkingMapStatus.error,
-        errorMessage: e.message,
-      );
+      // If we already have cached results from a prior load, retain them and clear refresh flag
+      if (isRefresh && state.locations.isNotEmpty) {
+        state = state.copyWith(
+          isRefreshing: false,
+          errorMessage: e.message,
+        );
+      } else {
+        state = state.copyWith(
+          status: isBackendUnreachable
+              ? ParkingMapStatus.backendUnavailable
+              : ParkingMapStatus.error,
+          isRefreshing: false,
+          errorMessage: e.message,
+        );
+      }
     } catch (e) {
       if (!ref.mounted) return;
-      state = state.copyWith(
-        status: ParkingMapStatus.error,
-        errorMessage: 'An unexpected error occurred: $e',
-      );
+      if (isRefresh && state.locations.isNotEmpty) {
+        state = state.copyWith(isRefreshing: false);
+      } else {
+        state = state.copyWith(
+          status: ParkingMapStatus.error,
+          isRefreshing: false,
+          errorMessage: 'An unexpected error occurred while searching for parking.',
+        );
+      }
     }
   }
 

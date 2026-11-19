@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prakaro/core/services/navigation_service.dart';
+import 'package:prakaro/core/theme/app_theme.dart';
 import 'package:prakaro/features/parking/domain/parking_location.dart';
 import 'package:prakaro/features/parking/presentation/parking_list_screen.dart';
 import 'package:prakaro/features/parking/presentation/parking_providers.dart';
@@ -13,7 +14,7 @@ import 'package:prakaro/features/parking/presentation/widgets/parking_loading_st
 import 'package:prakaro/features/parking/presentation/widgets/parking_view_switcher.dart';
 
 class MockNavigationService extends NavigationService {
-  bool launched = false;
+  int launchCount = 0;
   double? lastLat;
   double? lastLng;
   String? lastLabel;
@@ -24,7 +25,7 @@ class MockNavigationService extends NavigationService {
     required double destinationLongitude,
     String? destinationLabel,
   }) async {
-    launched = true;
+    launchCount++;
     lastLat = destinationLatitude;
     lastLng = destinationLongitude;
     lastLabel = destinationLabel;
@@ -66,12 +67,51 @@ void main() {
 
         expect(find.text('Grand Central Parking'), findsOneWidget);
         expect(find.text('45 Residency Road, Srinagar'), findsOneWidget);
-        expect(find.text('450 m away'), findsOneWidget);
+        expect(find.text('450 m away (straight-line)'), findsOneWidget);
         expect(find.text('Directions'), findsOneWidget);
 
         await tester.tap(find.byIcon(Icons.close_rounded));
         await tester.pump();
         expect(closed, isTrue);
+      },
+    );
+
+    testWidgets(
+      'handles text scaling gracefully without RenderFlex overflow',
+      (WidgetTester tester) async {
+        const testLocation = ParkingLocation(
+          id: 'google:long_text',
+          name:
+              'A Very Long Parking Facility Name That Extends Over Multiple Lines In Narrow Viewports',
+          latitude: 34.0837,
+          longitude: 74.7973,
+          address:
+              'Building 4A, Tech Industrial Boulevard, Near Sector 6 Metro Station, Srinagar, Jammu & Kashmir',
+          source: 'google',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                textScaler: TextScaler.linear(1.5),
+                size: Size(360, 640),
+              ),
+              child: Scaffold(
+                body: ProviderScope(
+                  child: ParkingDetailsSheet(
+                    location: testLocation,
+                    distanceMeters: 1420,
+                    onClose: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Directions'), findsOneWidget);
       },
     );
   });
@@ -122,10 +162,15 @@ void main() {
         // Tap Directions button
         await tester.tap(find.text('Directions'));
         await tester.pump();
-        expect(mockNav.launched, isTrue);
+        expect(mockNav.launchCount, 1);
         expect(mockNav.lastLat, 12.9716);
         expect(mockNav.lastLng, 77.5946);
         expect(mockNav.lastLabel, 'Downtown Safe Park');
+
+        // Immediate second tap should be debounced
+        await tester.tap(find.text('Directions'));
+        await tester.pump();
+        expect(mockNav.launchCount, 1);
       },
     );
 
@@ -157,6 +202,37 @@ void main() {
         expect(find.text('Riverside Lot'), findsOneWidget);
         expect(find.text('Address unavailable'), findsOneWidget);
         expect(find.text('Distance unavailable'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'handles long names and unusual Unicode characters without overflow',
+      (WidgetTester tester) async {
+        const testLocation = ParkingLocation(
+          id: 'google:unicode_lot',
+          name: '🅿️ Central Multi-Level Parking • 地下駐車場 • مواقف السيارات',
+          latitude: 12.9716,
+          longitude: 77.5946,
+          address: 'International Plaza, Wing B',
+          source: 'google',
+        );
+
+        await tester.pumpWidget(
+          const ProviderScope(
+            child: MaterialApp(
+              home: Scaffold(
+                body: ParkingCard(
+                  location: testLocation,
+                  distanceMeters: 2300,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.textContaining('Central Multi-Level'), findsOneWidget);
+        expect(find.text('2.3 km (straight-line)'), findsOneWidget);
       },
     );
   });
@@ -212,16 +288,16 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: ParkingEmptyState(
-                title: 'No parking found nearby',
-                message: 'No spots available within 3 km.',
+                title: 'No parking facilities found',
+                message: 'No facilities detected within 3 km.',
                 onRetry: () => retried = true,
               ),
             ),
           ),
         );
 
-        expect(find.text('No parking found nearby'), findsOneWidget);
-        expect(find.text('No spots available within 3 km.'), findsOneWidget);
+        expect(find.text('No parking facilities found'), findsOneWidget);
+        expect(find.text('No facilities detected within 3 km.'), findsOneWidget);
         expect(find.text('Refresh Search'), findsOneWidget);
 
         await tester.tap(find.text('Refresh Search'));
@@ -265,7 +341,7 @@ void main() {
     );
   });
 
-  group('7. ParkingListScreen states', () {
+  group('7. ParkingListScreen states and responsive layouts', () {
     testWidgets(
       'renders loaded list with Prakaro branding, cards, count, and Google attribution',
       (WidgetTester tester) async {
@@ -307,7 +383,7 @@ void main() {
 
         expect(find.text('Prakaro'), findsOneWidget);
         expect(find.text('Parking near you'), findsOneWidget);
-        expect(find.text('2 spots found'), findsOneWidget);
+        expect(find.text('2 parking facilities found'), findsOneWidget);
         expect(find.text('Central Plaza Parking'), findsOneWidget);
         expect(find.text('North Bay Parking'), findsOneWidget);
         expect(find.text('Powered by Google Places'), findsOneWidget);
@@ -334,18 +410,18 @@ void main() {
           ),
         );
 
-        expect(find.text('No parking found nearby'), findsOneWidget);
+        expect(find.text('No parking facilities found'), findsOneWidget);
         expect(find.text('Refresh Search'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'renders permission required view when location permission denied',
+      'renders friendly permission required view when location access is needed',
       (WidgetTester tester) async {
         final container = ProviderContainer();
         container.read(parkingMapProvider.notifier).state = const ParkingMapState(
           status: ParkingMapStatus.locationPermissionRequired,
-          errorMessage: 'Location permission denied by user',
+          errorMessage: 'Allow location access to discover nearby parking.',
         );
 
         await tester.pumpWidget(
@@ -357,8 +433,8 @@ void main() {
           ),
         );
 
-        expect(find.text('Location Permission Required'), findsOneWidget);
-        expect(find.text('Grant Access'), findsOneWidget);
+        expect(find.text('Find parking near you'), findsOneWidget);
+        expect(find.text('Allow Access'), findsOneWidget);
         expect(find.text('Open Settings'), findsOneWidget);
       },
     );
@@ -369,7 +445,7 @@ void main() {
         final container = ProviderContainer();
         container.read(parkingMapProvider.notifier).state = const ParkingMapState(
           status: ParkingMapStatus.backendUnavailable,
-          errorMessage: 'Unable to connect to parking discovery service.',
+          errorMessage: 'Unable to connect to the parking discovery service.',
         );
 
         await tester.pumpWidget(
@@ -381,8 +457,85 @@ void main() {
           ),
         );
 
-        expect(find.text('Discovery Service Unavailable'), findsOneWidget);
+        expect(find.text('Service Notice'), findsOneWidget);
         expect(find.text('Try Again'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'renders cleanly on small-screen compact devices (320x480)',
+      (WidgetTester tester) async {
+        const locations = [
+          ParkingLocation(
+            id: 'spot_small',
+            name: 'City Compact Parking',
+            latitude: 34.08,
+            longitude: 74.79,
+            address: 'Lane 1',
+            source: 'google',
+          ),
+        ];
+
+        final container = ProviderContainer();
+        container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+          status: ParkingMapStatus.loaded,
+          userLatitude: 34.0837,
+          userLongitude: 74.7973,
+          locations: locations,
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MediaQuery(
+              data: const MediaQueryData(size: Size(320, 480)),
+              child: const MaterialApp(
+                home: ParkingListScreen(),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('City Compact Parking'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'supports Dark theme rendering without errors',
+      (WidgetTester tester) async {
+        const locations = [
+          ParkingLocation(
+            id: 'spot_dark',
+            name: 'Night Express Parking',
+            latitude: 34.08,
+            longitude: 74.79,
+            address: 'Dark Ave',
+            source: 'google',
+          ),
+        ];
+
+        final container = ProviderContainer();
+        container.read(parkingMapProvider.notifier).state = const ParkingMapState(
+          status: ParkingMapStatus.loaded,
+          userLatitude: 34.0837,
+          userLongitude: 74.7973,
+          locations: locations,
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              themeMode: ThemeMode.dark,
+              home: const ParkingListScreen(),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Night Express Parking'), findsOneWidget);
       },
     );
   });

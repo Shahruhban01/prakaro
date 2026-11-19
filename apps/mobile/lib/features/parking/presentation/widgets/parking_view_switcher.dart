@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../parking_providers.dart';
 
 /// Clean, modern segmented view switcher for toggling between List and Map presentations.
@@ -15,15 +16,14 @@ class ParkingViewSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(24),
+        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(3),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -31,14 +31,24 @@ class ParkingViewSwitcher extends StatelessWidget {
             label: 'List',
             icon: Icons.format_list_bulleted_rounded,
             isSelected: currentMode == ParkingViewMode.list,
-            onTap: () => onModeChanged(ParkingViewMode.list),
+            onTap: () {
+              if (currentMode != ParkingViewMode.list) {
+                AppHaptics.selection();
+                onModeChanged(ParkingViewMode.list);
+              }
+            },
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
           _SwitcherTab(
             label: 'Map',
             icon: Icons.map_outlined,
             isSelected: currentMode == ParkingViewMode.map,
-            onTap: () => onModeChanged(ParkingViewMode.map),
+            onTap: () {
+              if (currentMode != ParkingViewMode.map) {
+                AppHaptics.selection();
+                onModeChanged(ParkingViewMode.map);
+              }
+            },
           ),
         ],
       ),
@@ -68,20 +78,20 @@ class _SwitcherTab extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
             color: isSelected ? colorScheme.surfaceContainerLowest : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
                     ),
                   ]
                 : null,
@@ -100,6 +110,7 @@ class _SwitcherTab extends StatelessWidget {
                 style: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
+                  letterSpacing: -0.1,
                 ),
               ),
             ],
