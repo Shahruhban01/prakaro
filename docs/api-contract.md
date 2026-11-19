@@ -360,3 +360,54 @@ Proxied Google Places Autocomplete & Details resolution.
   }
   ```
 
+
+
+---
+
+## 8. Parking Photos & Visual Facility Details (`/api/v1/parking/:id/photos`)
+
+Proxied Google Places API (New) Place Photos endpoints with SSRF protection and streaming media.
+
+### A. Facility Photos Metadata
+- **URL**: `/api/v1/parking/:id/photos`
+- **Method**: `GET`
+- **Authentication**: None (public / guest-accessible)
+- **Parameters**:
+  - `id` (path): Google Place ID (`places/ChIJ...`, `ChIJ...`, or `google:ChIJ...`)
+- **Success (`200 OK`)**:
+  ```json
+  {
+    "facilityId": "google:ChIJtest123",
+    "photos": [
+      {
+        "id": "0",
+        "source": "google",
+        "width": 1920,
+        "height": 1080,
+        "attributions": [
+          {
+            "displayName": "Alex Traveler",
+            "uri": "https://maps.google.com/maps/contrib/123456789"
+          }
+        ],
+        "mediaUrl": "/api/v1/parking/google:ChIJtest123/photos/0/media"
+      }
+    ],
+    "total": 1
+  }
+  ```
+
+### B. Facility Photo Media Stream
+- **URL**: `/api/v1/parking/:id/photos/:photoIndex/media`
+- **Method**: `GET`
+- **Authentication**: None (public / guest-accessible)
+- **Parameters**:
+  - `id` (path): Google Place ID
+  - `photoIndex` (path): 0-indexed integer (0 to 4)
+  - `maxWidth` (query, optional): integer (100–4800, default: 1200)
+  - `maxHeight` (query, optional): integer (100–4800, default: 800)
+- **Success (`200 OK`)**:
+  - Headers:
+    - `Content-Type`: `image/jpeg` (or image/*)
+    - `Cache-Control`: `public, max-age=86400`
+  - Body: Binary image stream

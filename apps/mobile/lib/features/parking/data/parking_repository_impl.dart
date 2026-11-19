@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../domain/parking_location.dart';
+import '../domain/parking_photo.dart';
 import '../domain/parking_repository.dart';
 import 'parking_remote_data_source.dart';
 
@@ -35,5 +36,16 @@ class ParkingRepositoryImpl implements ParkingRepository {
       cancelToken: cancelToken,
     );
     return dto?.toDomain();
+  }
+
+  @override
+  Future<List<ParkingPhoto>> getParkingPhotos(
+    String id, {
+    CancelToken? cancelToken,
+  }) {
+    return _remoteDataSource.getParkingPhotos(
+      id,
+      cancelToken: cancelToken,
+    );
   }
 }

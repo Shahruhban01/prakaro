@@ -9,11 +9,13 @@ import 'package:prakaro/core/services/location_service.dart';
 import 'package:prakaro/core/services/navigation_service.dart';
 import 'package:prakaro/core/storage/local_storage_service.dart';
 import 'package:prakaro/features/parking/domain/parking_location.dart';
+import 'package:prakaro/features/parking/domain/parking_photo.dart';
 import 'package:prakaro/features/parking/domain/parking_repository.dart';
 import 'package:prakaro/features/parking/domain/recent_search.dart';
 import 'package:prakaro/features/parking/domain/saved_parking_ref.dart';
 import 'package:prakaro/features/parking/presentation/parking_home_screen.dart';
 import 'package:prakaro/features/parking/presentation/parking_providers.dart';
+import 'package:prakaro/features/parking/presentation/parking_photos_provider.dart';
 import 'package:prakaro/features/parking/presentation/saved_parking_screen.dart';
 import 'package:prakaro/features/parking/presentation/saved_providers.dart';
 import 'package:prakaro/features/parking/presentation/widgets/parking_card.dart';
@@ -70,6 +72,14 @@ class FakeParkingRepo implements ParkingRepository {
       return mockFacilities[id];
     }
     throw const NotFoundException(message: 'Facility not found.');
+  }
+
+  @override
+  Future<List<ParkingPhoto>> getParkingPhotos(
+    String id, {
+    dynamic cancelToken,
+  }) async {
+    return const [];
   }
 }
 
@@ -433,6 +443,9 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ProviderScope(
+              overrides: [
+                parkingPhotosProvider.overrideWith((ref, id) async => const []),
+              ],
               child: ParkingDetailsSheet(
                 location: testLocation,
                 onClose: () {},

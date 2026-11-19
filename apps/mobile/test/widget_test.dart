@@ -6,6 +6,7 @@ import 'package:prakaro/core/theme/app_theme.dart';
 import 'package:prakaro/features/parking/domain/parking_location.dart';
 import 'package:prakaro/features/parking/presentation/parking_list_screen.dart';
 import 'package:prakaro/features/parking/presentation/parking_providers.dart';
+import 'package:prakaro/features/parking/presentation/parking_photos_provider.dart';
 import 'package:prakaro/features/parking/presentation/widgets/google_attribution.dart';
 import 'package:prakaro/features/parking/presentation/widgets/parking_card.dart';
 import 'package:prakaro/features/parking/presentation/widgets/parking_details_sheet.dart';
@@ -54,6 +55,9 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: ProviderScope(
+                overrides: [
+                  parkingPhotosProvider.overrideWith((ref, id) async => const []),
+                ],
                 child: ParkingDetailsSheet(
                   location: testLocation,
                   distanceMeters: 450,
@@ -100,6 +104,9 @@ void main() {
               ),
               child: Scaffold(
                 body: ProviderScope(
+                  overrides: [
+                    parkingPhotosProvider.overrideWith((ref, id) async => const []),
+                  ],
                   child: ParkingDetailsSheet(
                     location: testLocation,
                     distanceMeters: 1420,

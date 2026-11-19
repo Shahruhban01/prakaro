@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/errors/app_exception.dart';
 import '../../../core/network/api_client.dart';
+import '../domain/parking_photo.dart';
 import 'parking_location_dto.dart';
 
 abstract class ParkingRemoteDataSource {
@@ -13,6 +14,11 @@ abstract class ParkingRemoteDataSource {
   });
 
   Future<ParkingLocationDto?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  });
+
+  Future<List<ParkingPhoto>> getParkingPhotos(
     String id, {
     CancelToken? cancelToken,
   });
@@ -95,6 +101,45 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
       return null;
     } on NotFoundException {
       return null;
+    }
+  }
+
+  @override
+  Future<List<ParkingPhoto>> getParkingPhotos(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final cleanId = id.startsWith('google:') ? id.substring(7) : id;
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/parking/$cleanId/photos',
+        cancelToken: cancelToken,
+      );
+
+      final responseData = response.data;
+      if (responseData == null || !responseData.containsKey('data')) {
+        return const [];
+      }
+
+      final rawList = responseData['data'];
+      if (rawList is! List) {
+        return const [];
+      }
+
+      final List<ParkingPhoto> photos = [];
+      for (final item in rawList) {
+        if (item is Map<String, dynamic>) {
+          try {
+            photos.add(ParkingPhoto.fromJson(item));
+          } catch (_) {
+            // Skip individually malformed photo records gracefully
+          }
+        }
+      }
+
+      return photos;
+    } on NotFoundException {
+      return const [];
     }
   }
 }

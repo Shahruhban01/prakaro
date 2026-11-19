@@ -297,3 +297,35 @@ Milestone 09A introduces persistent local bookmarks for parking facilities, expl
 4. **Local Device Storage**: All search history is stored locally in device storage via `shared_preferences` and never uploaded to the backend or external telemetry.
 
 
+
+---
+
+## Milestone 11: Parking Photos & Visual Facility Details
+
+### Architecture & Security Workflow
+```
+[ Mobile Client: ParkingDetailsSheet ]
+  │
+  ├─► 1. Watches `parkingPhotosProvider(parkingId)`
+  │      - Requests metadata: `GET /api/v1/parking/:id/photos`
+  │
+  ├─► 2. Backend executes Place Details with FieldMask: `id,photos`
+  │      - Checks 5-min in-memory LRU cache to avoid duplicate API calls
+  │      - Normalizes up to 5 photos with width, height, and author attributions
+  │      - Returns internal proxy URLs: `/api/v1/parking/:id/photos/:index/media`
+  │
+  ├─► 3. Mobile displays `ParkingPhotoGallery` (16:9 carousel)
+  │      - On image render: calls proxy media endpoint
+  │      - Backend validates photoName regex (SSRF protection)
+  │      - Streams image bytes with `Cache-Control: public, max-age=86400`
+  │
+  └─► 4. On Tap: Opens `ParkingPhotoViewerScreen`
+         - Full-screen modal with `InteractiveViewer` pinch-to-zoom (1.0x - 4.0x)
+         - Preserves author attribution links via `url_launcher`
+         - Displays Google Places attribution badge
+```
+
+### Compliance & Performance Safeguards
+1. **Zero Database Caching**: Google Places photo IDs and media bytes are strictly transient and proxied. MySQL contains no photo data.
+2. **SSRF Guard**: Strict regular expression validation (`^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_.-]+$`) and 10MB payload size enforcement on all proxied media requests.
+3. **API Key Security**: Google Maps Platform API key is stored exclusively on the backend server and never exposed to the Flutter application.

@@ -34,6 +34,21 @@ export interface GooglePlacesCurrentOpeningHours {
   weekdayDescriptions?: string[];
 }
 
+export interface GooglePlacePhotoAuthorAttribution {
+  displayName?: string;
+  uri?: string;
+  photoUri?: string;
+}
+
+export interface GooglePlacePhoto {
+  name?: string;
+  widthPx?: number;
+  heightPx?: number;
+  authorAttributions?: GooglePlacePhotoAuthorAttribution[];
+  flagContentUri?: string;
+  googleMapsUri?: string;
+}
+
 export interface GooglePlaceItem {
   id?: string;
   displayName?: GooglePlacesDisplayName;
@@ -43,6 +58,7 @@ export interface GooglePlaceItem {
   parkingOptions?: GooglePlacesParkingOptions;
   currentOpeningHours?: GooglePlacesCurrentOpeningHours;
   regularOpeningHours?: GooglePlacesCurrentOpeningHours;
+  photos?: GooglePlacePhoto[];
 }
 
 export interface GooglePlacesSearchNearbyResponse {
@@ -90,4 +106,25 @@ export interface GooglePlacesSearchNearbyParams {
   latitude: number;
   longitude: number;
   radius: number;
+}
+
+export interface PhotoAttribution {
+  displayName: string;
+  uri?: string;
+}
+
+export interface NormalizedParkingPhoto {
+  id: string;
+  width?: number;
+  height?: number;
+  attributions: PhotoAttribution[];
+  mediaUrl: string;
+}
+
+export interface ParkingPhotosResponse {
+  data: NormalizedParkingPhoto[];
+  meta: {
+    count: number;
+    source: string;
+  };
 }

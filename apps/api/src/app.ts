@@ -9,6 +9,9 @@ import { GooglePlacesClient } from './integrations/google-places/google-places.c
 import { ParkingService } from './modules/parking/parking.service';
 import { ParkingController } from './modules/parking/parking.controller';
 import { parkingRoutes } from './modules/parking/parking.routes';
+import { ParkingPhotosService } from './modules/parking/photos/parking-photos.service';
+import { ParkingPhotosController } from './modules/parking/photos/parking-photos.controller';
+import { parkingPhotosRoutes } from './modules/parking/photos/parking-photos.routes';
 import { UserService } from './modules/user/user.service';
 import { UserController } from './modules/user/user.controller';
 import { userRoutes } from './modules/user/user.routes';
@@ -139,6 +142,15 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
     customGooglePlacesClient ?? new GooglePlacesClient(env.GOOGLE_PLACES_API_KEY);
   const parkingService = new ParkingService(googlePlacesClient);
   const parkingController = new ParkingController(parkingService);
+
+  const parkingPhotosService = new ParkingPhotosService(googlePlacesClient);
+  const parkingPhotosController = new ParkingPhotosController(parkingPhotosService);
+
+  // Register parking photo routes first (more specific subpaths)
+  app.register(parkingPhotosRoutes, {
+    prefix: '/api/v1/parking',
+    controller: parkingPhotosController,
+  });
 
   // Register parking routes
   app.register(parkingRoutes, {

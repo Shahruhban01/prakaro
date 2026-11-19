@@ -7,6 +7,7 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../auth/presentation/widgets/auth_prompt_bottom_sheet.dart';
 import '../../domain/parking_location.dart';
 import '../saved_providers.dart';
+import 'parking_photo_gallery.dart';
 
 /// Modal bottom sheet presenting verified facility metadata and direct navigation trigger.
 class ParkingDetailsSheet extends ConsumerStatefulWidget {
@@ -88,7 +89,7 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
 
     final isSaved = ref.watch(savedParkingRefsProvider).any((r) => r.id == loc.id);
 
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -132,6 +133,13 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Photo Gallery Carousel / Placeholder Hero
+                      ParkingPhotoGallery(
+                        parkingId: loc.id,
+                        facilityName: displayName,
+                      ),
+                      const SizedBox(height: 14),
+
                       // Header Row with Title and Close button
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,13 +295,17 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.outline,
-                              fontSize: 11,
+                          Expanded(
+                            child: Text(
+                              '${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.outline,
+                                fontSize: 11,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             'Source: Google Places',
                             style: theme.textTheme.bodySmall?.copyWith(

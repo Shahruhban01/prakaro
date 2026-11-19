@@ -37,6 +37,23 @@ export interface GooglePlacesMetricsSnapshot {
     rateLimited: number;
     successRate: number;
   };
+  photoMetadata: {
+    attempts: number;
+    success: number;
+    failures: number;
+    timeouts: number;
+    rateLimited: number;
+    successRate: number;
+  };
+  photoMedia: {
+    attempts: number;
+    success: number;
+    failures: number;
+    timeouts: number;
+    rateLimited: number;
+    bytesTransferred: number;
+    successRate: number;
+  };
   totals: {
     totalUpstreamRequests: number;
     totalSuccess: number;
@@ -47,11 +64,13 @@ export interface GooglePlacesMetricsSnapshot {
   fieldMasks: {
     searchFieldMask: string;
     detailsFieldMask: string;
+    photoDetailsFieldMask: string;
   };
   costEstimation: {
     note: string;
     nearbySearchSku: string;
     placeDetailsSku: string;
+    placePhotoSku: string;
   };
 }
 
@@ -80,6 +99,19 @@ export class GooglePlacesMetrics {
   private resolveTimeouts = 0;
   private resolveRateLimited = 0;
 
+  private photoMetadataAttempts = 0;
+  private photoMetadataSuccess = 0;
+  private photoMetadataFailures = 0;
+  private photoMetadataTimeouts = 0;
+  private photoMetadataRateLimited = 0;
+
+  private photoMediaAttempts = 0;
+  private photoMediaSuccess = 0;
+  private photoMediaFailures = 0;
+  private photoMediaTimeouts = 0;
+  private photoMediaRateLimited = 0;
+  private photoMediaBytesTransferred = 0;
+
   private totalDurationMs = 0;
 
   public static readonly SEARCH_FIELD_MASK =
@@ -87,6 +119,8 @@ export class GooglePlacesMetrics {
 
   public static readonly DETAILS_FIELD_MASK =
     'id,displayName,formattedAddress,location,businessStatus,parkingOptions,currentOpeningHours,regularOpeningHours';
+
+  public static readonly PHOTO_DETAILS_FIELD_MASK = 'id,photos';
 
   public recordNearbyAttempt(): void {
     this.nearbyAttempts++;
@@ -164,22 +198,69 @@ export class GooglePlacesMetrics {
     if (options?.isRateLimit) this.resolveRateLimited++;
   }
 
+  public recordPhotoMetadataAttempt(): void {
+    this.photoMetadataAttempts++;
+  }
+
+  public recordPhotoMetadataSuccess(durationMs: number): void {
+    this.photoMetadataSuccess++;
+    this.totalDurationMs += Math.max(0, durationMs);
+  }
+
+  public recordPhotoMetadataFailure(
+    durationMs: number,
+    options?: { isTimeout?: boolean; isRateLimit?: boolean },
+  ): void {
+    this.photoMetadataFailures++;
+    this.totalDurationMs += Math.max(0, durationMs);
+    if (options?.isTimeout) this.photoMetadataTimeouts++;
+    if (options?.isRateLimit) this.photoMetadataRateLimited++;
+  }
+
+  public recordPhotoMediaAttempt(): void {
+    this.photoMediaAttempts++;
+  }
+
+  public recordPhotoMediaSuccess(durationMs: number, bytesTransferred?: number): void {
+    this.photoMediaSuccess++;
+    this.totalDurationMs += Math.max(0, durationMs);
+    if (bytesTransferred) {
+      this.photoMediaBytesTransferred += Math.max(0, bytesTransferred);
+    }
+  }
+
+  public recordPhotoMediaFailure(
+    durationMs: number,
+    options?: { isTimeout?: boolean; isRateLimit?: boolean },
+  ): void {
+    this.photoMediaFailures++;
+    this.totalDurationMs += Math.max(0, durationMs);
+    if (options?.isTimeout) this.photoMediaTimeouts++;
+    if (options?.isRateLimit) this.photoMediaRateLimited++;
+  }
+
   public getMetricsSnapshot(): GooglePlacesMetricsSnapshot {
     const totalRequests =
       this.nearbyAttempts +
       this.detailsAttempts +
       this.autocompleteAttempts +
-      this.resolveAttempts;
+      this.resolveAttempts +
+      this.photoMetadataAttempts +
+      this.photoMediaAttempts;
     const totalSuccess =
       this.nearbySuccess +
       this.detailsSuccess +
       this.autocompleteSuccess +
-      this.resolveSuccess;
+      this.resolveSuccess +
+      this.photoMetadataSuccess +
+      this.photoMediaSuccess;
     const totalFailures =
       this.nearbyFailures +
       this.detailsFailures +
       this.autocompleteFailures +
-      this.resolveFailures;
+      this.resolveFailures +
+      this.photoMetadataFailures +
+      this.photoMediaFailures;
 
     const nearbySuccessRate =
       this.nearbyAttempts > 0
@@ -199,6 +280,16 @@ export class GooglePlacesMetrics {
     const resolveSuccessRate =
       this.resolveAttempts > 0
         ? Number(((this.resolveSuccess / this.resolveAttempts) * 100).toFixed(1))
+        : 100.0;
+
+    const photoMetadataSuccessRate =
+      this.photoMetadataAttempts > 0
+        ? Number(((this.photoMetadataSuccess / this.photoMetadataAttempts) * 100).toFixed(1))
+        : 100.0;
+
+    const photoMediaSuccessRate =
+      this.photoMediaAttempts > 0
+        ? Number(((this.photoMediaSuccess / this.photoMediaAttempts) * 100).toFixed(1))
         : 100.0;
 
     const averageDurationMs =
@@ -237,6 +328,23 @@ export class GooglePlacesMetrics {
         rateLimited: this.resolveRateLimited,
         successRate: resolveSuccessRate,
       },
+      photoMetadata: {
+        attempts: this.photoMetadataAttempts,
+        success: this.photoMetadataSuccess,
+        failures: this.photoMetadataFailures,
+        timeouts: this.photoMetadataTimeouts,
+        rateLimited: this.photoMetadataRateLimited,
+        successRate: photoMetadataSuccessRate,
+      },
+      photoMedia: {
+        attempts: this.photoMediaAttempts,
+        success: this.photoMediaSuccess,
+        failures: this.photoMediaFailures,
+        timeouts: this.photoMediaTimeouts,
+        rateLimited: this.photoMediaRateLimited,
+        bytesTransferred: this.photoMediaBytesTransferred,
+        successRate: photoMediaSuccessRate,
+      },
       totals: {
         totalUpstreamRequests: totalRequests,
         totalSuccess,
@@ -247,11 +355,13 @@ export class GooglePlacesMetrics {
       fieldMasks: {
         searchFieldMask: GooglePlacesMetrics.SEARCH_FIELD_MASK,
         detailsFieldMask: GooglePlacesMetrics.DETAILS_FIELD_MASK,
+        photoDetailsFieldMask: GooglePlacesMetrics.PHOTO_DETAILS_FIELD_MASK,
       },
       costEstimation: {
         note: 'Estimated costs depend on active Google Cloud Platform billing SKU rates and free tier credits ($200 monthly allowance). Multiply billable requests by current regional SKU rate.',
         nearbySearchSku: 'Places API (New) - Nearby Search (Pro/Enterprise based on field mask)',
         placeDetailsSku: 'Places API (New) - Place Details (Essentials/Pro based on field mask)',
+        placePhotoSku: 'Places API (New) - Place Photo (Media fetch per requested photo)',
       },
     };
   }
@@ -280,6 +390,19 @@ export class GooglePlacesMetrics {
     this.resolveFailures = 0;
     this.resolveTimeouts = 0;
     this.resolveRateLimited = 0;
+
+    this.photoMetadataAttempts = 0;
+    this.photoMetadataSuccess = 0;
+    this.photoMetadataFailures = 0;
+    this.photoMetadataTimeouts = 0;
+    this.photoMetadataRateLimited = 0;
+
+    this.photoMediaAttempts = 0;
+    this.photoMediaSuccess = 0;
+    this.photoMediaFailures = 0;
+    this.photoMediaTimeouts = 0;
+    this.photoMediaRateLimited = 0;
+    this.photoMediaBytesTransferred = 0;
 
     this.totalDurationMs = 0;
   }

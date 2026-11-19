@@ -10,6 +10,7 @@ import 'package:prakaro/features/parking/data/parking_location_dto.dart';
 import 'package:prakaro/features/parking/data/parking_remote_data_source.dart';
 import 'package:prakaro/features/parking/data/parking_repository_impl.dart';
 import 'package:prakaro/features/parking/domain/parking_location.dart';
+import 'package:prakaro/features/parking/domain/parking_photo.dart';
 import 'package:prakaro/features/parking/domain/parking_repository.dart';
 import 'package:prakaro/features/parking/presentation/parking_providers.dart';
 
@@ -90,6 +91,14 @@ class FakeParkingRepository implements ParkingRepository {
       throw errorToThrow!;
     }
     return results?.where((l) => l.id == id).firstOrNull;
+  }
+
+  @override
+  Future<List<ParkingPhoto>> getParkingPhotos(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    return const [];
   }
 }
 
@@ -1469,6 +1478,14 @@ class _DelayedMockRepo implements ParkingRepository {
   }) async {
     return null;
   }
+
+  @override
+  Future<List<ParkingPhoto>> getParkingPhotos(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    return const [];
+  }
 }
 
 class _DynamicTimingRepo implements ParkingRepository {
@@ -1500,5 +1517,13 @@ class _DynamicTimingRepo implements ParkingRepository {
     CancelToken? cancelToken,
   }) async {
     return null;
+  }
+
+  @override
+  Future<List<ParkingPhoto>> getParkingPhotos(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    return const [];
   }
 }

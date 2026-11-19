@@ -1,11 +1,14 @@
 import {
   ConfigurationError,
+  NotFoundError,
   UpstreamError,
   UpstreamRateLimitError,
   UpstreamTimeoutError,
+  ValidationError,
 } from '../../common/errors/app-error';
 import {
   GooglePlaceItem,
+  GooglePlacePhoto,
   GooglePlacesSearchNearbyParams,
   GooglePlacesSearchNearbyResponse,
   GooglePlacesAutocompleteResponse,
@@ -408,5 +411,192 @@ export class GooglePlacesClient {
       this.metrics.recordResolveFailure(durationMs);
       throw new UpstreamError('Failed to parse upstream destination details.');
     }
+  }
+
+  /**
+   * Place Photos Metadata: Retrieves available photos for a place using Places API (New).
+   * Requests ONLY field mask `id,photos`.
+   */
+  public async getPlacePhotos(
+    placeId: string,
+    callerSignal?: AbortSignal,
+  ): Promise<GooglePlacePhoto[]> {
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new ConfigurationError();
+    }
+
+    const cleanId = placeId.startsWith('google:')
+      ? placeId.replace(/^google:/, '')
+      : placeId;
+
+    if (!cleanId || cleanId.trim() === '') {
+      return [];
+    }
+
+    this.metrics.recordPhotoMetadataAttempt();
+    const startTime = Date.now();
+
+    const url = `${this.detailsBaseUrl}/${encodeURIComponent(cleanId)}`;
+
+    const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
+    const combinedSignal = callerSignal
+      ? AbortSignal.any([timeoutSignal, callerSignal])
+      : timeoutSignal;
+
+    let response: Response;
+    try {
+      response = await this.fetchFn(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': GooglePlacesMetrics.PHOTO_DETAILS_FIELD_MASK,
+        },
+        signal: combinedSignal,
+      });
+    } catch (err: unknown) {
+      const durationMs = Date.now() - startTime;
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === 'TimeoutError' ||
+          err.name === 'AbortError' ||
+          err.message.toLowerCase().includes('timeout') ||
+          err.message.toLowerCase().includes('aborted'));
+
+      this.metrics.recordPhotoMetadataFailure(durationMs, { isTimeout });
+      if (isTimeout) {
+        throw new UpstreamTimeoutError();
+      }
+      throw new UpstreamError();
+    }
+
+    const durationMs = Date.now() - startTime;
+
+    if (response.status === 404) {
+      this.metrics.recordPhotoMetadataSuccess(durationMs);
+      return [];
+    }
+
+    if (response.status === 429) {
+      this.metrics.recordPhotoMetadataFailure(durationMs, { isRateLimit: true });
+      throw new UpstreamRateLimitError();
+    }
+
+    if (!response.ok) {
+      this.metrics.recordPhotoMetadataFailure(durationMs);
+      throw new UpstreamError();
+    }
+
+    try {
+      const data = (await response.json()) as GooglePlaceItem;
+      this.metrics.recordPhotoMetadataSuccess(durationMs);
+      return data.photos ?? [];
+    } catch {
+      this.metrics.recordPhotoMetadataFailure(durationMs);
+      throw new UpstreamError('Failed to parse upstream photo metadata.');
+    }
+  }
+
+  /**
+   * Place Photo Media: Streams image bytes from Google Places API (New) securely.
+   * SSRF protection: strictly validates that photoName matches `places/{placeId}/photos/{photoId}`.
+   */
+  public async getPhotoMedia(
+    photoName: string,
+    options: { maxWidthPx?: number; maxHeightPx?: number } = {},
+    callerSignal?: AbortSignal,
+  ): Promise<{
+    body: ReadableStream<Uint8Array> | NodeJS.ReadableStream | null;
+    contentType: string;
+    contentLength?: number;
+  }> {
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new ConfigurationError();
+    }
+
+    // SSRF safeguard: Enforce pattern places/<id>/photos/<id>
+    const photoNameRegex = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_.-]+$/;
+    if (!photoNameRegex.test(photoName)) {
+      throw new ValidationError('Invalid photo resource reference.');
+    }
+
+    this.metrics.recordPhotoMediaAttempt();
+    const startTime = Date.now();
+
+    const maxWidth = Math.min(Math.max(options.maxWidthPx ?? 1200, 50), 4800);
+    const maxHeight = Math.min(Math.max(options.maxHeightPx ?? 800, 50), 4800);
+
+    const url = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth}&maxHeightPx=${maxHeight}&key=${this.apiKey}`;
+
+    const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
+    const combinedSignal = callerSignal
+      ? AbortSignal.any([timeoutSignal, callerSignal])
+      : timeoutSignal;
+
+    let response: Response;
+    try {
+      response = await this.fetchFn(url, {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': this.apiKey,
+        },
+        redirect: 'follow',
+        signal: combinedSignal,
+      });
+    } catch (err: unknown) {
+      const durationMs = Date.now() - startTime;
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === 'TimeoutError' ||
+          err.name === 'AbortError' ||
+          err.message.toLowerCase().includes('timeout') ||
+          err.message.toLowerCase().includes('aborted'));
+
+      this.metrics.recordPhotoMediaFailure(durationMs, { isTimeout });
+      if (isTimeout) {
+        throw new UpstreamTimeoutError();
+      }
+      throw new UpstreamError();
+    }
+
+    const durationMs = Date.now() - startTime;
+
+    if (response.status === 404) {
+      this.metrics.recordPhotoMediaFailure(durationMs);
+      throw new NotFoundError('Photo media not found.');
+    }
+
+    if (response.status === 429) {
+      this.metrics.recordPhotoMediaFailure(durationMs, { isRateLimit: true });
+      throw new UpstreamRateLimitError();
+    }
+
+    if (!response.ok) {
+      this.metrics.recordPhotoMediaFailure(durationMs);
+      throw new UpstreamError();
+    }
+
+    const rawContentType = response.headers.get('content-type') || 'image/jpeg';
+    if (!rawContentType.startsWith('image/')) {
+      this.metrics.recordPhotoMediaFailure(durationMs);
+      throw new UpstreamError('Unexpected non-image response from photo media provider.');
+    }
+
+    const rawContentLength = response.headers.get('content-length');
+    const contentLength = rawContentLength ? parseInt(rawContentLength, 10) : undefined;
+
+    // Enforce 10MB maximum response size limit
+    if (contentLength && contentLength > 10 * 1024 * 1024) {
+      this.metrics.recordPhotoMediaFailure(durationMs);
+      throw new UpstreamError('Photo media exceeded maximum allowed size (10MB).');
+    }
+
+    this.metrics.recordPhotoMediaSuccess(durationMs, contentLength);
+
+    return {
+      body: response.body,
+      contentType: rawContentType,
+      contentLength,
+    };
   }
 }
