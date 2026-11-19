@@ -129,6 +129,13 @@ class ApiClient {
       }
     }
 
+    if (statusCode == 404) {
+      return NotFoundException(
+        message: extractedMessage ?? 'The requested facility was not found.',
+        cause: error,
+      );
+    }
+
     if (statusCode == 429) {
       return RateLimitException(
         message: extractedMessage ?? 'Too many searches. Please wait a moment.',

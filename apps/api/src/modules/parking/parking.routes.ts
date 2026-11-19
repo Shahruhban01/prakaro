@@ -38,6 +38,19 @@ export async function parkingRoutes(
   );
 
   app.get(
+    '/places/:id',
+    {
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    controller.getParkingDetails,
+  );
+
+  app.get(
     '/:id',
     {
       config: {

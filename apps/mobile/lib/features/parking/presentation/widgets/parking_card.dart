@@ -5,6 +5,7 @@ import '../../../../core/services/navigation_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/parking_location.dart';
 import '../parking_providers.dart';
+import '../saved_providers.dart';
 
 /// Refined, accessible card displaying a single discovered parking facility.
 class ParkingCard extends ConsumerStatefulWidget {
@@ -79,6 +80,8 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
     final formattedDistance = widget.distanceMeters != null
         ? '${ParkingMapState.formatDistance(widget.distanceMeters)} (straight-line)'
         : 'Distance unavailable';
+
+    final isSaved = ref.watch(savedParkingRefsProvider).any((r) => r.id == loc.id);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -159,6 +162,25 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
                         ),
                       ],
                     ),
+                  ),
+
+                  // Bookmark / Save Action
+                  IconButton(
+                    icon: Icon(
+                      isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                      color: isSaved ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                      size: 22,
+                    ),
+                    tooltip: isSaved ? 'Remove from saved' : 'Save parking',
+                    style: IconButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 36),
+                    ),
+                    onPressed: () {
+                      AppHaptics.lightImpact();
+                      ref.read(savedParkingRefsProvider.notifier).toggleSave(widget.location);
+                    },
                   ),
                 ],
               ),

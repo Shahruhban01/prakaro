@@ -12,6 +12,8 @@ import '../data/parking_remote_data_source.dart';
 import '../data/parking_repository_impl.dart';
 import '../domain/parking_location.dart';
 import '../domain/parking_repository.dart';
+import '../domain/recent_search.dart';
+import 'saved_providers.dart';
 
 /// Provider for Parking Remote Data Source.
 final parkingRemoteDataSourceProvider = Provider<ParkingRemoteDataSource>((ref) {
@@ -743,12 +745,53 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
         isCustomSearchArea: true,
         canSearchArea: false,
       );
+
+      // Record user-initiated explicit search area if recording is enabled
+      ref.read(recentSearchesProvider.notifier).recordSearch(
+        latitude: lat,
+        longitude: lng,
+        radiusMeters: state.radiusMeters,
+        originType: RecentSearchOriginType.explicitAreaSearch,
+      );
+
       await searchNearby(
         latitude: lat,
         longitude: lng,
         radius: state.radiusMeters,
       );
     }
+  }
+
+  /// Restores a recent search origin and radius, triggering a fresh backend search.
+  Future<void> searchFromRecent({
+    required double latitude,
+    required double longitude,
+    required int radiusMeters,
+  }) async {
+    _debounceTimer?.cancel();
+    state = state.copyWith(
+      radiusMeters: radiusMeters,
+      cameraLatitude: latitude,
+      cameraLongitude: longitude,
+      searchCenterLatitude: latitude,
+      searchCenterLongitude: longitude,
+      isCustomSearchArea: true,
+      canSearchArea: false,
+    );
+
+    // Refresh timestamp of reused search if recording is active
+    ref.read(recentSearchesProvider.notifier).recordSearch(
+      latitude: latitude,
+      longitude: longitude,
+      radiusMeters: radiusMeters,
+      originType: RecentSearchOriginType.customSearchCenter,
+    );
+
+    await searchNearby(
+      latitude: latitude,
+      longitude: longitude,
+      radius: radiusMeters,
+    );
   }
 
   /// Invoked when the user pans/zooms the map camera and movement ends.

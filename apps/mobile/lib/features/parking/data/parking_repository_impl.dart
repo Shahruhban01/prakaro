@@ -24,4 +24,16 @@ class ParkingRepositoryImpl implements ParkingRepository {
     );
     return dtos.map((dto) => dto.toDomain()).toList();
   }
+
+  @override
+  Future<ParkingLocation?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    final dto = await _remoteDataSource.getParkingDetails(
+      id,
+      cancelToken: cancelToken,
+    );
+    return dto?.toDomain();
+  }
 }

@@ -237,3 +237,27 @@ Google Places API (New) charges per 1,000 requests based on the requested field 
 4. Local filters (Free, Paid, Open Now, Public Access) filter in-memory candidate sets without calling Google Places again.
 5. Place Details are queried **only** when specifically requested for a single facility (Stage B), never prefetched in bulk.
 6. Persistent caching of Places content is strictly omitted in compliance with Google Maps Platform terms of service.
+
+---
+
+## 8. Saved Parking & Local Storage Testing (Milestone 09A)
+
+Milestone 09A introduces local persistence for bookmarked parking facilities and recent search origins via `shared_preferences`.
+
+### Storage Keys & Schemas
+- `prakaro_storage_version`: Integer schema version (`1`).
+- `prakaro_saved_parking_refs`: JSON array of `SavedParkingRef` (`[{ "id": "google:ChIJ...", "provider": "google", "providerPlaceId": "ChIJ...", "savedAt": "..." }]`). Stored references contain **zero** Google Places content.
+- `prakaro_recent_searches`: JSON array of `RecentSearch` (`[{ "id": "...", "latitude": 34.08, "longitude": 74.79, "radiusMeters": 3000, "createdAt": "...", "originType": "explicitAreaSearch", "label": "Previously searched area" }]`).
+- `prakaro_recent_search_recording_enabled`: Boolean flag (**defaults to `false`** for privacy).
+
+### Clearing Local Storage During Testing
+In Flutter tests or development:
+- From within the app: Navigate to the **Saved** tab, tap **Clear all** under Saved Facilities or Recent Searches.
+- From ADB:
+  ```powershell
+  adb shell pm clear com.prakaro.app
+  ```
+- In automated unit tests:
+  ```dart
+  SharedPreferences.setMockInitialValues({});
+  ```

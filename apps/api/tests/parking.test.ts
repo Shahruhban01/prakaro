@@ -365,6 +365,16 @@ describe('GET /api/v1/parking/nearby', () => {
       url: '/api/v1/parking/google:non_existent',
     });
     assert.equal(res404.statusCode, 404);
+
+    // Endpoint alias GET /api/v1/parking/places/:id
+    const resAlias = await app.inject({
+      method: 'GET',
+      url: '/api/v1/parking/places/google:place_deep_1',
+    });
+    assert.equal(resAlias.statusCode, 200);
+    const aliasBody = JSON.parse(resAlias.payload);
+    assert.equal(aliasBody.data.id, 'google:place_deep_1');
+    assert.equal(aliasBody.data.name, 'Srinagar Multi-Storey');
   });
 
   it('8. Upstream timeout error handling - returns 504 and does not leak keys', async () => {

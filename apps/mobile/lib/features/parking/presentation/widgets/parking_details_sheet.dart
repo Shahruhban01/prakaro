@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/navigation_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/parking_location.dart';
+import '../saved_providers.dart';
 
 /// Modal bottom sheet presenting verified facility metadata and direct navigation trigger.
 class ParkingDetailsSheet extends ConsumerStatefulWidget {
@@ -82,6 +83,8 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
     final displayAddress = loc.address.trim().isEmpty
         ? 'Address unavailable'
         : loc.address.trim();
+
+    final isSaved = ref.watch(savedParkingRefsProvider).any((r) => r.id == loc.id);
 
     final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
 
@@ -168,6 +171,23 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
                                 ],
                               ],
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filledTonal(
+                            icon: Icon(
+                              isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                              size: 20,
+                              color: isSaved ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                            ),
+                            tooltip: isSaved ? 'Remove from saved' : 'Save parking',
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(36, 36),
+                              padding: EdgeInsets.zero,
+                            ),
+                            onPressed: () {
+                              AppHaptics.lightImpact();
+                              ref.read(savedParkingRefsProvider.notifier).toggleSave(loc);
+                            },
                           ),
                           const SizedBox(width: 8),
                           IconButton.filledTonal(

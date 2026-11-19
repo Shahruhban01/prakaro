@@ -57,6 +57,15 @@ class RateLimitException extends NetworkException {
   });
 }
 
+/// Resource not found representation (e.g. 404 for deleted or non-existent place).
+class NotFoundException extends NetworkException {
+  const NotFoundException({
+    super.message = 'The requested facility was not found.',
+    super.statusCode = 404,
+    super.cause,
+  });
+}
+
 /// Upstream Google Places or backend server failure representation.
 class UpstreamServiceException extends NetworkException {
   const UpstreamServiceException({

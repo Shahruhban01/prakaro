@@ -116,14 +116,14 @@ Existing clients reading `data[0].id`, `data[0].name`, `data[0].latitude`, `data
 
 ### B. Single Facility Details (Stage B: On-Demand)
 
-Retrieves deep details for a specific parking facility on demand. This avoids uncontrolled upstream requests by only fetching details when a user inspects a facility.
+Retrieves deep details for a specific parking facility on demand. This avoids uncontrolled upstream requests by only fetching details when a user inspects a facility or when resolving user-saved parking bookmarks on demand.
 
-- **URL**: `/api/v1/parking/:id`
+- **URL**: `/api/v1/parking/places/:id` or `/api/v1/parking/:id`
 - **Method**: `GET`
 - **Authentication**: None
 - **Rate Limit**: 60 requests per minute per IP address
 - **URL Parameters**:
-  - `id`: Unique facility identifier (e.g., `google:ChIJZVma6EOP4TgRxagbQBLFB64`).
+  - `id`: Unique facility identifier (e.g., `google:ChIJZVma6EOP4TgRxagbQBLFB64` or Place ID `ChIJZVma6EOP4TgRxagbQBLFB64`).
 
 #### Success Response (`200 OK`)
 

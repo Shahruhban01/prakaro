@@ -80,6 +80,17 @@ class FakeParkingRepository implements ParkingRepository {
     }
     return results ?? [];
   }
+
+  @override
+  Future<ParkingLocation?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    if (errorToThrow != null) {
+      throw errorToThrow!;
+    }
+    return results?.where((l) => l.id == id).firstOrNull;
+  }
 }
 
 void main() {
@@ -1450,6 +1461,14 @@ class _DelayedMockRepo implements ParkingRepository {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     return [];
   }
+
+  @override
+  Future<ParkingLocation?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    return null;
+  }
 }
 
 class _DynamicTimingRepo implements ParkingRepository {
@@ -1473,5 +1492,13 @@ class _DynamicTimingRepo implements ParkingRepository {
   }) {
     callCount++;
     return handler(latitude, longitude, radius, cancelToken);
+  }
+
+  @override
+  Future<ParkingLocation?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    return null;
   }
 }

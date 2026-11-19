@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import 'parking_list_screen.dart';
 import 'parking_map_screen.dart';
 import 'parking_providers.dart';
+import 'saved_parking_screen.dart';
+import 'saved_providers.dart';
 
 /// Root container screen for the parking feature.
-/// Houses both List and Map views using an IndexedStack to preserve view state
-/// and prevent duplicate network requests when switching views.
+/// Houses both Explore (List / Map) and Saved destinations using an IndexedStack
+/// to preserve state and avoid unnecessary rebuilds or network requests.
 class ParkingHomeScreen extends ConsumerStatefulWidget {
   const ParkingHomeScreen({super.key});
 
@@ -29,16 +32,45 @@ class _ParkingHomeScreenState extends ConsumerState<ParkingHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final rootNavIndex = ref.watch(rootNavigationIndexProvider);
     final viewMode = ref.watch(
       parkingMapProvider.select((state) => state.viewMode),
     );
 
     return Scaffold(
       body: IndexedStack(
-        index: viewMode == ParkingViewMode.list ? 0 : 1,
-        children: const [
-          ParkingListScreen(),
-          ParkingMapScreen(),
+        index: rootNavIndex,
+        children: [
+          // Index 0: Explore Destination (List & Map views)
+          IndexedStack(
+            index: viewMode == ParkingViewMode.list ? 0 : 1,
+            children: const [
+              ParkingListScreen(),
+              ParkingMapScreen(),
+            ],
+          ),
+
+          // Index 1: Saved Parking Destination
+          const SavedParkingScreen(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: rootNavIndex,
+        onDestinationSelected: (index) {
+          AppHaptics.selection();
+          ref.read(rootNavigationIndexProvider.notifier).setIndex(index);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore_rounded),
+            label: 'Explore',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bookmark_outline_rounded),
+            selectedIcon: Icon(Icons.bookmark_rounded),
+            label: 'Saved',
+          ),
         ],
       ),
     );

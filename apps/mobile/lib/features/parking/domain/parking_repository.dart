@@ -10,4 +10,9 @@ abstract class ParkingRepository {
     int? radius,
     CancelToken? cancelToken,
   });
+
+  Future<ParkingLocation?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  });
 }

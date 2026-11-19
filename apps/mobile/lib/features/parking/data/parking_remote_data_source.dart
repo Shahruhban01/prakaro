@@ -11,6 +11,11 @@ abstract class ParkingRemoteDataSource {
     int? radius,
     CancelToken? cancelToken,
   });
+
+  Future<ParkingLocationDto?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  });
 }
 
 class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
@@ -65,5 +70,31 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
     }
 
     return facilities;
+  }
+
+  @override
+  Future<ParkingLocationDto?> getParkingDetails(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/parking/places/$id',
+        cancelToken: cancelToken,
+      );
+
+      final responseData = response.data;
+      if (responseData == null || !responseData.containsKey('data')) {
+        return null;
+      }
+
+      final raw = responseData['data'];
+      if (raw is Map<String, dynamic>) {
+        return ParkingLocationDto.fromJson(raw);
+      }
+      return null;
+    } on NotFoundException {
+      return null;
+    }
   }
 }

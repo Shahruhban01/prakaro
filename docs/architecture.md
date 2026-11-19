@@ -239,3 +239,57 @@ Milestone 08 introduces comprehensive request lifecycle management, client-side 
 - **Diagnostics Endpoint**: `GET /api/v1/parking/metrics` exposes read-only runtime usage counters and field mask definitions for cost analysis.
 - **Compliance & Privacy**: Raw user coordinates in URLs and request bodies are masked to two decimal places in logs (`34.08***`), and no sensitive credentials or places data are stored on persistent disk.
 
+---
+
+## 8. Saved Parking, Favorites & Privacy-First Recent Searches (Milestone 09A)
+
+Milestone 09A introduces persistent local bookmarks for parking facilities, explicit recent search area tracking, on-demand backend resolution, and privacy controls.
+
+```
+[ Root Navigation: NavigationBar ]
+  ├─► [ Explore Tab (Index 0) ]
+  │     └─► IndexedStack: ParkingListScreen (Index 0) / ParkingMapScreen (Index 1)
+  │           - State fully preserved across tab switching
+  │           - ParkingCard & ParkingDetailsSheet include Save/Bookmark action
+  │           - "Search This Area" records search area (if history is enabled)
+  │
+  └─► [ Saved Tab (Index 1) ]
+        └─► SavedParkingScreen
+              ├─► Tab A: Saved Facilities
+              │     - On-demand resolution via GET /api/v1/parking/places/:id
+              │     - Bounded concurrency (up to 3 concurrent requests)
+              │     - Honest offline, 404 not found, and timeout states
+              │     - Individual remove action & bulk "Clear all" with confirmation
+              │     - Google attribution footer
+              │
+              └─► Tab B: Recent Searches
+                    - Privacy control card with toggle switch (DISABLED by default)
+                    - Reopen search area via "Search area" (switches to Explore tab)
+                    - Individual remove & bulk "Clear all" with confirmation
+```
+
+### Strict Google Places Compliance Contract
+1. **Zero Google Places Content Persistence**:
+   - In accordance with Google Maps Platform Terms of Service, the client application never persists Google Places facility names, addresses, latitude/longitude coordinates, opening hours, prices, ratings, or API response snapshots.
+   - Only local references are stored via `SavedParkingRef`:
+     ```json
+     {
+       "id": "google:ChIJ...",
+       "provider": "google",
+       "providerPlaceId": "ChIJ...",
+       "savedAt": "2026-11-19T12:00:00Z"
+     }
+     ```
+2. **On-Demand Facility Resolution**:
+   - Facility details are fetched freshly on demand from the Prakaro backend (`GET /api/v1/parking/places/:id`).
+   - If a place is no longer found (404), an honest "Facility no longer available" state is shown with a Remove option.
+   - If offline, an honest "Connect to the internet to load parking details" state is presented with Retry and Remove actions.
+   - Stale responses or unauthorized local caching fallbacks are strictly prohibited.
+
+### Privacy-Preserving Recent Searches
+1. **Disabled by Default**: Recent search history recording is turned off by default until the user explicitly toggles it on.
+2. **Explicit Actions Only**: Only user-initiated actions ("Search This Area" or explicit search centers) are recorded. Device GPS bootstraps, map panning, and radius adjustments are **never** logged as search history.
+3. **Neutral Description**: Recent searches display a neutral description ("Previously searched area" with radius and relative date); fictitious place or neighborhood names are never invented.
+4. **Local Device Storage**: All search history is stored locally in device storage via `shared_preferences` and never uploaded to the backend or external telemetry.
+
+
