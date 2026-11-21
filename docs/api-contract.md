@@ -411,3 +411,19 @@ Proxied Google Places API (New) Place Photos endpoints with SSRF protection and 
     - `Content-Type`: `image/jpeg` (or image/*)
     - `Cache-Control`: `public, max-age=86400`
   - Body: Binary image stream
+
+## Parking Intelligence discovery extension
+
+The optional `mode` parameter on `GET /api/v1/parking/nearby` accepts `ALL_CANDIDATES`, `RECOMMENDED` or `VERIFIED_ONLY`. Explicit `sort=distance` wins in every mode. With display disabled, the response keeps the original shape and nearby ordering. With display enabled, each candidate and place details may contain `verification`, and nearby responses include `meta.intelligence`.
+
+| Field | Meaning |
+| --- | --- |
+| `verification.facilityStatus` / `displayCategory` | `INDEPENDENTLY_VERIFIED`, `STRONGLY_SUPPORTED`, `UNCONFIRMED` or `CONTRADICTED` |
+| `verification.access` | `PUBLIC`, `PRIVATE`, `CUSTOMERS_ONLY`, `RESTRICTED` or `UNKNOWN` |
+| `verification.pricing` | `FREE`, `PAID` or `UNKNOWN`, from independent findings. Existing pricing fields still describe the provider option evidence. |
+| `verification.operatingStatus` | `OPEN`, `CLOSED` or `UNKNOWN`, from the existing current provider status |
+| `verification.reasonCodes`, `evidenceLevel`, `reviewRequired` | Sanitized policy explanations and review state |
+| `verification.validUntil` | Optional UTC expiry of the evidence snapshot |
+| `meta.intelligence` | Availability, filtering flag, default/effective mode, recommendation-ordered IDs, and an optional notice |
+
+Notices are `FILTERING_DISABLED`, `VERIFICATION_UNAVAILABLE` or `NO_VERIFIED_PARKING`. The first two fall back to the original eligible candidate set in distance order. An enabled and available Verified Only query can return an empty set. Flutter requests All Candidates and applies backend-provided modes locally so view switches do not repeat the search. The [rollout guide](intelligence-rollout.md) lists flag interactions.

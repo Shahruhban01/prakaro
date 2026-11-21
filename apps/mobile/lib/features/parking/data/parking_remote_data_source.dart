@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/parking_photo.dart';
+import '../domain/parking_verification.dart';
 import 'parking_location_dto.dart';
 
 abstract class ParkingRemoteDataSource {
@@ -35,10 +36,23 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
     required double longitude,
     int? radius,
     CancelToken? cancelToken,
+  }) async => (await discoverParking(
+        latitude: latitude,
+        longitude: longitude,
+        radius: radius,
+        cancelToken: cancelToken,
+      )).facilities;
+
+  Future<({List<ParkingLocationDto> facilities, ParkingDiscoverySettings settings})> discoverParking({
+    required double latitude,
+    required double longitude,
+    int? radius,
+    CancelToken? cancelToken,
   }) async {
     final queryParams = <String, dynamic>{
       'latitude': latitude,
       'longitude': longitude,
+      'mode': 'ALL_CANDIDATES',
     };
     if (radius != null) {
       queryParams['radius'] = radius;
@@ -75,7 +89,11 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
       }
     }
 
-    return facilities;
+    final meta = responseData['meta'];
+    return (
+      facilities: facilities,
+      settings: ParkingDiscoverySettings.fromJson(meta is Map ? meta['intelligence'] : null),
+    );
   }
 
   @override

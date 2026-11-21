@@ -1,10 +1,13 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
 import { prisma } from '../../common/database/prisma';
 import { env } from '../../config/env';
 import { PROMPT_VERSION } from './intelligence.gemini';
-import { evaluateMetrics, type EvaluationRow } from './intelligence.metrics';
+import { evaluateMetrics } from './intelligence.metrics';
+import { decideParking, POLICY_VERSION, reviewDecision } from './intelligence.policy';
+import { comparePolicyMetrics, type PolicyEvaluationRow } from './intelligence.policy-metrics';
+import { evaluateRules, RULES_VERSION } from './intelligence.rules';
 import { access, pricing, classification, evidenceSchema } from './intelligence.schemas';
 import { createIntelligenceService, getVersion } from './intelligence.store';
 
@@ -16,7 +19,7 @@ const dataset = z
       .array(
         z
           .object({
-            id: z.string().trim().min(1).max(100),
+            id: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/),
             scenario: z.enum([
               'PUBLIC_PARKING',
               'PAID_PARKING',
@@ -28,8 +31,18 @@ const dataset = z
               'INCORRECT_CATEGORY',
               'DUPLICATE',
               'UNCERTAIN',
+              'CLOSED_PARKING',
             ]),
             observations: z.array(evidenceSchema.omit({ id: true }).extend({ reference })).max(12),
+            priorReview: z
+              .object({
+                reviewedOn: z.string().date(),
+                expiresOn: z.string().date(),
+                decision: reviewDecision,
+                evidenceReferences: z.array(reference).max(12),
+              })
+              .strict()
+              .optional(),
             review: z
               .object({
                 reviewedOn: z.string().date(),
@@ -44,7 +57,7 @@ const dataset = z
               .strict(),
           })
           .strict()
-          .superRefine(({ review }, context) => {
+          .superRefine(({ review, priorReview, observations }, context) => {
             const confirmed =
               review.classification === 'LIKELY_PARKING' ||
               review.classification === 'LIKELY_NOT_PARKING';
@@ -56,6 +69,19 @@ const dataset = z
               context.addIssue({
                 code: 'custom',
                 message: 'Inconsistent reviewer decision or missing sources',
+              });
+            }
+            if (
+              priorReview &&
+              (priorReview.reviewedOn >= review.reviewedOn ||
+                priorReview.expiresOn <= priorReview.reviewedOn ||
+                priorReview.evidenceReferences.some(
+                  (item) => !observations.some(({ reference }) => reference === item),
+                ))
+            ) {
+              context.addIssue({
+                code: 'custom',
+                message: 'Prior review must predate ground truth and cite observation evidence',
               });
             }
           }),
@@ -70,6 +96,7 @@ async function main() {
     options: {
       gemini: { type: 'boolean' },
       persist: { type: 'boolean' },
+      'as-of': { type: 'string' },
       'input-usd-per-million': { type: 'string' },
       'output-usd-per-million': { type: 'string' },
     },
@@ -77,8 +104,12 @@ async function main() {
   });
   const [file] = positionals;
   if (!file || positionals.length !== 1) throw new Error('Provide one reviewed dataset JSON path.');
+  if ((await stat(file)).size > 2_000_000) throw new Error('Reviewed dataset exceeds 2 MB.');
   const metadata = await readFile(file);
-  if (metadata.length > 2_000_000) throw new Error('Reviewed dataset exceeds 2 MB.');
+  const evaluationDate = z
+    .string()
+    .date()
+    .parse(values['as-of'] ?? new Date().toISOString().slice(0, 10));
   const parsed = dataset.safeParse(JSON.parse(metadata.toString('utf8')));
   if (!parsed.success) {
     const locations = parsed.error.issues.map((issue) => issue.path.join('.') || 'dataset');
@@ -102,16 +133,47 @@ async function main() {
     throw new Error('Supply both nonnegative USD rates per million tokens.');
 
   const service = createIntelligenceService(values.gemini === true);
-  const rows: EvaluationRow[] = [];
+  const rows: PolicyEvaluationRow[] = [];
   for (const entry of parsed.data.cases) {
+    if (entry.review.reviewedOn > evaluationDate)
+      throw new Error('Ground truth review is after the evaluation date.');
     const evidence = entry.observations.map(({ source, finding }, index) => ({
       source,
       finding,
       id: `E${index + 1}`,
     }));
+    const previous = entry.priorReview;
+    const cited = evidence.filter((_, index) =>
+      previous?.evidenceReferences.includes(entry.observations[index]?.reference ?? ''),
+    );
+    const citedRules = evaluateRules(cited);
+    const priorMatches =
+      previous?.decision === 'CONFIRM_PARKING'
+        ? citedRules.classification === 'LIKELY_PARKING'
+        : previous?.decision === 'CONFIRM_NON_PARKING'
+          ? citedRules.classification === 'LIKELY_NOT_PARKING'
+          : true;
+    const review =
+      previous && priorMatches && previous.expiresOn > evaluationDate
+        ? previous.decision
+        : previous
+          ? 'STALE'
+          : undefined;
+    const verification = await service.verify({ evidence });
     rows.push({
+      id: entry.id,
+      scenario: entry.scenario,
       truth: entry.review.classification,
-      verification: await service.verify({ evidence }),
+      truthAccess: entry.review.access,
+      verification,
+      decision: decideParking({
+        evidence,
+        rules: verification.baseline,
+        assessment:
+          verification.status === 'EVALUATED' ? verification.assessment?.classification : undefined,
+        review,
+        requireHumanReview: env.PARKING_INTELLIGENCE_REQUIRE_HUMAN_REVIEW,
+      }),
     });
   }
   const evaluated = evaluateMetrics(
@@ -125,14 +187,33 @@ async function main() {
   );
   const metrics = {
     datasetVersion: parsed.data.version,
+    evaluationDate,
     model: env.GEMINI_MODEL,
     promptVersion: PROMPT_VERSION,
+    rulesVersion: RULES_VERSION,
+    policyVersion: POLICY_VERSION,
+    requireHumanReview: env.PARKING_INTELLIGENCE_REQUIRE_HUMAN_REVIEW,
+    labelDistribution: Object.fromEntries(
+      classification.options.map((label) => [
+        label,
+        rows.filter(({ truth }) => truth === label).length,
+      ]),
+    ),
     ...evaluated,
+    comparisons: comparePolicyMetrics(rows),
   };
   if (values.persist) {
     const version = await getVersion();
     await prisma.parkingEvaluationMetrics.create({
-      data: { versionId: version.id, datasetVersion: parsed.data.version, metrics },
+      data: {
+        versionId: version.id,
+        datasetVersion: parsed.data.version,
+        metrics: JSON.parse(
+          JSON.stringify(metrics, (key, value: unknown) =>
+            key === 'examples' ? undefined : value,
+          ),
+        ),
+      },
     });
   }
   console.log(JSON.stringify(metrics, null, 2));

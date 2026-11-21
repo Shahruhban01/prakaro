@@ -129,12 +129,13 @@ model UserPreference {
 }
 
 model ParkingIntelligenceCase {
-  id            String                     @id @default(uuid())
+  id             String                     @id @default(uuid())
+  reviewRevision Int                        @default(0)
   // Optional matching key only. Google Places policy allows storage of place IDs.
-  googlePlaceId String?                    @unique @db.VarChar(191)
-  evidence      ParkingEvidenceReference[]
-  labels        ParkingHumanLabel[]
-  runs          ParkingVerificationRun[]
+  googlePlaceId  String?                    @unique @db.VarChar(191)
+  evidence       ParkingEvidenceReference[]
+  labels         ParkingHumanLabel[]
+  runs           ParkingVerificationRun[]
 
   @@map("parking_intelligence_case")
 }
@@ -154,17 +155,23 @@ model ParkingEvidenceReference {
 }
 
 model ParkingHumanLabel {
-  id                 String                  @id @default(uuid())
-  caseId             String
-  reviewedAt         DateTime
-  classification     String                  @db.VarChar(30)
-  access             String                  @db.VarChar(20)
-  pricing            String                  @db.VarChar(10)
-  decision           String                  @db.VarChar(30)
-  evidenceReferences Json
-  notes              String?                 @db.Text
-  parkingCase        ParkingIntelligenceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  id                  String                  @id @default(uuid())
+  caseId              String
+  reviewedAt          DateTime
+  classification      String                  @db.VarChar(30)
+  access              String                  @db.VarChar(20)
+  pricing             String                  @db.VarChar(10)
+  decision            String                  @db.VarChar(30)
+  evidenceReferences  Json
+  notes               String?                 @db.Text
+  reviewerId          String?
+  revision            Int?
+  expiresAt           DateTime?
+  evidenceFingerprint String?                 @db.Char(64)
+  policyVersion       String?                 @db.VarChar(60)
+  parkingCase         ParkingIntelligenceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
+  @@unique([caseId, revision])
   @@index([caseId, reviewedAt])
   @@map("parking_human_label")
 }

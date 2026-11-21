@@ -1,4 +1,5 @@
 import '../domain/parking_location.dart';
+import '../domain/parking_verification.dart';
 
 /// Data Transfer Object for parsing backend parking records.
 class ParkingLocationDto {
@@ -16,6 +17,7 @@ class ParkingLocationDto {
     this.parkingOptions = ParkingOptions.empty,
     this.hourlyRate,
     this.currency,
+    this.verification,
   });
 
   final String id;
@@ -31,6 +33,7 @@ class ParkingLocationDto {
   final ParkingOptions parkingOptions;
   final double? hourlyRate;
   final String? currency;
+  final ParkingVerification? verification;
 
   factory ParkingLocationDto.fromJson(Map<String, dynamic> json) {
     final id = json['id'] as String?;
@@ -69,6 +72,7 @@ class ParkingLocationDto {
       parkingOptions: ParkingOptions.fromJson(rawOptions),
       hourlyRate: hourlyRateNum,
       currency: json['currency'] as String?,
+      verification: ParkingVerification.fromJson(json['verification']),
     );
   }
 
@@ -87,6 +91,7 @@ class ParkingLocationDto {
       parkingOptions: parkingOptions,
       hourlyRate: hourlyRate,
       currency: currency,
+      verification: verification,
     );
   }
 }

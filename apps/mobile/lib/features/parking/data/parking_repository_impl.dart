@@ -5,10 +5,35 @@ import '../domain/parking_photo.dart';
 import '../domain/parking_repository.dart';
 import 'parking_remote_data_source.dart';
 
-class ParkingRepositoryImpl implements ParkingRepository {
+class ParkingRepositoryImpl implements ParkingDiscoveryRepository {
   ParkingRepositoryImpl(this._remoteDataSource);
 
   final ParkingRemoteDataSource _remoteDataSource;
+
+  @override
+  Future<ParkingDiscoveryResult> discoverParking({
+    required double latitude,
+    required double longitude,
+    int? radius,
+    CancelToken? cancelToken,
+  }) async {
+    final remote = _remoteDataSource;
+    if (remote is ParkingRemoteDataSourceImpl) {
+      final result = await remote.discoverParking(
+        latitude: latitude,
+        longitude: longitude,
+        radius: radius,
+        cancelToken: cancelToken,
+      );
+      return ParkingDiscoveryResult(
+        result.facilities.map((dto) => dto.toDomain()).toList(),
+        result.settings,
+      );
+    }
+    return ParkingDiscoveryResult(await getNearbyParking(
+      latitude: latitude, longitude: longitude, radius: radius, cancelToken: cancelToken,
+    ));
+  }
 
   @override
   Future<List<ParkingLocation>> getNearbyParking({

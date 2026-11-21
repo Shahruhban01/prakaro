@@ -1,5 +1,7 @@
 # Parking Intelligence · Milestone 12A
 
+Milestone 12B extends this shadow foundation with [controlled discovery and review](intelligence-rollout.md) and a [reproducible evaluation report](intelligence-evaluation.md). Display and filtering default to off.
+
 The Fastify parking service hands up to 20 nearby candidates to a background observer. The existing Places API (New) client, parking DTO, filters, distance sort and provider-backed opening status still drive discovery. The observer has no public route or control over the response, saved parking, official verification or Flutter. It runs on nearby discovery requests and has no task backlog.
 
 ## Rules and verification states

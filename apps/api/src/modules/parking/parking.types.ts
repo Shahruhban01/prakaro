@@ -1,3 +1,5 @@
+import type { DiscoveryMode, ParkingDecision } from '../intelligence/intelligence.policy';
+
 export type AccessType = 'public' | 'customers_only' | 'private' | 'unknown';
 export type OwnershipType = 'public' | 'private' | 'unknown';
 export type PricingType = 'free' | 'paid' | 'mixed' | 'unknown';
@@ -26,6 +28,7 @@ export interface ParkingFacility {
   parkingOptions: ParkingOptions;
   hourlyRate: number | null;
   currency: string | null;
+  verification?: ParkingDecision;
 }
 
 export interface NearbyParkingQuery {
@@ -36,6 +39,7 @@ export interface NearbyParkingQuery {
   openNow?: boolean;
   access?: 'all' | 'public';
   sort?: 'distance';
+  mode?: DiscoveryMode;
 }
 
 export interface NearbyParkingResponse {
@@ -48,8 +52,16 @@ export interface NearbyParkingResponse {
       pricing: 'all' | 'free' | 'paid';
       openNow: boolean;
       access: 'all' | 'public';
-      sort: 'distance';
+      sort: 'distance' | 'recommended';
     };
     filteredOnCandidateSet: boolean;
+    intelligence?: {
+      available: boolean;
+      filteringEnabled: boolean;
+      defaultMode: DiscoveryMode;
+      mode: DiscoveryMode;
+      recommendedOrder: string[];
+      notice?: 'NO_VERIFIED_PARKING' | 'VERIFICATION_UNAVAILABLE' | 'FILTERING_DISABLED';
+    };
   };
 }

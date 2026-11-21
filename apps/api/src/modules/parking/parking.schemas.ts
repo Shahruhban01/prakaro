@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { discoveryMode } from '../intelligence/intelligence.policy';
 
 function createCoordinateSchema(name: string, min: number, max: number) {
   return z.preprocess(
@@ -103,7 +104,8 @@ export const nearbyParkingQuerySchema = z.object({
     .enum(['distance'], {
       errorMap: () => ({ message: "Sort option must be 'distance'." }),
     })
-    .default('distance'),
+    .optional(),
+  mode: discoveryMode.optional(),
 });
 
 export type NearbyParkingQueryInput = z.infer<typeof nearbyParkingQuerySchema>;

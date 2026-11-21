@@ -164,6 +164,8 @@ flutter run --dart-define=API_BASE_URL=http://<YOUR_COMPUTER_LAN_IP>:3000
 ## Documentation Links
 
 - [Parking Intelligence and reviewer workflow](docs/parking-intelligence.md)
+- [Milestone 12B evaluation](docs/intelligence-evaluation.md)
+- [Controlled rollout and rollback](docs/intelligence-rollout.md)
 - [Architecture Overview](file:///e:/JustAnotherFuckinProject/docs/architecture.md)
 - [Development & Networking Guide](file:///e:/JustAnotherFuckinProject/docs/development.md)
 - [API Contract Specification](file:///e:/JustAnotherFuckinProject/docs/api-contract.md)

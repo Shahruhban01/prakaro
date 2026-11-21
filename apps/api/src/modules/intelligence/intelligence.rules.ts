@@ -1,5 +1,7 @@
 import type { AiOutput, Classification, Evidence } from './intelligence.schemas';
 
+export const RULES_VERSION = 'parking-rules-v1';
+
 export interface RuleOutcome {
   rule: string;
   outcome: 'SUPPORTING' | 'SUSPICIOUS' | 'INFORMATIONAL';

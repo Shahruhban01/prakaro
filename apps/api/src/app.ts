@@ -7,6 +7,7 @@ import { auth } from './config/auth';
 import { AppError } from './common/errors/app-error';
 import { GooglePlacesClient } from './integrations/google-places/google-places.client';
 import { ParkingService } from './modules/parking/parking.service';
+import { DiscoveryIntelligence, discoveryIntelligenceOptions } from './modules/intelligence/intelligence.discovery';
 import { ParkingController } from './modules/parking/parking.controller';
 import { parkingRoutes } from './modules/parking/parking.routes';
 import { ParkingPhotosService } from './modules/parking/photos/parking-photos.service';
@@ -23,15 +24,16 @@ import { createDiscoveryObserver, type DiscoveryObserver } from './modules/intel
 export interface AppOptions extends FastifyServerOptions {
   googlePlacesClient?: GooglePlacesClient;
   parkingDiscoveryObserver?: DiscoveryObserver;
+  parkingIntelligence?: DiscoveryIntelligence;
 }
 
 function maskSensitiveUrl(url: string): string {
-  // Mask coordinates to 2 decimal places to prevent logging precise user coordinates
-  return url.replace(/([?&](?:latitude|longitude)=)(-?\d+\.\d{2})\d*/gi, '$1$2***');
+  // Query parameters can contain coordinates in encoded or exponential form.
+  return url.split('?', 1)[0] ?? '/';
 }
 
 export function buildApp(opts: AppOptions = {}): FastifyInstance {
-  const { googlePlacesClient: customGooglePlacesClient, parkingDiscoveryObserver, ...fastifyOpts } = opts;
+  const { googlePlacesClient: customGooglePlacesClient, parkingDiscoveryObserver, parkingIntelligence, ...fastifyOpts } = opts;
 
   const app = Fastify({
     logger: {
@@ -143,7 +145,8 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
   const googlePlacesClient =
     customGooglePlacesClient ?? new GooglePlacesClient(env.GOOGLE_PLACES_API_KEY);
   const parkingService = new ParkingService(googlePlacesClient, parkingDiscoveryObserver ??
-    createDiscoveryObserver(() => app.log.warn('Parking intelligence shadow evaluation failed')));
+    createDiscoveryObserver(() => app.log.warn('Parking intelligence shadow evaluation failed')),
+    parkingIntelligence ?? new DiscoveryIntelligence(discoveryIntelligenceOptions));
   const parkingController = new ParkingController(parkingService);
 
   const parkingPhotosService = new ParkingPhotosService(googlePlacesClient);

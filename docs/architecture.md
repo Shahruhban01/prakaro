@@ -4,6 +4,8 @@ Prakaro is a parking discovery platform designed with a **strictly backend-drive
 
 Nearby discovery also schedules a bounded [Parking Intelligence](parking-intelligence.md) shadow observer. It evaluates provider signals in memory and can submit approved independent findings to Gemini through an internal service. MySQL shares the request budget and stores independent evidence and run metrics. The observer runs outside the discovery response path.
 
+Milestone 12B can attach a deterministic verification decision to parking discovery and details. Discovery batches one time-bounded independent-evidence lookup and falls back to its original candidates if the store is unavailable. The public API can order recommendations or return the verified-only subset when enabled and requested. Flutter keeps the eligible candidate set in the existing shared List/Map state and applies the server's recommendation order and verification status locally. The authorized review CLI appends revisions to the existing MySQL labels.
+
 ```
 +-----------------------------------------------------------------+
 |                         Prakaro Mobile                          |

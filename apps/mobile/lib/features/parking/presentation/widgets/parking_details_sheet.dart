@@ -12,6 +12,7 @@ import '../../../auth/presentation/widgets/auth_prompt_bottom_sheet.dart';
 import '../../domain/parking_location.dart';
 import '../saved_providers.dart';
 import 'parking_photo_gallery.dart';
+import 'parking_verification_label.dart';
 
 /// Modal bottom sheet presenting verified facility metadata, photo gallery,
 /// and direct navigation trigger in a refined consumer interface.
@@ -21,11 +22,13 @@ class ParkingDetailsSheet extends ConsumerStatefulWidget {
     required this.location,
     this.distanceMeters,
     required this.onClose,
+    this.verificationUnavailable = false,
   });
 
   final ParkingLocation location;
   final double? distanceMeters;
   final VoidCallback onClose;
+  final bool verificationUnavailable;
 
   @override
   ConsumerState<ParkingDetailsSheet> createState() => _ParkingDetailsSheetState();
@@ -270,6 +273,15 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
 
                     const SizedBox(height: 12),
 
+                    if (loc.verification case final verification?) ...[
+                      ParkingVerificationLabel(
+                        verification: verification,
+                        unavailable: widget.verificationUnavailable,
+                        explain: true,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     // 5. Source Attribution
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -362,6 +374,16 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
   }
 
   String _buildAccessLabel(ParkingLocation loc) {
+    final verification = loc.verification;
+    if (verification != null && !widget.verificationUnavailable && !verification.isUnavailable) {
+      return switch (verification.access) {
+        'PUBLIC' => 'Public access',
+        'PRIVATE' => 'Private parking',
+        'CUSTOMERS_ONLY' => 'Customers only',
+        'RESTRICTED' => 'Restricted access',
+        _ => 'Access unconfirmed',
+      };
+    }
     switch (loc.accessType) {
       case AccessType.public:
         return 'Public access';
@@ -370,7 +392,7 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
       case AccessType.private:
         return 'Private parking';
       case AccessType.unknown:
-        return 'General access';
+        return 'Access unconfirmed';
     }
   }
 }

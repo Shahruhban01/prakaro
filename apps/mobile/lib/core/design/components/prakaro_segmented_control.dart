@@ -94,52 +94,56 @@ class _SegmentButton<T> extends StatelessWidget {
     final selectedFg = isDark ? Colors.white : AppTheme.textPrimaryLight;
     final unselectedFg = isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 10.0 : 14.0,
-          vertical: isCompact ? 5.0 : 7.0,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? selectedBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1.5),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (item.icon != null) ...[
-              PrakaroIcon(
-                item.icon!,
-                size: isCompact ? 13.0 : 15.0,
-                color: isSelected ? selectedFg : unselectedFg,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 10.0 : 14.0,
+            vertical: isCompact ? 5.0 : 7.0,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? selectedBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (item.icon != null) ...[
+                PrakaroIcon(
+                  item.icon!,
+                  size: isCompact ? 13.0 : 15.0,
+                  color: isSelected ? selectedFg : unselectedFg,
+                ),
+                const SizedBox(width: 5.0),
+              ],
+              Text(
+                item.label,
+                style: TextStyle(
+                  fontSize: isCompact ? 12.0 : 13.0,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: -0.1,
+                  color: isSelected ? selectedFg : unselectedFg,
+                  height: 1.0,
+                ),
               ),
-              const SizedBox(width: 5.0),
             ],
-            Text(
-              item.label,
-              style: TextStyle(
-                fontSize: isCompact ? 12.0 : 13.0,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                letterSpacing: -0.1,
-                color: isSelected ? selectedFg : unselectedFg,
-                height: 1.0,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -5,6 +5,8 @@ import {
 } from '../../integrations/google-places/google-places.mapper';
 import { NearbyParkingQuery, NearbyParkingResponse, ParkingFacility } from './parking.types';
 import type { DiscoveryObserver } from '../intelligence/intelligence.shadow';
+import type { DiscoveryIntelligence } from '../intelligence/intelligence.discovery';
+import { compareRecommendations } from '../intelligence/intelligence.policy';
 
 function calculateHaversineDistanceMeters(
   lat1: number,
@@ -29,6 +31,7 @@ export class ParkingService {
   constructor(
     private readonly googlePlacesClient: GooglePlacesClient,
     private readonly observeDiscovery?: DiscoveryObserver,
+    private readonly intelligence?: DiscoveryIntelligence,
   ) {}
 
   public async findNearby(query: NearbyParkingQuery): Promise<NearbyParkingResponse> {
@@ -45,16 +48,37 @@ export class ParkingService {
     const pricing = query.pricing ?? 'all';
     const openNow = query.openNow ?? false;
     const access = query.access ?? 'all';
-    const sort = query.sort ?? 'distance';
+    const intelligence = this.intelligence?.options.displayEnabled ? this.intelligence : undefined;
+    const decorated = intelligence ? await intelligence.decorate(candidates) : undefined;
+    const settings = intelligence?.options;
+    const available = decorated?.available ?? false;
+    const filteringEnabled = settings?.filteringEnabled ?? false;
+    const defaultMode =
+      settings?.defaultMode === 'VERIFIED_ONLY' && !filteringEnabled
+        ? 'ALL_CANDIDATES'
+        : (settings?.defaultMode ?? 'ALL_CANDIDATES');
+    const requested = query.mode ?? defaultMode;
+    const mode =
+      !available || (requested === 'VERIFIED_ONLY' && !filteringEnabled)
+        ? 'ALL_CANDIDATES'
+        : requested;
+    const sort = mode === 'RECOMMENDED' && !query.sort ? 'recommended' : 'distance';
 
     // 1. Logical Filtering
-    const filtered = candidates.filter((facility) => {
+    const filtered = (decorated?.data ?? candidates).filter((facility) => {
+      const decision = available && filteringEnabled ? facility.verification : undefined;
+      const verifiedPrice =
+        decision?.pricing === 'FREE'
+          ? 'free'
+          : decision?.pricing === 'PAID'
+            ? 'paid'
+            : facility.pricingType;
       // Pricing Filter
       if (pricing === 'free') {
-        const isFree = facility.pricingType === 'free' || facility.pricingType === 'mixed';
+        const isFree = verifiedPrice === 'free' || verifiedPrice === 'mixed';
         if (!isFree) return false;
       } else if (pricing === 'paid') {
-        const isPaid = facility.pricingType === 'paid' || facility.pricingType === 'mixed';
+        const isPaid = verifiedPrice === 'paid' || verifiedPrice === 'mixed';
         if (!isPaid) return false;
       }
       // 'all' includes free, paid, mixed, and unknown
@@ -66,39 +90,56 @@ export class ParkingService {
 
       // Access Filter
       if (access === 'public') {
-        if (facility.accessType !== 'public') return false;
+        if (decision ? decision.access !== 'PUBLIC' : facility.accessType !== 'public')
+          return false;
       }
 
       return true;
     });
 
     // 2. Sorting (Default: Nearest First by straight-line Haversine distance)
-    if (sort === 'distance') {
-      filtered.sort((a, b) => {
-        const distA = calculateHaversineDistanceMeters(
-          query.latitude,
-          query.longitude,
-          a.latitude,
-          a.longitude,
-        );
-        const distB = calculateHaversineDistanceMeters(
-          query.latitude,
-          query.longitude,
-          b.latitude,
-          b.longitude,
-        );
+    filtered.sort((a, b) => {
+      const distA = calculateHaversineDistanceMeters(
+        query.latitude,
+        query.longitude,
+        a.latitude,
+        a.longitude,
+      );
+      const distB = calculateHaversineDistanceMeters(
+        query.latitude,
+        query.longitude,
+        b.latitude,
+        b.longitude,
+      );
 
-        if (distA !== distB) {
-          return distA - distB;
-        }
-        return a.id.localeCompare(b.id);
-      });
-    }
+      if (distA !== distB) {
+        return distA - distB;
+      }
+      return a.id.localeCompare(b.id);
+    });
+    const recommended =
+      settings && available
+        ? [...filtered].sort((a, b) => compareRecommendations(a.verification, b.verification))
+        : filtered;
+    const ordered = sort === 'recommended' ? recommended : filtered;
+    const data =
+      mode === 'VERIFIED_ONLY'
+        ? ordered.filter(
+            ({ verification }) => verification?.facilityStatus === 'INDEPENDENTLY_VERIFIED',
+          )
+        : ordered;
+    const notice = !available
+      ? 'VERIFICATION_UNAVAILABLE'
+      : requested === 'VERIFIED_ONLY' && !filteringEnabled
+        ? 'FILTERING_DISABLED'
+        : mode === 'VERIFIED_ONLY' && !data.length
+          ? 'NO_VERIFIED_PARKING'
+          : undefined;
 
     return {
-      data: filtered,
+      data,
       meta: {
-        count: filtered.length,
+        count: data.length,
         totalDiscovered,
         radiusMeters: query.radius,
         filterApplied: {
@@ -108,6 +149,18 @@ export class ParkingService {
           sort,
         },
         filteredOnCandidateSet: true,
+        ...(settings
+          ? {
+              intelligence: {
+                available,
+                filteringEnabled,
+                defaultMode,
+                mode,
+                recommendedOrder: available ? [...new Set(recommended.map(({ id }) => id))] : [],
+                ...(notice ? { notice } : {}),
+              },
+            }
+          : {}),
       },
     };
   }
@@ -120,7 +173,9 @@ export class ParkingService {
     if (!rawPlace) {
       return null;
     }
-    return mapGooglePlaceToParkingFacility(rawPlace);
+    const facility = mapGooglePlaceToParkingFacility(rawPlace);
+    if (!facility || !this.intelligence?.options.displayEnabled) return facility;
+    return (await this.intelligence.decorate([facility])).data[0] ?? facility;
   }
 
   public getMetricsSnapshot() {

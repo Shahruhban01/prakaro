@@ -29,6 +29,22 @@ const envSchema = z.object({
   AI_MAX_CALLS_PER_DAY: z.coerce.number().int().nonnegative().max(100_000).default(50),
   AI_MAX_CONCURRENT_REQUESTS: z.coerce.number().int().min(1).max(10).default(2),
   AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(100).max(15_000).default(4000),
+  PARKING_INTELLIGENCE_DISPLAY_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  PARKING_INTELLIGENCE_FILTERING_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  PARKING_INTELLIGENCE_DEFAULT_MODE: z
+    .enum(['ALL_CANDIDATES', 'RECOMMENDED', 'VERIFIED_ONLY'])
+    .default('ALL_CANDIDATES'),
+  PARKING_INTELLIGENCE_REQUIRE_HUMAN_REVIEW: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  PARKING_REVIEW_ADMIN_IDS: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

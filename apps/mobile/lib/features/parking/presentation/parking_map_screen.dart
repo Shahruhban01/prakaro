@@ -13,6 +13,8 @@ import '../domain/parking_location.dart';
 import 'destination_search_screen.dart';
 import 'parking_providers.dart';
 import 'widgets/parking_details_sheet.dart';
+import 'widgets/parking_discovery_control.dart';
+import '../domain/parking_verification.dart';
 import 'widgets/parking_filter_bar.dart';
 import 'widgets/parking_radius_selector.dart';
 import 'widgets/parking_view_switcher.dart';
@@ -56,7 +58,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
     );
   }
 
-  Set<Marker> _buildMarkers(List<ParkingLocation> locations, ParkingLocation? selected) {
+  Set<Marker> _buildMarkers(List<ParkingLocation> locations, ParkingLocation? selected, bool verificationAvailable) {
     return locations.map((loc) {
       final isSelected = selected?.id == loc.id;
 
@@ -73,7 +75,10 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
         icon: BitmapDescriptor.defaultMarkerWithHue(hue),
         infoWindow: InfoWindow(
           title: loc.name,
-          snippet: loc.address,
+          snippet: loc.verification == null ? loc.address
+              : !verificationAvailable ? 'Information unavailable'
+              : loc.verification!.isRestricted ? '${loc.verification!.label} · Restricted access'
+              : loc.verification!.label,
         ),
         onTap: () {
           AppHaptics.lightImpact();
@@ -134,7 +139,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
         ? LatLng(state.userLatitude!, state.userLongitude!)
         : _fallbackLocation;
 
-    final displayedMarkers = _buildMarkers(state.filteredLocations, state.selectedLocation);
+    final displayedMarkers = _buildMarkers(state.filteredLocations, state.selectedLocation, state.verificationAvailable);
     final displayedCircles = _buildCircles(state, colorScheme);
 
     return Scaffold(
@@ -299,6 +304,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
 
                   // Row 2: Search Radius Segmented Selector
                   const ParkingRadiusSelector(isCompact: true),
+                  const ParkingDiscoveryControl(),
 
                   // Row 3: Shared Quick Filters Bar
                   if (state.locations.isNotEmpty) ...[
@@ -507,7 +513,8 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
           if (state.status == ParkingMapStatus.locationUnavailable)
             _buildLocationUnavailableBanner(context, notifier, colorScheme, theme),
 
-          if (state.status == ParkingMapStatus.empty && !state.isLoading && state.locations.isEmpty)
+          if (state.isVerifiedEmpty ||
+              (state.status == ParkingMapStatus.empty && !state.isLoading && state.locations.isEmpty))
             _buildEmptyStateToast(context, state, notifier, colorScheme, theme),
 
           if (state.status == ParkingMapStatus.backendUnavailable && !state.isLoading)
@@ -520,6 +527,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
               child: ParkingDetailsSheet(
                 location: state.selectedLocation!,
                 distanceMeters: notifier.getDistanceTo(state.selectedLocation!),
+                verificationUnavailable: !state.verificationAvailable,
                 onClose: () => notifier.selectLocation(null),
               ),
             ),
@@ -669,14 +677,21 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'No parking found within ${state.searchRadiusKm} km.',
+                state.isVerifiedEmpty ? 'No verified parking found'
+                    : 'No parking found within ${state.searchRadiusKm} km.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.1,
                 ),
               ),
             ),
-            if (state.canIncreaseRadius)
+            if (state.isVerifiedEmpty)
+              PrakaroButton.tonal(
+                label: 'All Candidates',
+                size: PrakaroButtonSize.small,
+                onPressed: () => notifier.setDiscoveryMode(ParkingDiscoveryMode.allCandidates),
+              )
+            else if (state.canIncreaseRadius)
               PrakaroButton.tonal(
                 label: 'Expand (${state.nextRadiusMeters ~/ 1000} km)',
                 size: PrakaroButtonSize.small,

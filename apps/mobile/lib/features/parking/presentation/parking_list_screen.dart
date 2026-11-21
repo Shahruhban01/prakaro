@@ -10,11 +10,13 @@ import '../../../core/services/location_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/screens/profile_screen.dart';
 import '../domain/parking_location.dart';
+import '../domain/parking_verification.dart';
 import 'destination_search_screen.dart';
 import 'parking_providers.dart';
 import 'widgets/google_attribution.dart';
 import 'widgets/parking_card.dart';
 import 'widgets/parking_details_sheet.dart';
+import 'widgets/parking_discovery_control.dart';
 import 'widgets/parking_empty_state.dart';
 import 'widgets/parking_filter_bar.dart';
 import 'widgets/parking_loading_state.dart';
@@ -25,7 +27,7 @@ import 'widgets/parking_view_switcher.dart';
 class ParkingListScreen extends ConsumerWidget {
   const ParkingListScreen({super.key});
 
-  void _showDetailsSheet(BuildContext context, ParkingLocation location, double? distance) {
+  void _showDetailsSheet(BuildContext context, ParkingLocation location, double? distance, bool unavailable) {
     AppHaptics.lightImpact();
     showModalBottomSheet<void>(
       context: context,
@@ -34,6 +36,7 @@ class ParkingListScreen extends ConsumerWidget {
       builder: (ctx) => ParkingDetailsSheet(
         location: location,
         distanceMeters: distance,
+        verificationUnavailable: unavailable,
         onClose: () => Navigator.of(ctx).pop(),
       ),
     );
@@ -201,6 +204,14 @@ class ParkingListScreen extends ConsumerWidget {
                       ),
                     ),
 
+                    if (state.discoverySettings.displayEnabled)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: ParkingDiscoveryControl(),
+                        ),
+                      ),
+
                     // B. Horizontally Scrollable Filter Chips Bar
                     if (state.status == ParkingMapStatus.loaded || state.locations.isNotEmpty)
                       const SliverToBoxAdapter(
@@ -273,6 +284,16 @@ class ParkingListScreen extends ConsumerWidget {
                       const SliverToBoxAdapter(
                         child: ParkingLoadingState(),
                       )
+                    else if (state.isVerifiedEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: ParkingEmptyState(
+                          title: 'No verified parking found',
+                          message: 'Try All Candidates to see other parking that matches your filters.',
+                          onRetry: () => notifier.setDiscoveryMode(ParkingDiscoveryMode.allCandidates),
+                          retryLabel: 'Show All Candidates',
+                        ),
+                      )
                     else if (state.isFilterEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
@@ -305,10 +326,12 @@ class ParkingListScreen extends ConsumerWidget {
                                 child: ParkingCard(
                                   location: item.location,
                                   distanceMeters: item.distanceMeters,
+                                  verificationUnavailable: !state.verificationAvailable,
                                   onTap: () => _showDetailsSheet(
                                     context,
                                     item.location,
                                     item.distanceMeters,
+                                    !state.verificationAvailable,
                                   ),
                                 ),
                               );

@@ -12,6 +12,7 @@ import '../data/parking_remote_data_source.dart';
 import '../data/parking_repository_impl.dart';
 import '../domain/parking_location.dart';
 import '../domain/parking_repository.dart';
+import '../domain/parking_verification.dart';
 import '../domain/recent_search.dart';
 import '../domain/destination_search_models.dart';
 import 'saved_providers.dart';
@@ -114,6 +115,8 @@ class ParkingMapState {
     this.lastSearchedLongitude,
     this.radiusMeters = defaultRadiusMeters,
     this.locations = const [],
+    this.discoverySettings = const ParkingDiscoverySettings(),
+    this.discoveryMode,
     this.selectedLocation,
     this.errorMessage,
     this.canSearchArea = false,
@@ -148,6 +151,8 @@ class ParkingMapState {
   final double? lastSearchedLongitude;
   final int radiusMeters;
   final List<ParkingLocation> locations;
+  final ParkingDiscoverySettings discoverySettings;
+  final ParkingDiscoveryMode? discoveryMode;
   final ParkingLocation? selectedLocation;
   final String? errorMessage;
   final bool canSearchArea;
@@ -218,20 +223,47 @@ class ParkingMapState {
           ? 'from search center'
           : 'straight-line';
 
-  /// Returns parking locations matching active filters, sorted by ascending straight-line distance.
+  bool get verificationAvailable => discoverySettings.available && !isStaleResults &&
+      !locations.any((loc) => loc.verification?.isCurrent == false);
+
+  ParkingDiscoveryMode get effectiveDiscoveryMode {
+    final requested = discoveryMode ?? discoverySettings.defaultMode;
+    if (!verificationAvailable ||
+        (requested == ParkingDiscoveryMode.verifiedOnly && !discoverySettings.filteringEnabled)) {
+      return ParkingDiscoveryMode.allCandidates;
+    }
+    return requested;
+  }
+
+  bool get isVerifiedEmpty => !isLoading &&
+      (status == ParkingMapStatus.empty || status == ParkingMapStatus.loaded) &&
+      effectiveDiscoveryMode == ParkingDiscoveryMode.verifiedOnly &&
+      filteredLocations.isEmpty;
+
+  /// Applies the current filters, keeping nearest-first unless Recommended is selected.
   List<ParkingLocationWithDistance> get filteredLocationsWithDistance {
-    // 1. Filter candidate facilities
+    final mode = effectiveDiscoveryMode;
+    final useIndependentFilters = verificationAvailable && discoverySettings.filteringEnabled;
     final filtered = locations.where((loc) {
-      if (pricingFilter == PricingFilter.free && !loc.isConfirmedFree) {
+      final verification = loc.verification;
+      if (mode == ParkingDiscoveryMode.verifiedOnly && verification?.isVerified != true) {
         return false;
       }
-      if (pricingFilter == PricingFilter.paid && !loc.isConfirmedPaid) {
+      final independentPrice = useIndependentFilters ? verification?.pricing : null;
+      final free = independentPrice == 'FREE' || (independentPrice != 'PAID' && loc.isConfirmedFree);
+      final paid = independentPrice == 'PAID' || (independentPrice != 'FREE' && loc.isConfirmedPaid);
+      if (pricingFilter == PricingFilter.free && !free) {
+        return false;
+      }
+      if (pricingFilter == PricingFilter.paid && !paid) {
         return false;
       }
       if (openNowFilter && !loc.isConfirmedOpen) {
         return false;
       }
-      if (publicAccessFilter && !loc.isConfirmedPublic) {
+      final public = useIndependentFilters && verification != null
+          ? verification.access == 'PUBLIC' : loc.isConfirmedPublic;
+      if (publicAccessFilter && !public) {
         return false;
       }
       return true;
@@ -256,8 +288,13 @@ class ParkingMapState {
     }).toList();
 
     // 3. Nearest first sorting with stable tie-breaker
-    if (refLat != null && refLng != null) {
+    if (mode == ParkingDiscoveryMode.recommended || (refLat != null && refLng != null)) {
       list.sort((a, b) {
+        if (mode == ParkingDiscoveryMode.recommended) {
+          final order = discoverySettings.recommendedOrder;
+          final rank = (order[a.location.id] ?? order.length).compareTo(order[b.location.id] ?? order.length);
+          if (rank != 0) return rank;
+        }
         if (a.distanceMeters == null && b.distanceMeters == null) {
           return a.location.id.compareTo(b.location.id);
         }
@@ -320,6 +357,8 @@ class ParkingMapState {
     double? lastSearchedLongitude,
     int? radiusMeters,
     List<ParkingLocation>? locations,
+    ParkingDiscoverySettings? discoverySettings,
+    ParkingDiscoveryMode? discoveryMode,
     ParkingLocation? selectedLocation,
     bool clearSelectedLocation = false,
     String? errorMessage,
@@ -354,6 +393,8 @@ class ParkingMapState {
       lastSearchedLongitude: lastSearchedLongitude ?? this.lastSearchedLongitude,
       radiusMeters: radiusMeters ?? this.radiusMeters,
       locations: locations ?? this.locations,
+      discoverySettings: discoverySettings ?? this.discoverySettings,
+      discoveryMode: discoveryMode ?? this.discoveryMode,
       selectedLocation: clearSelectedLocation
           ? null
           : (selectedLocation ?? this.selectedLocation),
@@ -385,18 +426,42 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
   int _searchRequestId = 0;
   CancelToken? _activeCancelToken;
   Timer? _debounceTimer;
+  Timer? _verificationExpiryTimer;
 
   // In-flight request coalescing (prevents duplicate identical active queries)
   ParkingSearchQuery? _inFlightQuery;
-  Future<List<ParkingLocation>>? _inFlightSearchFuture;
+  Future<ParkingDiscoveryResult>? _inFlightSearchFuture;
 
   @override
   ParkingMapState build() {
     ref.onDispose(() {
       _debounceTimer?.cancel();
+      _verificationExpiryTimer?.cancel();
       _activeCancelToken?.cancel('Notifier disposed');
     });
     return const ParkingMapState();
+  }
+
+  void setDiscoveryMode(ParkingDiscoveryMode mode) {
+    if (mode == ParkingDiscoveryMode.verifiedOnly && !state.discoverySettings.filteringEnabled) return;
+    state = state.copyWith(discoveryMode: mode);
+    final selected = state.selectedLocation;
+    if (selected != null && !state.filteredLocations.contains(selected)) {
+      state = state.copyWith(clearSelectedLocation: true);
+    }
+  }
+
+  void _scheduleVerificationExpiry(List<ParkingLocation> locations) {
+    _verificationExpiryTimer?.cancel();
+    final now = DateTime.now();
+    final expiries = locations.map((location) => location.verification?.validUntil)
+        .whereType<DateTime>().where((expiry) => expiry.isAfter(now)).toList()..sort();
+    if (expiries.isEmpty) return;
+    _verificationExpiryTimer = Timer(expiries.first.difference(now), () {
+      if (!ref.mounted) return;
+      state = state.copyWith();
+      _scheduleVerificationExpiry(state.locations);
+    });
   }
 
   /// Switch the active presentation mode between list and map without re-fetching data.
@@ -677,25 +742,27 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     }
 
     _inFlightQuery = targetQuery;
-    final searchFuture = parkingRepository.getNearbyParking(
-      latitude: latitude,
-      longitude: longitude,
-      radius: effectiveRadius,
-      cancelToken: cancelToken,
-    );
+    final repository = parkingRepository;
+    final searchFuture = repository is ParkingDiscoveryRepository
+        ? repository.discoverParking(latitude: latitude, longitude: longitude, radius: effectiveRadius, cancelToken: cancelToken)
+        : repository.getNearbyParking(latitude: latitude, longitude: longitude, radius: effectiveRadius, cancelToken: cancelToken)
+            .then(ParkingDiscoveryResult.new);
     _inFlightSearchFuture = searchFuture;
 
     try {
-      final results = await searchFuture;
+      final discovery = await searchFuture;
+      final results = discovery.locations;
 
       // Stale-response guard: ignore older response if a newer request started
       if (!ref.mounted || requestId != _searchRequestId) return;
 
+      _scheduleVerificationExpiry(results);
       if (results.isEmpty) {
         state = state.copyWith(
           status: ParkingMapStatus.empty,
           isRefreshing: false,
           locations: const [],
+          discoverySettings: discovery.settings,
           displayedQuery: targetQuery,
           lastSuccessfulFetchTime: DateTime.now(),
           isStaleResults: false,
@@ -709,6 +776,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
           status: ParkingMapStatus.loaded,
           isRefreshing: false,
           locations: results,
+          discoverySettings: discovery.settings,
           displayedQuery: targetQuery,
           lastSuccessfulFetchTime: DateTime.now(),
           isStaleResults: false,

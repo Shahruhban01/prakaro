@@ -1,3 +1,5 @@
+import 'parking_verification.dart';
+
 /// Pricing classification for a parking facility.
 enum PricingType {
   free,
@@ -135,6 +137,7 @@ class ParkingLocation {
     this.parkingOptions = ParkingOptions.empty,
     this.hourlyRate,
     this.currency,
+    this.verification,
   });
 
   final String id;
@@ -150,6 +153,7 @@ class ParkingLocation {
   final ParkingOptions parkingOptions;
   final double? hourlyRate;
   final String? currency;
+  final ParkingVerification? verification;
 
   /// True if facility is verified to offer free parking (including mixed).
   bool get isConfirmedFree =>

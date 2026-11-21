@@ -87,8 +87,7 @@ export async function getVersion() {
 
 export async function claimRun(caseId: string, evidence: Evidence[]): Promise<string | undefined> {
   const version = await getVersion();
-  const findings = evidence.map(({ source, finding }) => `${source}:${finding}`).sort();
-  const evidenceFingerprint = createHash('sha256').update(JSON.stringify(findings)).digest('hex');
+  const evidenceFingerprint = fingerprintFindings(evidence);
   try {
     const run = await prisma.parkingVerificationRun.create({
       data: {
@@ -104,6 +103,11 @@ export async function claimRun(caseId: string, evidence: Evidence[]): Promise<st
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return;
     throw error;
   }
+}
+
+export function fingerprintFindings(evidence: Evidence[]): string {
+  const findings = evidence.map(({ source, finding }) => `${source}:${finding}`).sort();
+  return createHash('sha256').update(JSON.stringify(findings)).digest('hex');
 }
 
 export async function finishRun(id: string, verification: VerificationResult) {

@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { randomInt, randomUUID } from 'node:crypto';
 import { after, it } from 'node:test';
 import { prisma } from '../src/common/database/prisma';
+import { buildApp } from '../src/app';
+import { env } from '../src/config/env';
+import { ParkingReviewService } from '../src/modules/intelligence/intelligence.review';
 import {
   claimRun,
   createIntelligenceService,
@@ -11,6 +14,80 @@ import {
 } from '../src/modules/intelligence/intelligence.store';
 
 after(() => prisma.$disconnect());
+
+it('requires an allowlisted Better Auth session and appends corrections to the audit trail', async (t) => {
+  const app = buildApp();
+  t.after(() => app.close());
+  const originalAllowlist = env.PARKING_REVIEW_ADMIN_IDS;
+  t.after(() => {
+    env.PARKING_REVIEW_ADMIN_IDS = originalAllowlist;
+  });
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/auth/sign-up/email',
+    payload: {
+      name: 'Synthetic reviewer',
+      email: `${randomUUID()}@prakaro.test`,
+      password: 'ParkingReview123!',
+    },
+  });
+  assert.equal(response.statusCode, 200);
+  const { token, user } = response.json();
+  t.after(() => prisma.user.delete({ where: { id: user.id } }));
+  env.PARKING_REVIEW_ADMIN_IDS = 'different-user';
+  await assert.rejects(ParkingReviewService.open(token), /Authorized review session required/);
+  env.PARKING_REVIEW_ADMIN_IDS = user.id;
+  await assert.rejects(ParkingReviewService.open(), /Authorized review session required/);
+  const reviewer = await ParkingReviewService.open(token);
+  const expiresAt = new Date(Date.now() + 60_000).toISOString();
+  const created = await reviewer.createCase({
+    evidence: [
+      {
+        source: 'PRAKARO_AUDIT',
+        finding: 'CONFIRMED_PARKING',
+        reference: 'synthetic-audit-record',
+        expiresAt,
+      },
+    ],
+  });
+  t.after(() => prisma.parkingIntelligenceCase.delete({ where: { id: created.id } }));
+  const inspected = await reviewer.inspect(created.id);
+  const evidence = inspected.evidence[0];
+  assert.ok(evidence);
+  const review = {
+    expectedRevision: 0,
+    decision: 'CONFIRM_PARKING',
+    evidenceIds: [evidence.id],
+    expiresAt,
+    reason: 'Recorded independent inspection.',
+  };
+  assert.equal((await reviewer.record(created.id, review)).revision, 1);
+  await assert.rejects(reviewer.record(created.id, review), /review changed/);
+  assert.equal(
+    (
+      await reviewer.record(created.id, {
+        ...review,
+        expectedRevision: 1,
+        decision: 'NEEDS_EVIDENCE',
+        reason: 'Request current access evidence.',
+      })
+    ).revision,
+    2,
+  );
+  const corrected = await reviewer.inspect(created.id);
+  assert.deepEqual(
+    corrected.labels.map(({ revision, reviewerId, decision }) => ({
+      revision,
+      reviewerId,
+      decision,
+    })),
+    [
+      { revision: 2, reviewerId: user.id, decision: 'NEEDS_EVIDENCE' },
+      { revision: 1, reviewerId: user.id, decision: 'CONFIRM_PARKING' },
+    ],
+  );
+  assert.deepEqual(corrected.labels[1]?.evidenceReferences, [evidence.id]);
+});
 
 it('reserves an isolated MySQL budget atomically under concurrent callers', async (t) => {
   const utcDay = new Date(Date.UTC(2200, 0, randomInt(1, 60_000))).toISOString().slice(0, 10);

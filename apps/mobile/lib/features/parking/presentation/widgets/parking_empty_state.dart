@@ -13,6 +13,7 @@ class ParkingEmptyState extends StatelessWidget {
     this.message =
         'No parking facilities were found within your current search area. Try increasing your radius or searching another location.',
     this.onRetry,
+    this.retryLabel = 'Refresh Search',
     this.onClearFilters,
     this.onIncreaseRadius,
     this.increaseRadiusLabel = 'Increase Radius',
@@ -23,6 +24,7 @@ class ParkingEmptyState extends StatelessWidget {
   final String title;
   final String message;
   final VoidCallback? onRetry;
+  final String retryLabel;
   final VoidCallback? onClearFilters;
   final VoidCallback? onIncreaseRadius;
   final String increaseRadiusLabel;
@@ -113,7 +115,7 @@ class ParkingEmptyState extends StatelessWidget {
                   ),
                 if (onRetry != null)
                   PrakaroButton.tonal(
-                    label: 'Refresh Search',
+                    label: retryLabel,
                     icon: PrakaroIconData.refresh,
                     size: PrakaroButtonSize.small,
                     onPressed: onRetry,

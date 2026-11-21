@@ -11,6 +11,7 @@ import '../../../auth/presentation/widgets/auth_prompt_bottom_sheet.dart';
 import '../../domain/parking_location.dart';
 import '../parking_providers.dart';
 import '../saved_providers.dart';
+import 'parking_verification_label.dart';
 
 /// Professional, human-centered card presenting a single discovered parking facility.
 /// Prioritizes facility name, distance, readable address, verified attributes, and clear directions.
@@ -20,11 +21,13 @@ class ParkingCard extends ConsumerStatefulWidget {
     required this.location,
     this.distanceMeters,
     this.onTap,
+    this.verificationUnavailable = false,
   });
 
   final ParkingLocation location;
   final double? distanceMeters;
   final VoidCallback? onTap;
+  final bool verificationUnavailable;
 
   @override
   ConsumerState<ParkingCard> createState() => _ParkingCardState();
@@ -215,6 +218,15 @@ class _ParkingCardState extends ConsumerState<ParkingCard> {
               ),
             ],
           ),
+
+          if (loc.verification case final verification?)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: ParkingVerificationLabel(
+                verification: verification,
+                unavailable: widget.verificationUnavailable,
+              ),
+            ),
 
           // 3. Verified Information Badges (Soft Pills)
           const SizedBox(height: 10.0),
