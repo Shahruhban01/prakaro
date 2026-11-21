@@ -4,6 +4,7 @@ import {
   mapGooglePlaceToParkingFacility,
 } from '../../integrations/google-places/google-places.mapper';
 import { NearbyParkingQuery, NearbyParkingResponse, ParkingFacility } from './parking.types';
+import type { DiscoveryObserver } from '../intelligence/intelligence.shadow';
 
 function calculateHaversineDistanceMeters(
   lat1: number,
@@ -25,7 +26,10 @@ function calculateHaversineDistanceMeters(
 }
 
 export class ParkingService {
-  constructor(private readonly googlePlacesClient: GooglePlacesClient) {}
+  constructor(
+    private readonly googlePlacesClient: GooglePlacesClient,
+    private readonly observeDiscovery?: DiscoveryObserver,
+  ) {}
 
   public async findNearby(query: NearbyParkingQuery): Promise<NearbyParkingResponse> {
     const googleResponse = await this.googlePlacesClient.searchNearby({
@@ -35,6 +39,7 @@ export class ParkingService {
     });
 
     const candidates = mapGooglePlacesResponse(googleResponse);
+    if (googleResponse.places) this.observeDiscovery?.(googleResponse.places);
     const totalDiscovered = candidates.length;
 
     const pricing = query.pricing ?? 'all';

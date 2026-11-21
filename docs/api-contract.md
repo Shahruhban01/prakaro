@@ -192,12 +192,12 @@ Returns aggregate runtime usage counters for upstream Google Places requests wit
       "averageDurationMs": 303
     },
     "fieldMasks": {
-      "searchFieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus,places.parkingOptions,places.currentOpeningHours",
+      "searchFieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus,places.parkingOptions,places.currentOpeningHours,places.primaryType,places.types",
       "detailsFieldMask": "id,displayName,formattedAddress,location,businessStatus,parkingOptions,currentOpeningHours,regularOpeningHours"
     },
     "costEstimation": {
-      "note": "Estimated costs depend on active Google Cloud Platform billing SKU rates and free tier credits ($200 monthly allowance). Multiply billable requests by current regional SKU rate.",
-      "nearbySearchSku": "Places API (New) - Nearby Search (Pro/Enterprise based on field mask)",
+      "note": "Estimated costs depend on current Google Maps Platform SKU rates and billing account usage.",
+      "nearbySearchSku": "Places API (New) - Nearby Search Enterprise + Atmosphere",
       "placeDetailsSku": "Places API (New) - Place Details (Essentials/Pro based on field mask)"
     }
   }

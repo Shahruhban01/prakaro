@@ -18,9 +18,11 @@ import { userRoutes } from './modules/user/user.routes';
 import { PlacesService } from './modules/places/places.service';
 import { PlacesController } from './modules/places/places.controller';
 import { placesRoutes } from './modules/places/places.routes';
+import { createDiscoveryObserver, type DiscoveryObserver } from './modules/intelligence/intelligence.shadow';
 
 export interface AppOptions extends FastifyServerOptions {
   googlePlacesClient?: GooglePlacesClient;
+  parkingDiscoveryObserver?: DiscoveryObserver;
 }
 
 function maskSensitiveUrl(url: string): string {
@@ -29,7 +31,7 @@ function maskSensitiveUrl(url: string): string {
 }
 
 export function buildApp(opts: AppOptions = {}): FastifyInstance {
-  const { googlePlacesClient: customGooglePlacesClient, ...fastifyOpts } = opts;
+  const { googlePlacesClient: customGooglePlacesClient, parkingDiscoveryObserver, ...fastifyOpts } = opts;
 
   const app = Fastify({
     logger: {
@@ -140,7 +142,8 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
   // Parking module dependency wiring
   const googlePlacesClient =
     customGooglePlacesClient ?? new GooglePlacesClient(env.GOOGLE_PLACES_API_KEY);
-  const parkingService = new ParkingService(googlePlacesClient);
+  const parkingService = new ParkingService(googlePlacesClient, parkingDiscoveryObserver ??
+    createDiscoveryObserver(() => app.log.warn('Parking intelligence shadow evaluation failed')));
   const parkingController = new ParkingController(parkingService);
 
   const parkingPhotosService = new ParkingPhotosService(googlePlacesClient);

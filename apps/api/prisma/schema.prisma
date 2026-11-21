@@ -127,3 +127,96 @@ model UserPreference {
 
   @@map("user_preference")
 }
+
+model ParkingIntelligenceCase {
+  id            String                     @id @default(uuid())
+  // Optional matching key only. Google Places policy allows storage of place IDs.
+  googlePlaceId String?                    @unique @db.VarChar(191)
+  evidence      ParkingEvidenceReference[]
+  labels        ParkingHumanLabel[]
+  runs          ParkingVerificationRun[]
+
+  @@map("parking_intelligence_case")
+}
+
+model ParkingEvidenceReference {
+  id          String                  @id @default(uuid())
+  caseId      String
+  source      String                  @db.VarChar(40)
+  reference   String                  @db.VarChar(500)
+  finding     String                  @db.VarChar(50)
+  approvedAt  DateTime?
+  expiresAt   DateTime
+  parkingCase ParkingIntelligenceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, expiresAt])
+  @@map("parking_evidence_reference")
+}
+
+model ParkingHumanLabel {
+  id                 String                  @id @default(uuid())
+  caseId             String
+  reviewedAt         DateTime
+  classification     String                  @db.VarChar(30)
+  access             String                  @db.VarChar(20)
+  pricing            String                  @db.VarChar(10)
+  decision           String                  @db.VarChar(30)
+  evidenceReferences Json
+  notes              String?                 @db.Text
+  parkingCase        ParkingIntelligenceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, reviewedAt])
+  @@map("parking_human_label")
+}
+
+model ParkingVerificationVersion {
+  id            String                     @id @default(uuid())
+  model         String                     @db.VarChar(100)
+  promptVersion String                     @db.VarChar(60)
+  runs          ParkingVerificationRun[]
+  evaluations   ParkingEvaluationMetrics[]
+
+  @@unique([model, promptVersion])
+  @@map("parking_verification_version")
+}
+
+model ParkingVerificationRun {
+  id                  String                     @id @default(uuid())
+  caseId              String
+  versionId           String
+  evidenceFingerprint String                     @db.Char(64)
+  utcDay              String                     @db.Char(10)
+  createdAt           DateTime                   @default(now())
+  status              String                     @default("STARTED") @db.VarChar(32)
+  outcome             String?                    @db.VarChar(30)
+  calls               Int                        @default(0)
+  callsWithTokenUsage Int                        @default(0)
+  inputTokens         Int                        @default(0)
+  outputTokens        Int                        @default(0)
+  latencyMs           Int                        @default(0)
+  parkingCase         ParkingIntelligenceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  version             ParkingVerificationVersion @relation(fields: [versionId], references: [id])
+
+  @@unique([caseId, versionId, evidenceFingerprint, utcDay], map: "parking_run_daily_evidence_key")
+  @@index([createdAt])
+  @@map("parking_verification_run")
+}
+
+model ParkingEvaluationMetrics {
+  id             String                     @id @default(uuid())
+  versionId      String
+  datasetVersion String                     @db.VarChar(100)
+  createdAt      DateTime                   @default(now())
+  metrics        Json
+  version        ParkingVerificationVersion @relation(fields: [versionId], references: [id])
+
+  @@index([createdAt])
+  @@map("parking_evaluation_metrics")
+}
+
+model ParkingAiDailyBudget {
+  utcDay String @id @db.Char(10)
+  calls  Int    @default(0)
+
+  @@map("parking_ai_daily_budget")
+}

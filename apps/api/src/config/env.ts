@@ -11,6 +11,24 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().default('prakaro_dev_secret_auth_key_super_secure_32_chars_min'),
   BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
   GOOGLE_PLACES_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().trim().optional(),
+  GEMINI_MODEL: z
+    .string()
+    .trim()
+    .max(100)
+    .regex(/^[a-z0-9][a-z0-9.-]*$/)
+    .default('gemini-2.5-flash-lite'),
+  AI_VERIFICATION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  AI_SHADOW_MODE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  AI_MAX_CALLS_PER_DAY: z.coerce.number().int().nonnegative().max(100_000).default(50),
+  AI_MAX_CONCURRENT_REQUESTS: z.coerce.number().int().min(1).max(10).default(2),
+  AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(100).max(15_000).default(4000),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -51,6 +51,8 @@ export interface GooglePlacePhoto {
 
 export interface GooglePlaceItem {
   id?: string;
+  primaryType?: string;
+  types?: string[];
   displayName?: GooglePlacesDisplayName;
   formattedAddress?: string;
   location?: GooglePlacesLocation;

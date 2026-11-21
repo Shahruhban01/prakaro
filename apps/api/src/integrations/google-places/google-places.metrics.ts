@@ -115,7 +115,7 @@ export class GooglePlacesMetrics {
   private totalDurationMs = 0;
 
   public static readonly SEARCH_FIELD_MASK =
-    'places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus,places.parkingOptions,places.currentOpeningHours';
+    'places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus,places.parkingOptions,places.currentOpeningHours,places.primaryType,places.types';
 
   public static readonly DETAILS_FIELD_MASK =
     'id,displayName,formattedAddress,location,businessStatus,parkingOptions,currentOpeningHours,regularOpeningHours';
@@ -358,8 +358,8 @@ export class GooglePlacesMetrics {
         photoDetailsFieldMask: GooglePlacesMetrics.PHOTO_DETAILS_FIELD_MASK,
       },
       costEstimation: {
-        note: 'Estimated costs depend on active Google Cloud Platform billing SKU rates and free tier credits ($200 monthly allowance). Multiply billable requests by current regional SKU rate.',
-        nearbySearchSku: 'Places API (New) - Nearby Search (Pro/Enterprise based on field mask)',
+        note: 'Estimated costs depend on current Google Maps Platform SKU rates and billing account usage.',
+        nearbySearchSku: 'Places API (New) - Nearby Search Enterprise + Atmosphere',
         placeDetailsSku: 'Places API (New) - Place Details (Essentials/Pro based on field mask)',
         placePhotoSku: 'Places API (New) - Place Photo (Media fetch per requested photo)',
       },

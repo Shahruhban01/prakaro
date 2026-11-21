@@ -2,6 +2,8 @@
 
 Prakaro is a parking discovery platform designed with a **strictly backend-driven architecture**. The system is built to minimize client-side complexity, protect commercial provider API keys, and maintain centralized control over business logic and data aggregation.
 
+Nearby discovery also schedules a bounded [Parking Intelligence](parking-intelligence.md) shadow observer. It evaluates provider signals in memory and can submit approved independent findings to Gemini through an internal service. MySQL shares the request budget and stores independent evidence and run metrics. The observer runs outside the discovery response path.
+
 ```
 +-----------------------------------------------------------------+
 |                         Prakaro Mobile                          |

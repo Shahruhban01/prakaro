@@ -154,7 +154,7 @@ flutter run --dart-define=API_BASE_URL=http://<YOUR_COMPUTER_LAN_IP>:3000
 | :--- | :--- |
 | `npm run api:build` | Compiles TypeScript backend in strict mode |
 | `npm run api:lint` | Runs ESLint across the backend codebase |
-| `npm run api:test` | Executes backend test suite (14 test suites, 49 tests) |
+| `npm run api:test` | Runs backend tests, including mocked Gemini and MySQL-backed auth tests |
 | `flutter analyze` | Runs Dart static analysis across the mobile codebase (0 issues) |
 | `flutter test` | Executes Flutter unit, DTO, repository, filter, radius, concurrency, saved parking, and photo gallery widget tests (113 tests) |
 | `flutter build apk --debug` | Verifies full native Android APK compilation |
@@ -163,6 +163,7 @@ flutter run --dart-define=API_BASE_URL=http://<YOUR_COMPUTER_LAN_IP>:3000
 
 ## Documentation Links
 
+- [Parking Intelligence and reviewer workflow](docs/parking-intelligence.md)
 - [Architecture Overview](file:///e:/JustAnotherFuckinProject/docs/architecture.md)
 - [Development & Networking Guide](file:///e:/JustAnotherFuckinProject/docs/development.md)
 - [API Contract Specification](file:///e:/JustAnotherFuckinProject/docs/api-contract.md)

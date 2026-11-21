@@ -17,11 +17,13 @@
     "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:validate": "prisma validate",
-    "test": "tsx --test tests/health.test.ts tests/parking.test.ts tests/auth-and-cloud.test.ts tests/parking-photos.test.ts"
+    "test": "tsx --import ./tests/setup-env.mjs --test tests/health.test.ts tests/parking.test.ts tests/auth-and-cloud.test.ts tests/parking-photos.test.ts tests/intelligence.test.ts tests/intelligence.mysql.test.ts",
+    "intelligence:evaluate": "tsx src/modules/intelligence/intelligence.evaluate.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
     "@fastify/rate-limit": "^9.1.0",
+    "@google/genai": "2.32.0",
     "@prisma/client": "^5.22.0",
     "better-auth": "^1.7.26",
     "dotenv": "^16.4.5",
