@@ -76,7 +76,7 @@ class _ParkingMapScreenState extends ConsumerState<ParkingMapScreen> {
         infoWindow: InfoWindow(
           title: loc.name,
           snippet: loc.verification == null ? loc.address
-              : !verificationAvailable ? 'Information unavailable'
+              : !verificationAvailable ? 'Verification unavailable'
               : loc.verification!.isRestricted ? '${loc.verification!.label} · Restricted access'
               : loc.verification!.label,
         ),

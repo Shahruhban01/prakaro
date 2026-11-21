@@ -90,3 +90,26 @@ The combined arm uses the same cases and includes fallbacks. Status counts descr
 ## Future activation
 
 Keep verification observational until evidence rights, project model access and shadow coverage are confirmed. Evaluate false negatives and abstentions on held-out cases, test cost and quota behavior under the intended replica count, and establish authorized review and reversal workflows before changing any user-facing behavior.
+
+## Local pilot on an Android device
+
+Use the dedicated development profile to see verification in discovery. From the repository root, run the following with the API development database available. The profile reads credentials from the API environment, refuses production mode, binds to loopback port 3121, enables shadow evaluation, verification display and user-selected filtering, and starts in All Candidates with human review required. The ordinary API startup and production defaults are unchanged.
+
+```powershell
+npm --prefix apps/api run dev:intelligence
+adb reverse tcp:3121 tcp:3121
+cd apps/mobile
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:3121
+```
+
+Run the Android commands in a second terminal. With multiple ADB transports, use `adb -s <transport> reverse tcp:3121 tcp:3121` and `flutter run -d <transport>`. Repeat the reverse after reconnecting the phone. For a standalone debug install, use `flutter build apk --debug --dart-define=API_BASE_URL=http://127.0.0.1:3121` and `adb install -r build/app/outputs/flutter-apk/app-debug.apk`. The ordinary mobile build may target a different host. Keep the development server running while testing.
+
+Enter `diagnostics` in the development server terminal to print the effective settings and refresh a local HTML snapshot. No diagnostics route or model proxy is exposed. Daily requests are shared MySQL reservations in UTC. Evaluated cases count distinct completed cases. Verified and unconfirmed counts cover the most recent discovery batch before user filters. Null means no observation or a database read failure. Successful/error times use the latest retained run or this process's explicit smoke test. The synthetic test creates no facility, review, or evaluation label. Append `-- --smoke` to the startup command to request one budgeted synthetic evaluation using the configured model. Normal startup performs no synthetic generation.
+
+### First 20–30 independently reviewed cases
+
+1. A reviewer creates a private copy of the [evaluation template](parking-intelligence-evaluation.template.json). Assign each facility an opaque internal ID. Select a mix of public, private, customer-only, closed and ambiguous candidates, plus potential duplicates and non-parking businesses. Preserve ambiguous cases.
+2. Record only observations you have permission to use. Suitable sources include a Prakaro field audit or operator information authorized for this purpose. Record a controlled finding and a reference to the permissioned material. Keep source documents private. Avoid provider descriptions, photos, search coordinates or copied listings.
+3. Have a second reviewer establish facility existence, access and price separately using independent evidence. Record the review date, decision, reasoning and evidence references. Use UNKNOWN for unsupported attributes and ABSTAINED when identity cannot be established. Freeze prediction-time observations before adjudication.
+4. Use the [authorized review CLI](intelligence-rollout.md) for cases that should appear in development discovery. The offline evaluation file alone has no effect on a listing. Store the identity link, independent observations, review expiry and decision using the existing workflow.
+5. Run the [evaluation commands](intelligence-evaluation.md). Each task reports observed correct, incorrect, false-positive, false-negative and uncertain counts for known ground truth. The assisted arm requires at least one accepted model response. Report actual model coverage alongside its results. Accuracy rates remain withheld for insufficient cohorts. Review genuine facilities that were missed before expanding to the 100–200-case evaluation.

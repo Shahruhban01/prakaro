@@ -329,6 +329,11 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
   }
 
   String _buildPricingLabel(ParkingLocation loc) {
+    final verification = loc.verification;
+    if (!widget.verificationUnavailable && verification != null && !verification.isUnavailable) {
+      if (verification.pricing == 'FREE') return 'Free parking';
+      if (verification.pricing == 'PAID') return 'Paid parking';
+    }
     switch (loc.pricingType) {
       case PricingType.free:
         return 'Free parking';

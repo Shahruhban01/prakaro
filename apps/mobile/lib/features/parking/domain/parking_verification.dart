@@ -51,6 +51,7 @@ class ParkingVerification {
     this.access = 'UNKNOWN',
     this.pricing = 'UNKNOWN',
     this.reasonCodes = const [],
+    this.reviewedAt,
     this.validUntil,
   });
 
@@ -58,6 +59,7 @@ class ParkingVerification {
   final String access;
   final String pricing;
   final List<String> reasonCodes;
+  final DateTime? reviewedAt;
   final DateTime? validUntil;
 
   bool get isCurrent =>
@@ -71,11 +73,11 @@ class ParkingVerification {
       const ['PRIVATE', 'CUSTOMERS_ONLY', 'RESTRICTED'].contains(access);
 
   String get label {
-    if (isUnavailable) return 'Information unavailable';
+    if (isUnavailable) return 'Verification unavailable';
     return switch (status) {
       ParkingFacilityStatus.verified => 'Verified parking',
       ParkingFacilityStatus.supported => 'Parking supported by evidence',
-      ParkingFacilityStatus.unconfirmed => 'Unconfirmed',
+      ParkingFacilityStatus.unconfirmed => 'Unconfirmed parking',
       ParkingFacilityStatus.contradicted => 'Parking classification disputed',
     };
   }
@@ -99,6 +101,7 @@ class ParkingVerification {
       reasonCodes: List.unmodifiable(
         codes is List ? codes.whereType<String>() : const <String>[],
       ),
+      reviewedAt: DateTime.tryParse(value['reviewedAt']?.toString() ?? ''),
       validUntil: expiry is String ? DateTime.tryParse(expiry) : null,
     );
   }

@@ -158,12 +158,12 @@ void main() {
         find.text('Verified through independent facility information.'),
         findsOneWidget,
       );
-      expect(find.text('Unconfirmed'), findsOneWidget);
+      expect(find.text('Unconfirmed parking'), findsOneWidget);
       expect(
         find.text('Public access has not been confirmed.'),
         findsOneWidget,
       );
-      expect(find.text('Information unavailable'), findsOneWidget);
+      expect(find.text('Verification unavailable'), findsOneWidget);
     },
   );
 

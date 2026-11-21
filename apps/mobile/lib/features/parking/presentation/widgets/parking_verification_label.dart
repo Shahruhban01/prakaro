@@ -17,9 +17,13 @@ class ParkingVerificationLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final available = !unavailable && !verification.isUnavailable;
-    final title = available ? verification.label : 'Information unavailable';
+    final title = available ? verification.label : 'Verification unavailable';
     final restricted = available && verification.isRestricted;
     final reasons = <String>{
+      if (explain && (!available || verification.status == ParkingFacilityStatus.unconfirmed))
+        'Parking information has not been independently verified.',
+      if (explain && available && verification.reviewedAt != null)
+        'Last reviewed ${MaterialLocalizations.of(context).formatMediumDate(verification.reviewedAt!.toLocal())}',
       if (available && explain)
         for (final reason in verification.reasonCodes)
           if (reasonMessages[reason] case final String message) message,

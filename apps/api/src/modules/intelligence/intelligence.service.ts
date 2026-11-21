@@ -24,6 +24,7 @@ export type AiStatus =
   | 'BUDGET_UNAVAILABLE'
   | 'QUOTA_EXHAUSTED'
   | 'TIMEOUT'
+  | 'MODEL_UNAVAILABLE'
   | 'PROVIDER_ERROR'
   | 'INVALID_OUTPUT'
   | 'UNSUPPORTED_CLAIM'
@@ -205,6 +206,7 @@ export class IntelligenceService {
           if (controller.signal.aborted) return complete('TIMEOUT');
           const status =
             error && typeof error === 'object' && 'status' in error ? error.status : null;
+          if (status === 404) return complete('MODEL_UNAVAILABLE');
           if (status === 429) {
             this.quotaRetryAt = Date.now() + 60_000;
             return complete('QUOTA_EXHAUSTED');

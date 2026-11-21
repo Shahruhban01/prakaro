@@ -48,7 +48,7 @@ export function comparePolicyMetrics(rows: PolicyEvaluationRow[]) {
     const enoughLabels = rows.length >= 100 && positive >= 20 && negative >= 20;
 
     function measure(arm: 'rulesOnly' | 'rulesPlusGemini' | 'policy') {
-      if (!enoughLabels || (arm === 'rulesPlusGemini' && !hasGemini)) return null;
+      if (!rows.length || (arm === 'rulesPlusGemini' && !hasGemini)) return null;
       const matrix = {
         positive: { positive: 0, negative: 0, abstained: 0 },
         negative: { positive: 0, negative: 0, abstained: 0 },
@@ -107,12 +107,31 @@ export function comparePolicyMetrics(rows: PolicyEvaluationRow[]) {
       };
     }
 
+    const rulesOnly = measure('rulesOnly');
+    const rulesPlusGemini = measure('rulesPlusGemini');
+    const policy = measure('policy');
+    function counts(result: ReturnType<typeof measure>) {
+      if (!result) return null;
+      const { positive, negative } = result.matrix;
+      return {
+        correct: positive.positive + negative.negative,
+        incorrect: positive.negative + negative.positive,
+        uncertainOnKnownTruth: positive.abstained + negative.abstained,
+        falsePositives: negative.positive,
+        falseNegatives: positive.negative,
+      };
+    }
     return {
+      observedCounts: {
+        rulesOnly: counts(rulesOnly),
+        rulesPlusGemini: counts(rulesPlusGemini),
+        policy: counts(policy),
+      },
       labels: { positive, negative, unknown: rows.length - positive - negative },
       enoughLabels,
-      rulesOnly: measure('rulesOnly'),
-      rulesPlusGemini: measure('rulesPlusGemini'),
-      policy: measure('policy'),
+      rulesOnly: enoughLabels ? rulesOnly : null,
+      rulesPlusGemini: enoughLabels ? rulesPlusGemini : null,
+      policy: enoughLabels ? policy : null,
     };
   }
   return {

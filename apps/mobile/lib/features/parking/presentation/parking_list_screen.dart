@@ -238,7 +238,9 @@ class ParkingListScreen extends ConsumerWidget {
                               Text(
                                 state.isAnyFilterActive
                                     ? '${filteredItems.length} matching facilities ($totalDiscovered discovered)'
-                                    : '$totalDiscovered parking facilities found',
+                                    : state.discoverySettings.displayEnabled
+                                        ? '${filteredItems.length} parking candidates'
+                                        : '$totalDiscovered parking facilities found',
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
@@ -247,7 +249,9 @@ class ParkingListScreen extends ConsumerWidget {
                                 ),
                               ),
                               Text(
-                                'Nearest first',
+                                state.effectiveDiscoveryMode == ParkingDiscoveryMode.recommended
+                                    ? 'Verification order'
+                                    : 'Nearest first',
                                 style: TextStyle(
                                   fontSize: 12.0,
                                   fontWeight: FontWeight.w600,

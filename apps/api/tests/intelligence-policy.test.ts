@@ -252,6 +252,10 @@ it('separates the public usability and facility confusion matrices and withholds
     decision,
   };
   assert.equal(comparePolicyMetrics([privateRow]).genuineParking.policy, null);
+  const pilot = comparePolicyMetrics([privateRow]);
+  assert.equal(pilot.genuineParking.observedCounts.policy?.correct, 1);
+  assert.equal(pilot.publiclyUsableParking.observedCounts.policy?.falsePositives, 0);
+  assert.equal(pilot.genuineParking.observedCounts.rulesPlusGemini, null);
   const negatives = { ...privateRow, truth: 'LIKELY_NOT_PARKING' as const };
   const publicRows = { ...privateRow, truthAccess: 'PUBLIC' as const };
   const summary = comparePolicyMetrics([

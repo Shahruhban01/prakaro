@@ -46,6 +46,7 @@ export const parkingDecisionSchema = z
     reasonCodes: z.array(reasonCode),
     evidenceLevel: z.enum(['AUTHORITATIVE', 'INDEPENDENTLY_CORROBORATED', 'WEAK', 'INSUFFICIENT']),
     reviewRequired: z.boolean(),
+    reviewedAt: z.string().datetime().optional(),
     validUntil: z.string().datetime().optional(),
   })
   .strict();
@@ -59,6 +60,7 @@ interface PolicyInput {
   review?: PolicyReview;
   requireHumanReview: boolean;
   openingStatus?: 'open' | 'closed' | 'unknown';
+  reviewedAt?: Date;
   validUntil?: Date;
   unavailable?: boolean;
 }
@@ -139,6 +141,7 @@ export function decideParking(input: PolicyInput): ParkingDecision {
       held ||
       rules.needsHumanReview ||
       (status !== 'INDEPENDENTLY_VERIFIED' && status !== 'CONTRADICTED'),
+    reviewedAt: input.reviewedAt?.toISOString(),
     validUntil: input.validUntil?.toISOString(),
   });
 }

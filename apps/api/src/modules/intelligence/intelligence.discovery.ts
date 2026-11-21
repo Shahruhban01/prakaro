@@ -212,6 +212,7 @@ export class DiscoveryIntelligence {
       assessment: assessment?.data,
       requireHumanReview: this.options.requireHumanReview,
       openingStatus,
+      reviewedAt: review && review !== 'STALE' ? label?.reviewedAt : undefined,
       validUntil: Number.isFinite(expiration) ? new Date(expiration) : undefined,
       unavailable,
     });

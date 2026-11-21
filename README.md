@@ -170,3 +170,5 @@ flutter run --dart-define=API_BASE_URL=http://<YOUR_COMPUTER_LAN_IP>:3000
 - [Development & Networking Guide](file:///e:/JustAnotherFuckinProject/docs/development.md)
 - [API Contract Specification](file:///e:/JustAnotherFuckinProject/docs/api-contract.md)
 - [Parking Photos & Visual Details](file:///e:/JustAnotherFuckinProject/docs/parking-photos.md)
+
+To activate verification locally on Android, use the [development profile, device connection and pilot reviewer workflow](docs/parking-intelligence.md#local-pilot-on-an-android-device).
