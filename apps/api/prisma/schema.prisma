@@ -15,15 +15,16 @@ datasource db {
 // ----------------------------------------------------
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  id              String           @id
+  name            String
+  email           String
+  emailVerified   Boolean          @default(false)
+  image           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  moderationStaff ModerationStaff?
+  sessions        Session[]
+  accounts        Account[]
 
   // Prakaro Relations
   savedParkings  SavedParking[]
@@ -130,6 +131,7 @@ model UserPreference {
 
 model ParkingIntelligenceCase {
   id             String                     @id @default(uuid())
+  admission      SearchAdmission?
   reviewRevision Int                        @default(0)
   // Optional matching key only. Google Places policy allows storage of place IDs.
   googlePlaceId  String?                    @unique @db.VarChar(191)
@@ -226,4 +228,131 @@ model ParkingAiDailyBudget {
   calls  Int    @default(0)
 
   @@map("parking_ai_daily_budget")
+}
+
+model ModerationStaff {
+  userId      String                 @id
+  user        User                   @relation(fields: [userId], references: [id])
+  role        String
+  active      Boolean                @default(true)
+  memberships ModerationMembership[]
+
+  @@map("moderation_staff")
+}
+
+model ModerationQueue {
+  id          String                 @id @default(uuid())
+  code        String                 @unique
+  name        String
+  description String                 @default("")
+  kind        String
+  status      String                 @default("ACTIVE")
+  priority    Int                    @default(0)
+  capacity    Int                    @default(500)
+  version     Int                    @default(1)
+  config      Json
+  createdBy   String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  memberships ModerationMembership[]
+  tasks       ModerationTask[]
+
+  @@map("moderation_queue")
+}
+
+model ModerationMembership {
+  userId  String
+  queueId String
+  staff   ModerationStaff @relation(fields: [userId], references: [userId])
+  queue   ModerationQueue @relation(fields: [queueId], references: [id])
+
+  @@id([userId, queueId])
+  @@map("moderation_membership")
+}
+
+model SearchAdmission {
+  facilityId String                  @id
+  facility   ParkingIntelligenceCase @relation(fields: [facilityId], references: [id])
+  firstEvent String
+  demand     Int                     @default(1)
+  createdAt  DateTime                @default(now())
+  cases      ModerationCase[]
+
+  @@map("search_admission")
+}
+
+model ModerationCounter {
+  key       String    @id
+  count     Int       @default(0)
+  expiresAt DateTime?
+
+  @@index([expiresAt])
+  @@map("moderation_counter")
+}
+
+model ModerationCase {
+  id         String                 @id @default(uuid())
+  code       String                 @unique
+  activeKey  String?                @unique
+  facilityId String
+  admission  SearchAdmission        @relation(fields: [facilityId], references: [facilityId])
+  category   String
+  trigger    String
+  status     String                 @default("QUEUED")
+  priority   Int                    @default(0)
+  revision   Int                    @default(0)
+  owner      String?
+  leaseUntil DateTime?
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  tasks      ModerationTask[]
+  reviews    ModerationSubmission[]
+
+  @@index([status, priority])
+  @@map("moderation_case")
+}
+
+model ModerationTask {
+  id           String          @id @default(uuid())
+  caseId       String
+  queueId      String
+  queueVersion Int
+  form         Json
+  deadline     DateTime
+  queue        ModerationQueue @relation(fields: [queueId], references: [id])
+  case         ModerationCase  @relation(fields: [caseId], references: [id])
+
+  @@unique([caseId, queueId])
+  @@map("moderation_task")
+}
+
+model ModerationSubmission {
+  id           String         @id @default(uuid())
+  caseId       String
+  taskId       String
+  queueVersion Int
+  case         ModerationCase @relation(fields: [caseId], references: [id])
+  reviewerId   String
+  action       String
+  answers      Json
+  evidenceIds  Json
+  fingerprint  String
+  reason       String         @db.VarChar(500)
+  createdAt    DateTime       @default(now())
+
+  @@index([caseId, createdAt])
+  @@map("moderation_submission")
+}
+
+model ModerationAudit {
+  id        String   @id @default(uuid())
+  actor     String
+  action    String
+  target    String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([target, createdAt])
+  @@map("moderation_audit")
 }

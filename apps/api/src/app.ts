@@ -1,3 +1,4 @@
+import { moderationRoutes } from './modules/moderation/routes';
 import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
@@ -59,7 +60,7 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
 
   // Sensible CORS configuration
   app.register(cors, {
-    origin: true,
+    origin: [new URL(env.BETTER_AUTH_URL).origin, ...(process.env.MODERATION_ORIGIN ? [new URL(process.env.MODERATION_ORIGIN).origin] : [])],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Cookie'],
@@ -133,6 +134,7 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
     }),
   });
 
+  app.register(moderationRoutes,{prefix:'/api/v1/moderation'});
   // Health endpoint
   app.get('/health', async () => {
     return {

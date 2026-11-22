@@ -16,6 +16,7 @@ abstract interface class ParkingDiscoveryRepository implements ParkingRepository
     required double latitude,
     required double longitude,
     int? radius,
+    bool userSearch = false,
     CancelToken? cancelToken,
   });
 }

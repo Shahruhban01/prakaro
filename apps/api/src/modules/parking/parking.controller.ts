@@ -1,3 +1,4 @@
+import { observeSearch } from '../moderation/intake';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { NotFoundError, ValidationError } from '../../common/errors/app-error';
 import { facilityIdParamSchema, nearbyParkingQuerySchema } from './parking.schemas';
@@ -18,6 +19,7 @@ export class ParkingController {
     }
 
     const result = await this.parkingService.findNearby(parsed.data);
+    observeSearch(req,result.data);
     return reply.status(200).send(result);
   };
 

@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { auth } from '../../config/auth';
 import { env } from '../../config/env';
@@ -157,12 +158,15 @@ export class ParkingReviewService {
   }
 
   async record(caseId: string, payload: unknown) {
+    return prisma.$transaction(tx => publishReview(tx, this.reviewerId, caseId, payload), {isolationLevel:'Serializable'});
+  }
+}
+
+export async function publishReview(tx: Prisma.TransactionClient, reviewerId: string, caseId: string, payload:unknown) {
     const input = recordSchema.parse(payload);
     const id = z.string().uuid().parse(caseId);
     const now = new Date();
     if (input.expiresAt <= now) throw new Error('Review expiry must be in the future.');
-    return prisma.$transaction(
-      async (tx) => {
         const updated = await tx.parkingIntelligenceCase.updateMany({
           where: { id, reviewRevision: input.expectedRevision },
           data: { reviewRevision: { increment: 1 } },
@@ -206,7 +210,7 @@ export class ParkingReviewService {
         return tx.parkingHumanLabel.create({
           data: {
             caseId: id,
-            reviewerId: this.reviewerId,
+            reviewerId,
             revision: input.expectedRevision + 1,
             reviewedAt: now,
             expiresAt: expiry,
@@ -221,8 +225,4 @@ export class ParkingReviewService {
           },
           select: { id: true, revision: true, decision: true },
         });
-      },
-      { isolationLevel: 'Serializable' },
-    );
-  }
 }

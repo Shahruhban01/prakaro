@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/errors/app_exception.dart';
@@ -47,6 +48,7 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
     required double latitude,
     required double longitude,
     int? radius,
+    bool userSearch = false,
     CancelToken? cancelToken,
   }) async {
     final queryParams = <String, dynamic>{
@@ -61,6 +63,7 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
     final response = await _apiClient.get<Map<String, dynamic>>(
       '/api/v1/parking/nearby',
       queryParameters: queryParams,
+      options: userSearch ? Options(headers: {'X-Prakaro-Search': const Uuid().v4()}) : null,
       cancelToken: cancelToken,
     );
 

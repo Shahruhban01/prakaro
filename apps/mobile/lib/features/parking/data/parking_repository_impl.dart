@@ -15,11 +15,13 @@ class ParkingRepositoryImpl implements ParkingDiscoveryRepository {
     required double latitude,
     required double longitude,
     int? radius,
+    bool userSearch = false,
     CancelToken? cancelToken,
   }) async {
     final remote = _remoteDataSource;
     if (remote is ParkingRemoteDataSourceImpl) {
       final result = await remote.discoverParking(
+        userSearch: userSearch,
         latitude: latitude,
         longitude: longitude,
         radius: radius,

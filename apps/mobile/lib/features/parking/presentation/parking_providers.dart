@@ -744,7 +744,7 @@ class ParkingMapNotifier extends Notifier<ParkingMapState> {
     _inFlightQuery = targetQuery;
     final repository = parkingRepository;
     final searchFuture = repository is ParkingDiscoveryRepository
-        ? repository.discoverParking(latitude: latitude, longitude: longitude, radius: effectiveRadius, cancelToken: cancelToken)
+        ? repository.discoverParking(userSearch: !isRefresh, latitude: latitude, longitude: longitude, radius: effectiveRadius, cancelToken: cancelToken)
         : repository.getNearbyParking(latitude: latitude, longitude: longitude, radius: effectiveRadius, cancelToken: cancelToken)
             .then(ParkingDiscoveryResult.new);
     _inFlightSearchFuture = searchFuture;
