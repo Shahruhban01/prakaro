@@ -4,7 +4,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { fromNodeHeaders } from 'better-auth/node';
 import { env } from './config/env';
-import { auth } from './config/auth';
+import { auth, moderatorAuth, superAdminAuth } from './config/auth';
 import { AppError } from './common/errors/app-error';
 import { GooglePlacesClient } from './integrations/google-places/google-places.client';
 import { ParkingService } from './modules/parking/parking.service';
@@ -67,60 +67,66 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
     exposedHeaders: ['X-Request-Id', 'Set-Cookie'],
   });
 
-  // Better Auth Catch-All Handler (/api/auth/*)
-  app.route({
-    method: ['GET', 'POST'],
-    url: '/api/auth/*',
-    async handler(request, reply) {
-      try {
-        const protocol = request.headers['x-forwarded-proto'] || 'http';
-        const host = request.headers.host || 'localhost:3000';
-        const url = new URL(request.url, `${protocol}://${host}`);
+  // Register Better Auth handler for each isolated identity boundary
+  const registerAuthEndpoint = (pathPrefix: string, authInstance: any) => {
+    app.route({
+      method: ['GET', 'POST'],
+      url: `${pathPrefix}/*`,
+      async handler(request, reply) {
+        try {
+          const protocol = request.headers['x-forwarded-proto'] || 'http';
+          const host = request.headers.host || 'localhost:3000';
+          const url = new URL(request.url, `${protocol}://${host}`);
 
-        const headers = fromNodeHeaders(request.headers);
+          const headers = fromNodeHeaders(request.headers);
 
-        const req = new Request(url.toString(), {
-          method: request.method,
-          headers,
-          ...(request.body && request.method !== 'GET'
-            ? { body: JSON.stringify(request.body) }
-            : {}),
-        });
+          const req = new Request(url.toString(), {
+            method: request.method,
+            headers,
+            ...(request.body && request.method !== 'GET'
+              ? { body: JSON.stringify(request.body) }
+              : {}),
+          });
 
-        const response = await auth.handler(req);
+          const response = await authInstance.handler(req);
 
-        reply.status(response.status);
+          reply.status(response.status);
 
-        // Forward Set-Cookie headers properly
-        const getSetCookie = (
-          response.headers as unknown as { getSetCookie?: () => string[] }
-        ).getSetCookie;
-        if (typeof getSetCookie === 'function') {
-          const cookies = getSetCookie.call(response.headers);
-          if (cookies && cookies.length > 0) {
-            reply.header('set-cookie', cookies);
+          // Forward Set-Cookie headers properly
+          const getSetCookie = (
+            response.headers as unknown as { getSetCookie?: () => string[] }
+          ).getSetCookie;
+          if (typeof getSetCookie === 'function') {
+            const cookies = getSetCookie.call(response.headers);
+            if (cookies && cookies.length > 0) {
+              reply.header('set-cookie', cookies);
+            }
           }
+
+          response.headers.forEach((value: string, key: string) => {
+            if (key.toLowerCase() !== 'set-cookie') {
+              reply.header(key, value);
+            }
+          });
+
+          const data = await response.text();
+          return reply.send(data);
+        } catch (error) {
+          request.log.error(error);
+          return reply.status(500).send({
+            error: {
+              code: 'AUTH_PROCESSING_ERROR',
+              message: 'An error occurred while processing authentication.',
+            },
+          });
         }
+      },
+    });
+  };
 
-        response.headers.forEach((value, key) => {
-          if (key.toLowerCase() !== 'set-cookie') {
-            reply.header(key, value);
-          }
-        });
-
-        const data = await response.text();
-        return reply.send(data);
-      } catch (error) {
-        request.log.error(error);
-        return reply.status(500).send({
-          error: {
-            code: 'AUTH_PROCESSING_ERROR',
-            message: 'An error occurred while processing authentication.',
-          },
-        });
-      }
-    },
-  });
+  registerAuthEndpoint('/api/auth', auth);
+  registerAuthEndpoint('/api/moderator-auth', moderatorAuth);
+  registerAuthEndpoint('/api/super-admin-auth', superAdminAuth);
 
   // Basic endpoint rate limiting
   app.register(rateLimit, {

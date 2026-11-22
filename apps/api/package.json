@@ -18,7 +18,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:validate": "prisma validate",
-    "test": "tsx --import ./tests/setup-env.mjs --test --test-concurrency=1 tests/health.test.ts tests/parking.test.ts tests/auth-and-cloud.test.ts tests/parking-photos.test.ts tests/intelligence.test.ts tests/intelligence.mysql.test.ts tests/intelligence-policy.test.ts",
+    "test": "tsx --import ./tests/setup-env.mjs --test --test-concurrency=1 tests/health.test.ts tests/parking.test.ts tests/auth-and-cloud.test.ts tests/parking-photos.test.ts tests/intelligence.test.ts tests/intelligence.mysql.test.ts tests/intelligence-policy.test.ts tests/moderation.test.ts tests/identity-security.test.ts",
     "intelligence:evaluate": "tsx src/modules/intelligence/intelligence.evaluate.ts",
     "intelligence:review": "tsx src/modules/intelligence/intelligence.review-cli.ts"
   },

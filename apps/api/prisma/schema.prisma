@@ -11,20 +11,21 @@ datasource db {
 }
 
 // ----------------------------------------------------
-// Better Auth Authentication Models
+// Better Auth: Mobile Users
 // ----------------------------------------------------
 
 model User {
-  id              String           @id
-  name            String
-  email           String
-  emailVerified   Boolean          @default(false)
-  image           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  moderationStaff ModerationStaff?
-  sessions        Session[]
-  accounts        Account[]
+  id            String   @id
+  name          String
+  email         String
+  emailVerified Boolean  @default(false)
+  image         String?
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
 
   // Prakaro Relations
   savedParkings  SavedParking[]
@@ -32,7 +33,7 @@ model User {
   preference     UserPreference?
 
   @@unique([email])
-  @@map("user")
+  @@map("users")
 }
 
 model Session {
@@ -79,6 +80,146 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@map("verification")
+}
+
+// ----------------------------------------------------
+// Better Auth: Super Admins
+// ----------------------------------------------------
+
+model SuperAdmin {
+  id                    String                @id @default(uuid())
+  name                  String
+  email                 String                @unique
+  emailVerified         Boolean               @default(false)
+  image                 String?
+  status                String                @default("ACTIVE")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  lastLoginAt           DateTime?
+  createdBySuperAdminId String?
+  sessions              SuperAdminSession[]
+  accounts              SuperAdminAccount[]
+
+  @@map("super_admins")
+}
+
+model SuperAdminSession {
+  id        String     @id @default(uuid())
+  expiresAt DateTime
+  token     String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      SuperAdmin @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("super_admin_sessions")
+}
+
+model SuperAdminAccount {
+  id                    String     @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  SuperAdmin @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?    @db.Text
+  refreshToken          String?    @db.Text
+  idToken               String?    @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  @@index([userId])
+  @@map("super_admin_accounts")
+}
+
+model SuperAdminVerification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("super_admin_verifications")
+}
+
+// ----------------------------------------------------
+// Better Auth: Moderators & Moderation Staff
+// ----------------------------------------------------
+
+model Moderator {
+  id            String                 @id @default(uuid())
+  name          String
+  email         String                 @unique
+  emailVerified Boolean                @default(false)
+  image         String?
+  status        String                 @default("ACTIVE")
+  role          String                 @default("MODERATOR")
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  lastLoginAt   DateTime?
+  invitedBy     String?
+  activatedBy   String?
+  deactivatedAt DateTime?
+  sessions      ModeratorSession[]
+  accounts      ModeratorAccount[]
+  memberships   ModerationMembership[]
+  assignedCases ModerationCase[]
+  reviews       ModerationSubmission[]
+
+  @@map("moderators")
+}
+
+model ModeratorSession {
+  id        String    @id @default(uuid())
+  expiresAt DateTime
+  token     String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      Moderator @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("moderator_sessions")
+}
+
+model ModeratorAccount {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  Moderator @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("moderator_accounts")
+}
+
+model ModeratorVerification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("moderator_verifications")
 }
 
 // ----------------------------------------------------
@@ -130,14 +271,18 @@ model UserPreference {
 }
 
 model ParkingIntelligenceCase {
-  id             String                     @id @default(uuid())
-  admission      SearchAdmission?
-  reviewRevision Int                        @default(0)
-  // Optional matching key only. Google Places policy allows storage of place IDs.
-  googlePlaceId  String?                    @unique @db.VarChar(191)
-  evidence       ParkingEvidenceReference[]
-  labels         ParkingHumanLabel[]
-  runs           ParkingVerificationRun[]
+  id               String                     @id @default(uuid())
+  admission        SearchAdmission?
+  reviewRevision   Int                        @default(0)
+  googlePlaceId    String?                    @unique @db.VarChar(191)
+  displayName      String?                    @db.VarChar(255)
+  formattedAddress String?                    @db.VarChar(500)
+  latitude         Float?
+  longitude        Float?
+  placeMetadata    Json?
+  evidence         ParkingEvidenceReference[]
+  labels           ParkingHumanLabel[]
+  runs             ParkingVerificationRun[]
 
   @@map("parking_intelligence_case")
 }
@@ -230,16 +375,6 @@ model ParkingAiDailyBudget {
   @@map("parking_ai_daily_budget")
 }
 
-model ModerationStaff {
-  userId      String                 @id
-  user        User                   @relation(fields: [userId], references: [id])
-  role        String
-  active      Boolean                @default(true)
-  memberships ModerationMembership[]
-
-  @@map("moderation_staff")
-}
-
 model ModerationQueue {
   id          String                 @id @default(uuid())
   code        String                 @unique
@@ -261,12 +396,13 @@ model ModerationQueue {
 }
 
 model ModerationMembership {
-  userId  String
-  queueId String
-  staff   ModerationStaff @relation(fields: [userId], references: [userId])
-  queue   ModerationQueue @relation(fields: [queueId], references: [id])
+  moderatorId String
+  queueId     String
+  moderator   Moderator       @relation(fields: [moderatorId], references: [id], onDelete: Cascade)
+  queue       ModerationQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
 
-  @@id([userId, queueId])
+  @@id([moderatorId, queueId])
+  @@index([queueId])
   @@map("moderation_membership")
 }
 
@@ -303,12 +439,15 @@ model ModerationCase {
   revision   Int                    @default(0)
   owner      String?
   leaseUntil DateTime?
+  metadata   Json?
   createdAt  DateTime               @default(now())
   updatedAt  DateTime               @updatedAt
+  moderator  Moderator?             @relation(fields: [owner], references: [id], onDelete: SetNull)
   tasks      ModerationTask[]
   reviews    ModerationSubmission[]
 
   @@index([status, priority])
+  @@index([owner])
   @@map("moderation_case")
 }
 
@@ -333,6 +472,7 @@ model ModerationSubmission {
   queueVersion Int
   case         ModerationCase @relation(fields: [caseId], references: [id])
   reviewerId   String
+  reviewer     Moderator      @relation(fields: [reviewerId], references: [id])
   action       String
   answers      Json
   evidenceIds  Json
@@ -341,18 +481,23 @@ model ModerationSubmission {
   createdAt    DateTime       @default(now())
 
   @@index([caseId, createdAt])
+  @@index([reviewerId])
   @@map("moderation_submission")
 }
 
 model ModerationAudit {
-  id        String   @id @default(uuid())
-  actor     String
-  action    String
-  target    String
-  before    Json?
-  after     Json?
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  actor         String
+  actorType     String   @default("MODERATOR") @db.VarChar(32)
+  actorId       String?  @db.VarChar(191)
+  actorSnapshot Json?
+  action        String
+  target        String
+  before        Json?
+  after         Json?
+  createdAt     DateTime @default(now())
 
   @@index([target, createdAt])
+  @@index([actorId, actorType])
   @@map("moderation_audit")
 }

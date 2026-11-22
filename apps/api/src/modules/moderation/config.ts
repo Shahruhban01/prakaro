@@ -1,5 +1,5 @@
 import { z } from 'zod';
-export const roles = z.enum(['SUPER_ADMIN','ADMIN','MODERATION_MANAGER','SUPERVISOR','QA_REVIEWER','MODERATOR','VIEWER']);
+export const roles = z.enum(['SUPER_ADMIN','ADMIN','MODERATION_ADMIN','MODERATION_MANAGER','SUPERVISOR','QA_REVIEWER','MODERATOR','VIEWER']);
 export const fields = z.enum(['category','source','status','access','pricing','evidence','ai','demand','priority','region','classification']);
 type Clause = { field: z.infer<typeof fields>; value: string } | { op: 'AND'|'OR'; children: Clause[] };
 function clause(depth:number): z.ZodType<Clause> {

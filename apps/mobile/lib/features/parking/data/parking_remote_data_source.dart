@@ -24,6 +24,12 @@ abstract class ParkingRemoteDataSource {
     String id, {
     CancelToken? cancelToken,
   });
+
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    CancelToken? cancelToken,
+  });
 }
 
 class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
@@ -161,6 +167,28 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
       return photos;
     } on NotFoundException {
       return const [];
+    }
+  }
+
+  @override
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final cleanId = placeId.startsWith('google:') ? placeId.substring(7) : placeId;
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/v1/moderation/reports',
+        data: {
+          'placeId': cleanId,
+          'category': category,
+        },
+        cancelToken: cancelToken,
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 }

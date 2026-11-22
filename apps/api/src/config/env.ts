@@ -12,12 +12,36 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
   GOOGLE_PLACES_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().trim().optional(),
+  GOOGLE_GEMINI_API_KEY: z.string().trim().optional(),
   GEMINI_MODEL: z
     .string()
     .trim()
     .max(100)
     .regex(/^[a-z0-9][a-z0-9.-]*$/)
-    .default('gemini-2.5-flash-lite'),
+    .default('gemini-3.5-flash-lite'),
+  GOOGLE_GEMINI_MODEL: z
+    .string()
+    .trim()
+    .max(100)
+    .regex(/^[a-z0-9][a-z0-9.-]*$/)
+    .default('gemini-3.5-flash-lite'),
+  AI_PROVIDER_PRIORITY: z.string().default('google,openrouter'),
+  OPENROUTER_API_KEY: z.string().trim().optional(),
+  OPENROUTER_MODEL: z.string().trim().default('meta-llama/llama-3.3-70b-instruct:free'),
+  AI_ENABLE_PROVIDER_FALLBACK: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  AI_ALLOW_PAID_MODELS: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  MODERATION_INTAKE_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  MODERATION_DAILY_CASE_LIMIT: z.coerce.number().int().min(1).default(50),
+  MODERATION_ORIGIN: z.string().default('http://127.0.0.1:5173'),
   AI_VERIFICATION_ENABLED: z
     .enum(['true', 'false'])
     .default('false')

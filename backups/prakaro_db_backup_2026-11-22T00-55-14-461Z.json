@@ -1,0 +1,3614 @@
+{
+  "timestamp": "2026-11-22T00:55:14.464Z",
+  "users": [
+    {
+      "id": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "name": "Mod Super Admin",
+      "email": "admin-070f3588-8eee-4e72-a516-6eb16b8e3e79@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:43:49.017Z",
+      "updatedAt": "2026-11-22T00:43:49.017Z"
+    },
+    {
+      "id": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "name": "Field Moderator",
+      "email": "mod-9043d55e-18e1-4705-b7e3-c80fdf589368@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:27:08.083Z",
+      "updatedAt": "2026-11-22T00:27:08.083Z"
+    },
+    {
+      "id": "elHRkPxFqgUZt8VkfvnFUdQ5dbkvA1wm",
+      "name": "Regular App User",
+      "email": "user-b904562d-cb9e-4fc0-884d-52d538dfd3cd@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:27:08.665Z",
+      "updatedAt": "2026-11-22T00:27:08.665Z"
+    },
+    {
+      "id": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "name": "Mod Super Admin",
+      "email": "admin-e622291b-2779-45f6-9154-acac89b5be3d@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:28:36.739Z",
+      "updatedAt": "2026-11-22T00:28:36.739Z"
+    },
+    {
+      "id": "f2Ix9RoefYE8Y0DrgLUGRWkh2jlZSYic",
+      "name": "Auditor Viewer",
+      "email": "viewer-8ae16ebb-5b45-4a27-9d3c-5f61f9e88aa9@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:28:37.257Z",
+      "updatedAt": "2026-11-22T00:28:37.257Z"
+    },
+    {
+      "id": "GayOjWs4XpfBZHPVtWTq2UWhsEF1Ypr1",
+      "name": "Auditor Viewer",
+      "email": "viewer-f698312d-59ff-4ebb-8543-2f1f3fa91b5b@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:43:49.637Z",
+      "updatedAt": "2026-11-22T00:43:49.637Z"
+    },
+    {
+      "id": "gf8pO2clirwwfrwdZM8N1Jo03pBZaPsZ",
+      "name": "Regular App User",
+      "email": "user-4d4add95-0342-4e30-ae65-a00c55b4249d@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:43:49.888Z",
+      "updatedAt": "2026-11-22T00:43:49.888Z"
+    },
+    {
+      "id": "hBd5mo0Qch20YzchAZ9zJQJhEFOAkcYw",
+      "name": "Regular App User",
+      "email": "user-211bc15d-ea2f-47fa-8d87-b30ac6856a67@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:24:44.549Z",
+      "updatedAt": "2026-11-22T00:24:44.549Z"
+    },
+    {
+      "id": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "name": "Field Moderator",
+      "email": "mod-99e6e404-e27f-4e9e-97e4-f47592982f9c@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:43:49.411Z",
+      "updatedAt": "2026-11-22T00:43:49.411Z"
+    },
+    {
+      "id": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "name": "Mod Super Admin",
+      "email": "admin-27c36eed-e001-418a-8977-518b7ada1a1b@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:24:44.060Z",
+      "updatedAt": "2026-11-22T00:24:44.060Z"
+    },
+    {
+      "id": "jaGiYcq9DFrJdkt9MFrdbvqiuS7hmgdx",
+      "name": "Regular App User",
+      "email": "user-f77f624d-78f8-4bbd-8646-7c06942d37db@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:28:37.542Z",
+      "updatedAt": "2026-11-22T00:28:37.542Z"
+    },
+    {
+      "id": "OApjUxevF9A79AnvVd9u1wPL0eotzePx",
+      "name": "Field Moderator",
+      "email": "mod-82289572-50d5-40b8-92cd-9258d03c599b@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:24:44.224Z",
+      "updatedAt": "2026-11-22T00:24:44.224Z"
+    },
+    {
+      "id": "qW1lpMsDTqgP2CHGlfv1wNSyXJuDGkAW",
+      "name": "Auditor Viewer",
+      "email": "viewer-8ba6e416-37ca-4ebc-858c-8165f7cc36f1@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:27:08.355Z",
+      "updatedAt": "2026-11-22T00:27:08.355Z"
+    },
+    {
+      "id": "sFqNqH0L4ThBqkMOg7utknuqJJc4G5ae",
+      "name": "Auditor Viewer",
+      "email": "viewer-dbb140d8-5c3e-41a3-b68b-347282f20c2b@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:24:44.406Z",
+      "updatedAt": "2026-11-22T00:24:44.406Z"
+    },
+    {
+      "id": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "name": "Mod Super Admin",
+      "email": "admin-85f6910c-b220-42ce-bf8c-360a385fd004@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:27:07.818Z",
+      "updatedAt": "2026-11-22T00:27:07.818Z"
+    },
+    {
+      "id": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "name": "Ruhban Abdullah",
+      "email": "shahruhban01@gmail.com",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-19T18:13:40.838Z",
+      "updatedAt": "2026-11-19T18:13:40.838Z"
+    },
+    {
+      "id": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "name": "Field Moderator",
+      "email": "mod-4ccef32d-d970-46d4-98ef-b5e5a68d6ad2@prakaro.test",
+      "emailVerified": false,
+      "image": null,
+      "createdAt": "2026-11-22T00:28:37.010Z",
+      "updatedAt": "2026-11-22T00:28:37.010Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "0clsv3DKyYGdjKYjfKb8XmiEAKWXiyyq",
+      "expiresAt": "2026-11-29T00:43:49.434Z",
+      "token": "zVo0GXf1IIMKJWI8TMEinRXJHT0mT7Ux",
+      "createdAt": "2026-11-22T00:43:49.434Z",
+      "updatedAt": "2026-11-22T00:43:49.434Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS"
+    },
+    {
+      "id": "1bCLi1oG5e0imAEunGluk45TQF8gwy3o",
+      "expiresAt": "2026-11-29T00:27:07.858Z",
+      "token": "O0dBJlaYSUUXitOyvW74IIUGU9QdtFVk",
+      "createdAt": "2026-11-22T00:27:07.858Z",
+      "updatedAt": "2026-11-22T00:27:07.858Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw"
+    },
+    {
+      "id": "1SFhiIY9Y0TVKBh8zHtfVIWrDNSPFtaA",
+      "expiresAt": "2026-11-29T00:24:44.264Z",
+      "token": "Xh3coxCvVOTPjAg72PNX95yUam4AoF6t",
+      "createdAt": "2026-11-22T00:24:44.265Z",
+      "updatedAt": "2026-11-22T00:24:44.265Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "OApjUxevF9A79AnvVd9u1wPL0eotzePx"
+    },
+    {
+      "id": "2ByN8o7g8D1Z8KRAISgFwSSWvpr546wC",
+      "expiresAt": "2026-11-26T18:17:23.408Z",
+      "token": "3UgAVueGZUIeDtYxoOBkwSW98JV70nIo",
+      "createdAt": "2026-11-19T18:17:23.408Z",
+      "updatedAt": "2026-11-19T18:17:23.408Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Dart/3.12 (dart:io)",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4"
+    },
+    {
+      "id": "36keP8NFwvMB5ctLjp2g2Fkgss79kjAE",
+      "expiresAt": "2026-11-29T00:24:44.093Z",
+      "token": "FKypf8VQzDa26K0KGBKmyz8UAH2yH2nn",
+      "createdAt": "2026-11-22T00:24:44.093Z",
+      "updatedAt": "2026-11-22T00:24:44.093Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X"
+    },
+    {
+      "id": "4fsdxxTVMPhV373XS6ZxZ0XaxE1TMlqn",
+      "expiresAt": "2026-11-29T00:28:37.034Z",
+      "token": "dwg8kLPQXHvYrZQq3qcx3GQCbMuLfFWw",
+      "createdAt": "2026-11-22T00:28:37.034Z",
+      "updatedAt": "2026-11-22T00:28:37.034Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY"
+    },
+    {
+      "id": "4RozxnFhFeG670vfIE9OGvpOgbuybYt6",
+      "expiresAt": "2026-11-29T00:24:44.424Z",
+      "token": "r7FzvM1x1jUfT4hancS8dZSOmgoFCyDZ",
+      "createdAt": "2026-11-22T00:24:44.425Z",
+      "updatedAt": "2026-11-22T00:24:44.425Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "sFqNqH0L4ThBqkMOg7utknuqJJc4G5ae"
+    },
+    {
+      "id": "bgK62F7iWIAhCyA2sseA3ivV5pAu1tBN",
+      "expiresAt": "2026-11-29T00:27:08.381Z",
+      "token": "4hwa0Etf8XaecvdYRAynQiS9BpuPFUfb",
+      "createdAt": "2026-11-22T00:27:08.381Z",
+      "updatedAt": "2026-11-22T00:27:08.381Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "qW1lpMsDTqgP2CHGlfv1wNSyXJuDGkAW"
+    },
+    {
+      "id": "Cxjy2pehqmkXECEPD6pOy3FEJSrzdj2t",
+      "expiresAt": "2026-11-29T00:28:36.771Z",
+      "token": "XzYAkd3zOFfebt1BucYvnzdWOjOqWQSu",
+      "createdAt": "2026-11-22T00:28:36.771Z",
+      "updatedAt": "2026-11-22T00:28:36.771Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN"
+    },
+    {
+      "id": "dotOTpHk2GjvlEviXx4BmMZ3eBWQ1Ahw",
+      "expiresAt": "2026-11-29T00:43:49.911Z",
+      "token": "HchYFW4MALFiDQBqNKYpDU4QTjKr6xvH",
+      "createdAt": "2026-11-22T00:43:49.911Z",
+      "updatedAt": "2026-11-22T00:43:49.911Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "gf8pO2clirwwfrwdZM8N1Jo03pBZaPsZ"
+    },
+    {
+      "id": "EDaqWEQORShNLg2tW9KygwSz5LO3UPXU",
+      "expiresAt": "2026-11-29T00:28:37.570Z",
+      "token": "YyscSpO8ardFTHN6mEFI5CC5k7soOlo2",
+      "createdAt": "2026-11-22T00:28:37.570Z",
+      "updatedAt": "2026-11-22T00:28:37.570Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "jaGiYcq9DFrJdkt9MFrdbvqiuS7hmgdx"
+    },
+    {
+      "id": "HSFwwh5FV2Qkh99DxWMRty0aTuWRs8k3",
+      "expiresAt": "2026-11-29T00:24:44.569Z",
+      "token": "nL0xdC1tPnj0G4RppuYxDXXpVLfIbBnP",
+      "createdAt": "2026-11-22T00:24:44.569Z",
+      "updatedAt": "2026-11-22T00:24:44.569Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "hBd5mo0Qch20YzchAZ9zJQJhEFOAkcYw"
+    },
+    {
+      "id": "jy9Y5u1R0huMfrnzDwlnR2xLo6nkXXaK",
+      "expiresAt": "2026-11-29T00:27:08.136Z",
+      "token": "ZicFEqA0W6HtiKcXWKaotsY9YGdaztqX",
+      "createdAt": "2026-11-22T00:27:08.136Z",
+      "updatedAt": "2026-11-22T00:27:08.136Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi"
+    },
+    {
+      "id": "NO01aeuwsayWoxPfIYgAIxZ5FvsVD6Mp",
+      "expiresAt": "2026-11-29T00:28:37.313Z",
+      "token": "evNbaALz9SXgCNNw8fuwT2J2LV5CLDLS",
+      "createdAt": "2026-11-22T00:28:37.313Z",
+      "updatedAt": "2026-11-22T00:28:37.313Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "f2Ix9RoefYE8Y0DrgLUGRWkh2jlZSYic"
+    },
+    {
+      "id": "OmTQhZpQflEY3IV6W4RvVlK4RNTCGuAd",
+      "expiresAt": "2026-11-29T00:43:49.669Z",
+      "token": "wDEqL5DWwMLBUHvbuUGkF8mtzzz7tEaT",
+      "createdAt": "2026-11-22T00:43:49.670Z",
+      "updatedAt": "2026-11-22T00:43:49.670Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "GayOjWs4XpfBZHPVtWTq2UWhsEF1Ypr1"
+    },
+    {
+      "id": "w0ynJxycXADJebUcE2PnjqwW5h6SOytF",
+      "expiresAt": "2026-11-29T00:43:49.138Z",
+      "token": "CnTsmcWdW3YOjKSl62wXjLYYEizUED0T",
+      "createdAt": "2026-11-22T00:43:49.138Z",
+      "updatedAt": "2026-11-22T00:43:49.138Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp"
+    },
+    {
+      "id": "wt7ulh4QQsdwuoMtSY18aFrUYKS9FOB5",
+      "expiresAt": "2026-11-29T00:27:08.695Z",
+      "token": "hvcilOmghJxzWJRQi5FiqVK6kQpmZcX4",
+      "createdAt": "2026-11-22T00:27:08.695Z",
+      "updatedAt": "2026-11-22T00:27:08.695Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "lightMyRequest",
+      "userId": "elHRkPxFqgUZt8VkfvnFUdQ5dbkvA1wm"
+    },
+    {
+      "id": "y2DpjJGZCW2AaeOSr4MpcMhGxwNYkDSs",
+      "expiresAt": "2026-11-28T22:04:15.965Z",
+      "token": "MO0ONIf6dMFmvPYwDryW5mALumKU5tFY",
+      "createdAt": "2026-11-20T10:19:10.258Z",
+      "updatedAt": "2026-11-21T22:04:15.965Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Dart/3.12 (dart:io)",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4"
+    },
+    {
+      "id": "Yb7lRHDd6yu3pn4vapS9lyjLgAyWdBPj",
+      "expiresAt": "2026-11-26T18:13:40.888Z",
+      "token": "0pFdBdW16MbqXReVJXTaPVVGYFhXD9TD",
+      "createdAt": "2026-11-19T18:13:40.888Z",
+      "updatedAt": "2026-11-19T18:13:40.888Z",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Dart/3.12 (dart:io)",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "1eR84sJJnvO3AMjvonCOPtK7twlExKZX",
+      "accountId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "providerId": "credential",
+      "userId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "4f05bb5f278c5fc6e02a2ac24a5107d1:fb3d7615401df9d294f5f00c24acf7dc041028565b236ee8773ad53435c65861ff7174f1b23992b2c3b044f89352dfd767fce3ac4219c79dfb234120bd0dd50f",
+      "createdAt": "2026-11-22T00:28:37.023Z",
+      "updatedAt": "2026-11-22T00:28:37.023Z"
+    },
+    {
+      "id": "1HrXPvtSw9tzGKDD54lmjHuOR11aGP23",
+      "accountId": "f2Ix9RoefYE8Y0DrgLUGRWkh2jlZSYic",
+      "providerId": "credential",
+      "userId": "f2Ix9RoefYE8Y0DrgLUGRWkh2jlZSYic",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "5c8f3a4ad1e6814c10ad3f1d58cc4d81:3ad4512e3395da9d4cb4320e55e801209732701e0f1e92f223cdec769e961e8ac01d3e91e1f234b88983a1d41199132d9d881ef84949bdb56217e050c3012c69",
+      "createdAt": "2026-11-22T00:28:37.287Z",
+      "updatedAt": "2026-11-22T00:28:37.287Z"
+    },
+    {
+      "id": "1SpKs9W8T9IAnewfi3STvcVtOu7NrMD5",
+      "accountId": "elHRkPxFqgUZt8VkfvnFUdQ5dbkvA1wm",
+      "providerId": "credential",
+      "userId": "elHRkPxFqgUZt8VkfvnFUdQ5dbkvA1wm",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "f6ea76bce1327a7ae597f14be86c5ed4:be117143735a1304dd66f19576b29215ce23323b15c474a9eea959c78282096bb294c583e14982a4bb3d0601d552b7fed5cfa4df640728d25c11f425c01bbf45",
+      "createdAt": "2026-11-22T00:27:08.684Z",
+      "updatedAt": "2026-11-22T00:27:08.684Z"
+    },
+    {
+      "id": "3cpSlshdTMMbDS4AAzcDitfuanwmYk0v",
+      "accountId": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "providerId": "credential",
+      "userId": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "870c0bd54d54e1e32a5c3e1023bdc290:bffab6dd0090f956718719d682cac67df9d21b7e95d4aa56b23552eab72ac7e6391b1b9dac5f7d670039cbe8a0323cc5bd565ea934910110114c8a0c9e0b9f3d",
+      "createdAt": "2026-11-22T00:43:49.089Z",
+      "updatedAt": "2026-11-22T00:43:49.089Z"
+    },
+    {
+      "id": "7JJfl4TySUOjgHol9lvd0gdLSVzrdKt4",
+      "accountId": "GayOjWs4XpfBZHPVtWTq2UWhsEF1Ypr1",
+      "providerId": "credential",
+      "userId": "GayOjWs4XpfBZHPVtWTq2UWhsEF1Ypr1",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "af15481122779e23f99240f6a099c958:a2326fe2c3d1ffc7bf2f219b7c706487b6aaced05c00c104d169040834f9edd2e7842d10b71a91767d7e99f43709598be287b4ebf6dece190175c1d131d8a80e",
+      "createdAt": "2026-11-22T00:43:49.648Z",
+      "updatedAt": "2026-11-22T00:43:49.648Z"
+    },
+    {
+      "id": "7ogj8EM3XDKEEztqblPom4YTKgyjWrq4",
+      "accountId": "OApjUxevF9A79AnvVd9u1wPL0eotzePx",
+      "providerId": "credential",
+      "userId": "OApjUxevF9A79AnvVd9u1wPL0eotzePx",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "d08c2a3a99dd870abef0f93ed8e40e29:8a976fd35187fbbb6f8b45a265da0d6544616d1630a37ae1ada0f3ec2fb6b013bba4bbbc65a678ad6f4b71b0666e12195455782609fe1c59b2a393bf1efd7900",
+      "createdAt": "2026-11-22T00:24:44.242Z",
+      "updatedAt": "2026-11-22T00:24:44.242Z"
+    },
+    {
+      "id": "CtznQjAAZSFSv8Q4eqXB6UFwbaTpjTP4",
+      "accountId": "gf8pO2clirwwfrwdZM8N1Jo03pBZaPsZ",
+      "providerId": "credential",
+      "userId": "gf8pO2clirwwfrwdZM8N1Jo03pBZaPsZ",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "b58010f61f02c7ab726198ca1ca5c949:5fc85ad7604d87ef54bd4ba8bfeb67ee4fdccf4be4155cbc68844b7d4db283700aa54832b7b9188168dffdca6b00569bb7b5fb841423033e3abfc2d1217e3844",
+      "createdAt": "2026-11-22T00:43:49.904Z",
+      "updatedAt": "2026-11-22T00:43:49.904Z"
+    },
+    {
+      "id": "gBxLerD6Mgn4yubjpn7yabsYQja2OqvD",
+      "accountId": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "providerId": "credential",
+      "userId": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "e29f3c37672dadc852e7c535b6033b99:1250fb880ca5c68989c66d36045e505c00946493edeef48bbea1070b20ee37030ad098726807a413b9b5ddd335fef72c1596c3fa579bdb5dcbcb8a6300d50932",
+      "createdAt": "2026-11-22T00:24:44.079Z",
+      "updatedAt": "2026-11-22T00:24:44.079Z"
+    },
+    {
+      "id": "GwNtI5dfo0PlhTtFTnfCnHeX1x9ahu0t",
+      "accountId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "providerId": "credential",
+      "userId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "89d75078df65ac83071390535a42c53c:582e6036e31b032213160b7df51e84777388ab2b29a942db45cee3febecada1b844029c603609f0ff3f144705d2b5e96cb740713c56f902db68f3c7d41c2700f",
+      "createdAt": "2026-11-22T00:27:08.108Z",
+      "updatedAt": "2026-11-22T00:27:08.108Z"
+    },
+    {
+      "id": "KxQWwR1mAUw9R5Svdxt6HrQOFnnpakLW",
+      "accountId": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "providerId": "credential",
+      "userId": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "c142e9697c7228d3a42ecfa2ee8afcdc:e2c4d1d385013e3d6bf05a7cf8383827644acb29750fde71417bf3ff7bd6cb8074b8ff5b40fea0990f8ff88fd97ae4e405986b84391d44d4836cbbfd050c91c7",
+      "createdAt": "2026-11-22T00:28:36.759Z",
+      "updatedAt": "2026-11-22T00:28:36.759Z"
+    },
+    {
+      "id": "NKYzus0PfRx6avyxzYumOx86uUhcXKc1",
+      "accountId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "providerId": "credential",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "a0146d8507389d8db4c15b152e175167:afc853581828eae56efc0756c062b7ad53576c0ca3e4c105651e815a1ac2a2a9ab545c9c11d2b92e42b2e7a885c5d3c9fd7b022394a326c6622a79ca6798692a",
+      "createdAt": "2026-11-19T18:13:40.870Z",
+      "updatedAt": "2026-11-19T18:13:40.870Z"
+    },
+    {
+      "id": "ocHceNkiCXT0v9TW4N0fK8Zi8BvRWtJZ",
+      "accountId": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "providerId": "credential",
+      "userId": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "99b0bdf226f476b9bdfc64e6a4b6ff43:6e7bda27926f9c58f5632c06b59c67327d55589b0eecb5218125efa41983c5a168269efe02815610428e53180d6e2a6027a84a5609a1f3716a20f629d735ec81",
+      "createdAt": "2026-11-22T00:27:07.844Z",
+      "updatedAt": "2026-11-22T00:27:07.844Z"
+    },
+    {
+      "id": "QIrZmvU2Qpea1TVUBbWIafAMxBWSZeXq",
+      "accountId": "hBd5mo0Qch20YzchAZ9zJQJhEFOAkcYw",
+      "providerId": "credential",
+      "userId": "hBd5mo0Qch20YzchAZ9zJQJhEFOAkcYw",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "1a8848ab952743081fa3cc52f3cdaa63:28fea25b260f819a211a11f67d259f5a259226c09541fd18351b2aec31b2c8bf4b5f156b0aa4b4ffdb7a7c848bf2bf78736faefb951663eefb3e6677a8f52754",
+      "createdAt": "2026-11-22T00:24:44.559Z",
+      "updatedAt": "2026-11-22T00:24:44.559Z"
+    },
+    {
+      "id": "UcSq7AwqZtCfQHpRgl0oZYWLymPM0w6H",
+      "accountId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "providerId": "credential",
+      "userId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "afe1c2e8027312935de649af9f3dc3f9:0378f4d7185f644fa609fdbf13debff4d6ef9d89c07bb5d0dead384387f539bbd8206c269243fa7470b42137ce6a716e8533f2258c67c3a18d86fc646e4fcff7",
+      "createdAt": "2026-11-22T00:43:49.423Z",
+      "updatedAt": "2026-11-22T00:43:49.423Z"
+    },
+    {
+      "id": "v1YKlqjFWlOIxQnPvXxgNHqNNbQqjpce",
+      "accountId": "qW1lpMsDTqgP2CHGlfv1wNSyXJuDGkAW",
+      "providerId": "credential",
+      "userId": "qW1lpMsDTqgP2CHGlfv1wNSyXJuDGkAW",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "2b1a5afb80de309dba568c45b7fa76dd:fbd710cd556ee2b9a3091054c5bdf015597b60113bba5fd7466c9494b1d1eebe9d5eeefc79b904f43398ccb0dbb2f88ca4f3ff6c46542cd457b30521a2ff9c4d",
+      "createdAt": "2026-11-22T00:27:08.368Z",
+      "updatedAt": "2026-11-22T00:27:08.368Z"
+    },
+    {
+      "id": "Ybf4ZIG41dQyvYr7qwxuPzQ2CgYzgXno",
+      "accountId": "sFqNqH0L4ThBqkMOg7utknuqJJc4G5ae",
+      "providerId": "credential",
+      "userId": "sFqNqH0L4ThBqkMOg7utknuqJJc4G5ae",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "5677d34a7569142c67a87a4845625bac:a7dea5e4fe79dca60b2cde09c1ea7580dd1b7fe7e1e7a365b905144027d798b7769dd7f5f8d9a05fe23d20141c89f511f3c5fdc7adc5212fe3882966469f3b54",
+      "createdAt": "2026-11-22T00:24:44.416Z",
+      "updatedAt": "2026-11-22T00:24:44.416Z"
+    },
+    {
+      "id": "zNnUingTYG2tMh6xjTo4htnqZFWmsYjB",
+      "accountId": "jaGiYcq9DFrJdkt9MFrdbvqiuS7hmgdx",
+      "providerId": "credential",
+      "userId": "jaGiYcq9DFrJdkt9MFrdbvqiuS7hmgdx",
+      "accessToken": null,
+      "refreshToken": null,
+      "idToken": null,
+      "accessTokenExpiresAt": null,
+      "refreshTokenExpiresAt": null,
+      "scope": null,
+      "password": "1011f3a20d48b872ef772e96313900ea:258bffda5e42c5463c7e74544753c1e25a869a51d52ea8cf89b045d2f7a7ce3d94b6cc667534ab02005434201041fc615113df6fdd8681f80b8906daf00615da",
+      "createdAt": "2026-11-22T00:28:37.560Z",
+      "updatedAt": "2026-11-22T00:28:37.560Z"
+    }
+  ],
+  "verifications": [],
+  "savedParkings": [
+    {
+      "id": "b97bf532-c7e6-459e-8149-b892c525d50e",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "provider": "google",
+      "providerPlaceId": "ChIJoWK7eKMZDTkRlDeU7W0OVA8",
+      "createdAt": "2026-11-20T10:19:15.026Z"
+    },
+    {
+      "id": "e2a5aef0-5eaa-46d6-aa28-e7ea1d84f70c",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "provider": "google",
+      "providerPlaceId": "ChIJnQHfIgAF4TgRGJ-5gXlMWfQ",
+      "createdAt": "2026-11-21T22:10:38.837Z"
+    }
+  ],
+  "recentSearches": [
+    {
+      "id": "9925b619-7f01-4e5b-bcc0-e04e86496954",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "latitude": 34.36939184634141,
+      "longitude": 74.41084664314985,
+      "radiusMeters": 3000,
+      "originType": "explicitAreaSearch",
+      "providerPlaceId": null,
+      "destinationLabel": null,
+      "createdAt": "2026-11-21T22:11:00.414Z"
+    },
+    {
+      "id": "d3f8d5e5-f9e1-469b-bedd-0c19b7c84f83",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "latitude": 34.23076221856713,
+      "longitude": 74.49010726064444,
+      "radiusMeters": 3000,
+      "originType": "explicitAreaSearch",
+      "providerPlaceId": null,
+      "destinationLabel": null,
+      "createdAt": "2026-11-21T22:11:05.124Z"
+    }
+  ],
+  "userPreferences": [
+    {
+      "id": "dd797f10-e3ec-45ea-ab4d-bbf019b0c9be",
+      "userId": "YuYMv05bpLPy3my5sODLz7wHLwDaT1W4",
+      "recentSearchEnabled": true,
+      "defaultRadiusMeters": 3000,
+      "createdAt": "2026-11-19T18:13:41.137Z",
+      "updatedAt": "2026-11-19T20:18:53.417Z"
+    }
+  ],
+  "moderationStaff": [
+    {
+      "userId": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "role": "SUPER_ADMIN",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "role": "MODERATOR",
+      "active": true,
+      "memberships": [
+        {
+          "userId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+          "queueId": "3f116603-e62d-4398-8803-0d9462635568"
+        }
+      ]
+    },
+    {
+      "userId": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "role": "SUPER_ADMIN",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "f2Ix9RoefYE8Y0DrgLUGRWkh2jlZSYic",
+      "role": "VIEWER",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "GayOjWs4XpfBZHPVtWTq2UWhsEF1Ypr1",
+      "role": "VIEWER",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "role": "MODERATOR",
+      "active": true,
+      "memberships": [
+        {
+          "userId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+          "queueId": "89f59ddc-d141-4fb9-b086-8813f928b7c5"
+        }
+      ]
+    },
+    {
+      "userId": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "role": "SUPER_ADMIN",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "OApjUxevF9A79AnvVd9u1wPL0eotzePx",
+      "role": "MODERATOR",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "qW1lpMsDTqgP2CHGlfv1wNSyXJuDGkAW",
+      "role": "VIEWER",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "sFqNqH0L4ThBqkMOg7utknuqJJc4G5ae",
+      "role": "VIEWER",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "role": "SUPER_ADMIN",
+      "active": true,
+      "memberships": []
+    },
+    {
+      "userId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "role": "MODERATOR",
+      "active": true,
+      "memberships": [
+        {
+          "userId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+          "queueId": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe"
+        }
+      ]
+    }
+  ],
+  "moderationQueues": [
+    {
+      "id": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "code": "QUEUE-GENERAL-002",
+      "name": "Airport & Transit Verification (Updated)",
+      "description": "Updated SLA and description",
+      "kind": "GENERAL",
+      "status": "ACTIVE",
+      "priority": 85,
+      "capacity": 600,
+      "version": 2,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "createdBy": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "createdAt": "2026-11-22T00:24:44.666Z",
+      "updatedAt": "2026-11-22T00:24:44.756Z"
+    },
+    {
+      "id": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "code": "QUEUE-GENERAL-001",
+      "name": "Airport & Transit Verification",
+      "description": "High-priority intake queue for airport and transit parking discovery",
+      "kind": "GENERAL",
+      "status": "ACTIVE",
+      "priority": 80,
+      "capacity": 500,
+      "version": 1,
+      "config": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          },
+          {
+            "key": "access_type",
+            "label": "Public accessibility type",
+            "type": "SELECT",
+            "required": true,
+            "options": [
+              "PUBLIC",
+              "CUSTOMER_ONLY",
+              "RESIDENTIAL_ONLY",
+              "PERMIT_RESTRICTED"
+            ]
+          },
+          {
+            "key": "citation_evidence",
+            "label": "Primary verified evidence item",
+            "type": "EVIDENCE",
+            "required": false,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "createdBy": "zdYPDbDAff7JFnOb5lTuQVUj5DJqkcd1",
+      "createdAt": "2026-11-22T00:22:00.367Z",
+      "updatedAt": "2026-11-22T00:22:00.367Z"
+    },
+    {
+      "id": "3f116603-e62d-4398-8803-0d9462635568",
+      "code": "QUEUE-GENERAL-006",
+      "name": "Airport & Transit Verification (Updated)",
+      "description": "Updated SLA and description",
+      "kind": "GENERAL",
+      "status": "ACTIVE",
+      "priority": 85,
+      "capacity": 600,
+      "version": 2,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "createdBy": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "createdAt": "2026-11-22T00:27:08.823Z",
+      "updatedAt": "2026-11-22T00:27:08.999Z"
+    },
+    {
+      "id": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe",
+      "code": "QUEUE-GENERAL-008",
+      "name": "Airport & Transit Verification (Updated)",
+      "description": "Updated SLA and description",
+      "kind": "GENERAL",
+      "status": "ACTIVE",
+      "priority": 85,
+      "capacity": 600,
+      "version": 2,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "createdBy": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "createdAt": "2026-11-22T00:28:37.716Z",
+      "updatedAt": "2026-11-22T00:28:37.862Z"
+    },
+    {
+      "id": "69930c78-0fef-4253-a282-1f2b28d9e477",
+      "code": "QUEUE-REPORT-007",
+      "name": "User Problem Reports",
+      "description": "Queue for user-submitted problem reports",
+      "kind": "REPORT",
+      "status": "ACTIVE",
+      "priority": 90,
+      "capacity": 200,
+      "version": 1,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "REPORT"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [],
+        "slaHours": 12,
+        "qaPercent": 100
+      },
+      "createdBy": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "createdAt": "2026-11-22T00:27:08.860Z",
+      "updatedAt": "2026-11-22T00:27:08.860Z"
+    },
+    {
+      "id": "89f59ddc-d141-4fb9-b086-8813f928b7c5",
+      "code": "QUEUE-GENERAL-010",
+      "name": "Airport & Transit Verification (Updated)",
+      "description": "Updated SLA and description",
+      "kind": "GENERAL",
+      "status": "ACTIVE",
+      "priority": 85,
+      "capacity": 600,
+      "version": 2,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "createdBy": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "createdAt": "2026-11-22T00:43:50.098Z",
+      "updatedAt": "2026-11-22T00:43:50.275Z"
+    },
+    {
+      "id": "b9b17a10-dd10-4473-a0c6-88b9e68bcb68",
+      "code": "QUEUE-REPORT-003",
+      "name": "User Problem Reports",
+      "description": "Queue for user-submitted problem reports",
+      "kind": "REPORT",
+      "status": "ACTIVE",
+      "priority": 90,
+      "capacity": 200,
+      "version": 1,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "REPORT"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [],
+        "slaHours": 12,
+        "qaPercent": 100
+      },
+      "createdBy": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "createdAt": "2026-11-22T00:24:44.691Z",
+      "updatedAt": "2026-11-22T00:24:44.691Z"
+    },
+    {
+      "id": "ecb6d86b-7668-4de0-903e-26fee53efc49",
+      "code": "QUEUE-REPORT-009",
+      "name": "User Problem Reports",
+      "description": "Queue for user-submitted problem reports",
+      "kind": "REPORT",
+      "status": "ACTIVE",
+      "priority": 90,
+      "capacity": 200,
+      "version": 1,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "REPORT"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [],
+        "slaHours": 12,
+        "qaPercent": 100
+      },
+      "createdBy": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "createdAt": "2026-11-22T00:28:37.756Z",
+      "updatedAt": "2026-11-22T00:28:37.756Z"
+    },
+    {
+      "id": "f6a62f3b-ac5c-46ac-8497-3f08afb4880a",
+      "code": "QUEUE-REPORT-011",
+      "name": "User Problem Reports",
+      "description": "Queue for user-submitted problem reports",
+      "kind": "REPORT",
+      "status": "ACTIVE",
+      "priority": 90,
+      "capacity": 200,
+      "version": 1,
+      "config": {
+        "rule": {
+          "field": "source",
+          "value": "REPORT"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [],
+        "slaHours": 12,
+        "qaPercent": 100
+      },
+      "createdBy": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "createdAt": "2026-11-22T00:43:50.160Z",
+      "updatedAt": "2026-11-22T00:43:50.160Z"
+    }
+  ],
+  "moderationMemberships": [
+    {
+      "userId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "queueId": "3f116603-e62d-4398-8803-0d9462635568"
+    },
+    {
+      "userId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "queueId": "89f59ddc-d141-4fb9-b086-8813f928b7c5"
+    },
+    {
+      "userId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "queueId": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe"
+    }
+  ],
+  "moderationCases": [
+    {
+      "id": "201c5b74-cc4f-4c8d-aa9d-7b428d95b549",
+      "code": "CASE-2026-000004",
+      "activeKey": "cf3fd2f2-0b44-481e-9e5e-bd87e53d7012:NEW_FACILITY_VERIFICATION",
+      "facilityId": "cf3fd2f2-0b44-481e-9e5e-bd87e53d7012",
+      "category": "NEW_FACILITY_VERIFICATION",
+      "trigger": "SEARCH",
+      "status": "QUEUED",
+      "priority": 85,
+      "revision": 0,
+      "owner": null,
+      "leaseUntil": null,
+      "createdAt": "2026-11-22T00:25:41.552Z",
+      "updatedAt": "2026-11-22T00:25:41.552Z"
+    },
+    {
+      "id": "29d6c1dd-5099-4c7b-8633-fa494bd65e83",
+      "code": "CASE-2026-000001",
+      "activeKey": "c0652d86-7fdc-4f4c-938c-f21b09577e63:NEW_FACILITY_VERIFICATION",
+      "facilityId": "c0652d86-7fdc-4f4c-938c-f21b09577e63",
+      "category": "NEW_FACILITY_VERIFICATION",
+      "trigger": "SEARCH",
+      "status": "QUEUED",
+      "priority": 80,
+      "revision": 0,
+      "owner": null,
+      "leaseUntil": null,
+      "createdAt": "2026-11-22T00:22:00.515Z",
+      "updatedAt": "2026-11-22T00:22:00.515Z"
+    },
+    {
+      "id": "2a6da663-0b1b-438d-8f23-f1754462f668",
+      "code": "CASE-2026-000003",
+      "activeKey": "2c7aed58-d264-4fff-b46a-a2785ff022ae:USER_REPORT_REVIEW",
+      "facilityId": "2c7aed58-d264-4fff-b46a-a2785ff022ae",
+      "category": "USER_REPORT_REVIEW",
+      "trigger": "REPORT",
+      "status": "QUEUED",
+      "priority": 90,
+      "revision": 0,
+      "owner": null,
+      "leaseUntil": null,
+      "createdAt": "2026-11-22T00:24:46.113Z",
+      "updatedAt": "2026-11-22T00:24:46.113Z"
+    },
+    {
+      "id": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "code": "CASE-2026-000007",
+      "activeKey": null,
+      "facilityId": "45cb5135-018d-49e8-96e5-5f8ece83f7bd",
+      "category": "NEW_FACILITY_VERIFICATION",
+      "trigger": "SEARCH",
+      "status": "APPROVED",
+      "priority": 85,
+      "revision": 8,
+      "owner": null,
+      "leaseUntil": null,
+      "createdAt": "2026-11-22T00:28:38.022Z",
+      "updatedAt": "2026-11-22T00:28:38.639Z"
+    },
+    {
+      "id": "4e570623-3f43-4907-9b04-93da73c21cbb",
+      "code": "CASE-2026-000002",
+      "activeKey": "2c7aed58-d264-4fff-b46a-a2785ff022ae:NEW_FACILITY_VERIFICATION",
+      "facilityId": "2c7aed58-d264-4fff-b46a-a2785ff022ae",
+      "category": "NEW_FACILITY_VERIFICATION",
+      "trigger": "SEARCH",
+      "status": "IN_REVIEW",
+      "priority": 85,
+      "revision": 1,
+      "owner": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "leaseUntil": "2026-11-22T00:54:44.934Z",
+      "createdAt": "2026-11-22T00:24:44.846Z",
+      "updatedAt": "2026-11-22T00:24:44.937Z"
+    },
+    {
+      "id": "8e5ea960-44cc-47fd-85df-bedc318b7ef1",
+      "code": "CASE-2026-000005",
+      "activeKey": "cf3fd2f2-0b44-481e-9e5e-bd87e53d7012:USER_REPORT_REVIEW",
+      "facilityId": "cf3fd2f2-0b44-481e-9e5e-bd87e53d7012",
+      "category": "USER_REPORT_REVIEW",
+      "trigger": "REPORT",
+      "status": "QUEUED",
+      "priority": 90,
+      "revision": 0,
+      "owner": null,
+      "leaseUntil": null,
+      "createdAt": "2026-11-22T00:25:43.929Z",
+      "updatedAt": "2026-11-22T00:25:43.929Z"
+    },
+    {
+      "id": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "code": "CASE-2026-000008",
+      "activeKey": null,
+      "facilityId": "ea289587-3605-4811-af77-7ffb13118fe4",
+      "category": "NEW_FACILITY_VERIFICATION",
+      "trigger": "SEARCH",
+      "status": "APPROVED",
+      "priority": 85,
+      "revision": 8,
+      "owner": null,
+      "leaseUntil": null,
+      "createdAt": "2026-11-22T00:43:50.431Z",
+      "updatedAt": "2026-11-22T00:43:50.910Z"
+    },
+    {
+      "id": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "code": "CASE-2026-000006",
+      "activeKey": null,
+      "facilityId": "24b944fb-6249-4b14-8efe-52be9befe370",
+      "category": "NEW_FACILITY_VERIFICATION",
+      "trigger": "SEARCH",
+      "status": "APPROVED",
+      "priority": 85,
+      "revision": 8,
+      "owner": null,
+      "leaseUntil": null,
+      "createdAt": "2026-11-22T00:27:09.186Z",
+      "updatedAt": "2026-11-22T00:27:10.019Z"
+    }
+  ],
+  "moderationTasks": [
+    {
+      "id": "08550e26-12ea-450e-954c-8a2221db21f7",
+      "caseId": "2a6da663-0b1b-438d-8f23-f1754462f668",
+      "queueId": "b9b17a10-dd10-4473-a0c6-88b9e68bcb68",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "REPORT"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [],
+        "slaHours": 12,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-22T12:24:46.103Z"
+    },
+    {
+      "id": "0faaa29a-7adb-4172-9c28-97eff0d5a77c",
+      "caseId": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "queueId": "3f116603-e62d-4398-8803-0d9462635568",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:43:50.420Z"
+    },
+    {
+      "id": "10a1bbce-8d1e-47ff-8d98-5910f99c18cc",
+      "caseId": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "queueId": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:28:38.006Z"
+    },
+    {
+      "id": "57160c19-f12f-48b4-8af7-b77266daa11b",
+      "caseId": "201c5b74-cc4f-4c8d-aa9d-7b428d95b549",
+      "queueId": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:25:41.541Z"
+    },
+    {
+      "id": "5789496e-a266-41dd-9391-79d8c94c87fd",
+      "caseId": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "queueId": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          },
+          {
+            "key": "access_type",
+            "label": "Public accessibility type",
+            "type": "SELECT",
+            "required": true,
+            "options": [
+              "PUBLIC",
+              "CUSTOMER_ONLY",
+              "RESIDENTIAL_ONLY",
+              "PERMIT_RESTRICTED"
+            ]
+          },
+          {
+            "key": "citation_evidence",
+            "label": "Primary verified evidence item",
+            "type": "EVIDENCE",
+            "required": false,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-23T00:28:38.006Z"
+    },
+    {
+      "id": "5867ea79-6f4d-4246-aace-81b196d9bddf",
+      "caseId": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "queueId": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          },
+          {
+            "key": "access_type",
+            "label": "Public accessibility type",
+            "type": "SELECT",
+            "required": true,
+            "options": [
+              "PUBLIC",
+              "CUSTOMER_ONLY",
+              "RESIDENTIAL_ONLY",
+              "PERMIT_RESTRICTED"
+            ]
+          },
+          {
+            "key": "citation_evidence",
+            "label": "Primary verified evidence item",
+            "type": "EVIDENCE",
+            "required": false,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-23T00:43:50.420Z"
+    },
+    {
+      "id": "5bc7f833-0d92-4e55-b037-4f2bfee645ee",
+      "caseId": "8e5ea960-44cc-47fd-85df-bedc318b7ef1",
+      "queueId": "b9b17a10-dd10-4473-a0c6-88b9e68bcb68",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "REPORT"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [],
+        "slaHours": 12,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-22T12:25:43.918Z"
+    },
+    {
+      "id": "5e699f1d-6ee0-4267-89ed-b73e94983852",
+      "caseId": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "queueId": "89f59ddc-d141-4fb9-b086-8813f928b7c5",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:43:50.420Z"
+    },
+    {
+      "id": "65da42aa-f0cc-44bc-b191-698ffe77e5d4",
+      "caseId": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "queueId": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:43:50.420Z"
+    },
+    {
+      "id": "75bb3c15-a24f-45b6-a519-450b442fc83b",
+      "caseId": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "queueId": "3f116603-e62d-4398-8803-0d9462635568",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:28:38.006Z"
+    },
+    {
+      "id": "7b0596db-b067-41fc-98f5-b262d04bddac",
+      "caseId": "4e570623-3f43-4907-9b04-93da73c21cbb",
+      "queueId": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:24:44.838Z"
+    },
+    {
+      "id": "7cac25cd-4e0b-4054-ac13-b357c94ffe6a",
+      "caseId": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "queueId": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:28:38.006Z"
+    },
+    {
+      "id": "7dcfb583-d46d-4a06-ae84-bc431c1125e0",
+      "caseId": "201c5b74-cc4f-4c8d-aa9d-7b428d95b549",
+      "queueId": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          },
+          {
+            "key": "access_type",
+            "label": "Public accessibility type",
+            "type": "SELECT",
+            "required": true,
+            "options": [
+              "PUBLIC",
+              "CUSTOMER_ONLY",
+              "RESIDENTIAL_ONLY",
+              "PERMIT_RESTRICTED"
+            ]
+          },
+          {
+            "key": "citation_evidence",
+            "label": "Primary verified evidence item",
+            "type": "EVIDENCE",
+            "required": false,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-23T00:25:41.541Z"
+    },
+    {
+      "id": "8d10c02f-0843-49d2-b472-c32330dadbe0",
+      "caseId": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "queueId": "3f116603-e62d-4398-8803-0d9462635568",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:27:09.175Z"
+    },
+    {
+      "id": "9100633b-f4ba-4b80-8b9c-a7096fb365b6",
+      "caseId": "4e570623-3f43-4907-9b04-93da73c21cbb",
+      "queueId": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          },
+          {
+            "key": "access_type",
+            "label": "Public accessibility type",
+            "type": "SELECT",
+            "required": true,
+            "options": [
+              "PUBLIC",
+              "CUSTOMER_ONLY",
+              "RESIDENTIAL_ONLY",
+              "PERMIT_RESTRICTED"
+            ]
+          },
+          {
+            "key": "citation_evidence",
+            "label": "Primary verified evidence item",
+            "type": "EVIDENCE",
+            "required": false,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-23T00:24:44.838Z"
+    },
+    {
+      "id": "94e2c6f6-90b3-4dc6-909a-ea331c9ad2f8",
+      "caseId": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "queueId": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:27:09.175Z"
+    },
+    {
+      "id": "9fcf56f3-cce0-4502-92c8-65797e6ea7e6",
+      "caseId": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "queueId": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          },
+          {
+            "key": "access_type",
+            "label": "Public accessibility type",
+            "type": "SELECT",
+            "required": true,
+            "options": [
+              "PUBLIC",
+              "CUSTOMER_ONLY",
+              "RESIDENTIAL_ONLY",
+              "PERMIT_RESTRICTED"
+            ]
+          },
+          {
+            "key": "citation_evidence",
+            "label": "Primary verified evidence item",
+            "type": "EVIDENCE",
+            "required": false,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-23T00:27:09.175Z"
+    },
+    {
+      "id": "a3171fcb-bcc8-468b-b1d7-33f88ae6af6c",
+      "caseId": "29d6c1dd-5099-4c7b-8633-fa494bd65e83",
+      "queueId": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "queueVersion": 1,
+      "form": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          },
+          {
+            "key": "access_type",
+            "label": "Public accessibility type",
+            "type": "SELECT",
+            "required": true,
+            "options": [
+              "PUBLIC",
+              "CUSTOMER_ONLY",
+              "RESIDENTIAL_ONLY",
+              "PERMIT_RESTRICTED"
+            ]
+          },
+          {
+            "key": "citation_evidence",
+            "label": "Primary verified evidence item",
+            "type": "EVIDENCE",
+            "required": false,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-23T00:22:00.502Z"
+    },
+    {
+      "id": "fa881426-b605-4fab-920b-e9d9c6a09541",
+      "caseId": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "queueId": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe",
+      "queueVersion": 2,
+      "form": {
+        "rule": {
+          "field": "source",
+          "value": "SEARCH"
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does facility exist?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 48,
+        "qaPercent": 100
+      },
+      "deadline": "2026-11-24T00:43:50.420Z"
+    }
+  ],
+  "moderationSubmissions": [
+    {
+      "id": "355c8443-5762-4355-b03e-1a6aa470896a",
+      "caseId": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "taskId": "5e699f1d-6ee0-4267-89ed-b73e94983852",
+      "queueVersion": 2,
+      "reviewerId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "APPROVE",
+      "answers": {
+        "facility_exists": "YES"
+      },
+      "evidenceIds": [
+        "2a34c437-dccb-4ea4-8dfd-2af18cc6b5c6"
+      ],
+      "fingerprint": "b360cc740848855ea7afd1be1a5828cf8be553f3715b3d6d8fdff1a9d9684eab",
+      "reason": "Facility validated with official signage and parking entrance coordinates",
+      "createdAt": "2026-11-22T00:43:50.744Z"
+    },
+    {
+      "id": "4462b0cd-bbf0-431d-9742-1d4554a5b6a6",
+      "caseId": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "taskId": "7cac25cd-4e0b-4054-ac13-b357c94ffe6a",
+      "queueVersion": 2,
+      "reviewerId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "APPROVE",
+      "answers": {
+        "facility_exists": "YES"
+      },
+      "evidenceIds": [
+        "6e4502c7-f14c-4840-9881-b273ac0f94f4"
+      ],
+      "fingerprint": "24b0e6e7fc7102019ccbb98ca67ed74ce70af0a1c263c4a7e02e7a7a419603ce",
+      "reason": "Tariff confirmed: 20 INR first 4 hours, verified against official schedule",
+      "createdAt": "2026-11-22T00:28:38.500Z"
+    },
+    {
+      "id": "803f4dfd-127d-4d6e-96ad-3380e89b2a51",
+      "caseId": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "taskId": "8d10c02f-0843-49d2-b472-c32330dadbe0",
+      "queueVersion": 2,
+      "reviewerId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "APPROVE",
+      "answers": {
+        "facility_exists": "YES"
+      },
+      "evidenceIds": [
+        "a34d1574-6c9c-4aac-ae62-80f936fbd073"
+      ],
+      "fingerprint": "a53cffdc67331d7eb18f081f7714268b7f084b0bd36237698a461cea1bfb8737",
+      "reason": "Tariff confirmed: 20 INR first 4 hours, verified against official schedule",
+      "createdAt": "2026-11-22T00:27:09.899Z"
+    },
+    {
+      "id": "828d8870-a6fb-4e4b-a734-fede65dd33ec",
+      "caseId": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "taskId": "7cac25cd-4e0b-4054-ac13-b357c94ffe6a",
+      "queueVersion": 2,
+      "reviewerId": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "APPROVE",
+      "answers": {
+        "facility_exists": "YES"
+      },
+      "evidenceIds": [
+        "6e4502c7-f14c-4840-9881-b273ac0f94f4"
+      ],
+      "fingerprint": "24b0e6e7fc7102019ccbb98ca67ed74ce70af0a1c263c4a7e02e7a7a419603ce",
+      "reason": "Facility validated with official signage and parking entrance coordinates",
+      "createdAt": "2026-11-22T00:28:38.354Z"
+    },
+    {
+      "id": "eb282e3d-8511-465f-972c-5aa4e58ba547",
+      "caseId": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "taskId": "8d10c02f-0843-49d2-b472-c32330dadbe0",
+      "queueVersion": 2,
+      "reviewerId": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "APPROVE",
+      "answers": {
+        "facility_exists": "YES"
+      },
+      "evidenceIds": [
+        "a34d1574-6c9c-4aac-ae62-80f936fbd073"
+      ],
+      "fingerprint": "a53cffdc67331d7eb18f081f7714268b7f084b0bd36237698a461cea1bfb8737",
+      "reason": "Facility validated with official signage and parking entrance coordinates",
+      "createdAt": "2026-11-22T00:27:09.592Z"
+    },
+    {
+      "id": "f547c288-f2dc-4ed4-9ca8-755624f65dc7",
+      "caseId": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "taskId": "5e699f1d-6ee0-4267-89ed-b73e94983852",
+      "queueVersion": 2,
+      "reviewerId": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "APPROVE",
+      "answers": {
+        "facility_exists": "YES"
+      },
+      "evidenceIds": [
+        "2a34c437-dccb-4ea4-8dfd-2af18cc6b5c6"
+      ],
+      "fingerprint": "b360cc740848855ea7afd1be1a5828cf8be553f3715b3d6d8fdff1a9d9684eab",
+      "reason": "Tariff confirmed: 20 INR first 4 hours, verified against official schedule",
+      "createdAt": "2026-11-22T00:43:50.850Z"
+    }
+  ],
+  "moderationAudits": [
+    {
+      "id": "0aae402f-fc12-452d-8b26-900f830f6512",
+      "actor": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "action": "PUBLISH",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": {
+        "status": "PENDING_QA"
+      },
+      "after": {
+        "status": "APPROVED",
+        "reason": "All evidence criteria met. Publishing to production index."
+      },
+      "createdAt": "2026-11-22T00:43:50.913Z"
+    },
+    {
+      "id": "0db32671-72f3-4702-b43d-d7ddcbf5f9cb",
+      "actor": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "CASE_CLAIMED",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:43:50.671Z"
+    },
+    {
+      "id": "13f2fe98-73f9-452d-bdd2-f99c5d93bcbf",
+      "actor": "VEuCJIJDmAkuX8EQIDqJ25FVJV3ltwz3",
+      "action": "QUEUE_CREATED",
+      "target": "4d617624-9621-4305-854d-b845c7baca65",
+      "before": null,
+      "after": {
+        "name": "User Problem Reports",
+        "description": "Queue for user-submitted problem reports",
+        "kind": "REPORT",
+        "priority": 90,
+        "capacity": 200,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "REPORT"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [],
+          "slaHours": 12,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:25:41.316Z"
+    },
+    {
+      "id": "14d3736e-317e-475e-8135-d95d210720a3",
+      "actor": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "action": "STAFF_UPDATED",
+      "target": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "before": null,
+      "after": {
+        "role": "MODERATOR",
+        "active": true,
+        "queues": [
+          "5118184d-6563-4e3e-9f0b-7b3eb535c3fe"
+        ]
+      },
+      "createdAt": "2026-11-22T00:28:37.907Z"
+    },
+    {
+      "id": "15a5eb39-8396-41a3-905a-fd28d7bc2936",
+      "actor": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "APPROVE",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": {
+        "status": "IN_REVIEW"
+      },
+      "after": {
+        "status": "PENDING_QA",
+        "reason": "Tariff confirmed: 20 INR first 4 hours, verified against official schedule"
+      },
+      "createdAt": "2026-11-22T00:28:38.530Z"
+    },
+    {
+      "id": "226f4ff8-f14b-4e87-abef-3a58cce46298",
+      "actor": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "action": "QUEUE_CREATED",
+      "target": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe",
+      "before": null,
+      "after": {
+        "name": "Airport & Transit Verification",
+        "description": "High-priority intake queue for airport and transit parking discovery",
+        "kind": "GENERAL",
+        "priority": 80,
+        "capacity": 500,
+        "config": {
+          "rule": {
+            "op": "OR",
+            "children": [
+              {
+                "field": "category",
+                "value": "NEW_FACILITY_VERIFICATION"
+              },
+              {
+                "field": "source",
+                "value": "SEARCH"
+              }
+            ]
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority",
+            "owner",
+            "createdAt"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does an authentic vehicle parking facility exist at this location?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 24,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:28:37.723Z"
+    },
+    {
+      "id": "2583e804-c16a-4857-86ca-087199560dff",
+      "actor": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "CASE_CLAIMED",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:43:50.566Z"
+    },
+    {
+      "id": "31c6cd6c-6de2-4fbb-afee-e0985f188643",
+      "actor": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "CASE_CLAIMED",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:27:09.438Z"
+    },
+    {
+      "id": "330ea2cd-99ed-4e8e-9226-2f176f3fcbbf",
+      "actor": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "CASE_RELEASED",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:27:09.398Z"
+    },
+    {
+      "id": "4627d34c-8136-4af1-a871-b93ce0c17a87",
+      "actor": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "action": "QUEUE_UPDATED",
+      "target": "3f116603-e62d-4398-8803-0d9462635568",
+      "before": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "after": {
+        "name": "Airport & Transit Verification (Updated)",
+        "description": "Updated SLA and description",
+        "kind": "GENERAL",
+        "priority": 85,
+        "capacity": 600,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "SEARCH"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does facility exist?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 48,
+          "qaPercent": 100
+        },
+        "version": 1,
+        "status": "ACTIVE"
+      },
+      "createdAt": "2026-11-22T00:27:09.004Z"
+    },
+    {
+      "id": "46598373-7314-41a1-a565-d47ab2f0963e",
+      "actor": "klLdG6gH99KXB3r1MeG6iR237ICDjTg4",
+      "action": "REPORT_RECEIVED",
+      "target": "8e5ea960-44cc-47fd-85df-bedc318b7ef1",
+      "before": null,
+      "after": {
+        "category": "PRICE"
+      },
+      "createdAt": "2026-11-22T00:25:43.948Z"
+    },
+    {
+      "id": "4a5ac365-b8b5-47ec-8400-7da823276561",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": null,
+      "after": {
+        "event": "8e9e01c1ae9cd2da021d342a1fdfadb029c2fc05fa7f1ba903ff2ec06a27b7c0",
+        "queues": [
+          {
+            "id": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+            "version": 2
+          },
+          {
+            "id": "3f116603-e62d-4398-8803-0d9462635568",
+            "version": 2
+          },
+          {
+            "id": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe",
+            "version": 2
+          },
+          {
+            "id": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:28:38.035Z"
+    },
+    {
+      "id": "4ea2a7c3-c843-49e3-bbf1-d61914f7156a",
+      "actor": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "action": "STAFF_UPDATED",
+      "target": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "before": null,
+      "after": {
+        "role": "MODERATOR",
+        "active": true,
+        "queues": [
+          "89f59ddc-d141-4fb9-b086-8813f928b7c5"
+        ]
+      },
+      "createdAt": "2026-11-22T00:43:50.326Z"
+    },
+    {
+      "id": "507a65d6-0e8d-4950-9a92-7a730a0090a0",
+      "actor": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "EVIDENCE_RECORDED",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": null,
+      "after": {
+        "evidenceId": "6e4502c7-f14c-4840-9881-b273ac0f94f4"
+      },
+      "createdAt": "2026-11-22T00:28:38.296Z"
+    },
+    {
+      "id": "526a323d-ffaf-4d29-a27a-ebdb9bd5ec6f",
+      "actor": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "CASE_CLAIMED",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:27:09.343Z"
+    },
+    {
+      "id": "576f30df-0440-45ec-a80a-fc65ab4ad273",
+      "actor": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "action": "QUEUE_CREATED",
+      "target": "f6a62f3b-ac5c-46ac-8497-3f08afb4880a",
+      "before": null,
+      "after": {
+        "name": "User Problem Reports",
+        "description": "Queue for user-submitted problem reports",
+        "kind": "REPORT",
+        "priority": 90,
+        "capacity": 200,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "REPORT"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [],
+          "slaHours": 12,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:43:50.177Z"
+    },
+    {
+      "id": "5eeb0e2f-ee3e-433c-8243-6cfbc3d2750e",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": null,
+      "after": {
+        "event": "cae973b69d380102a5d4d94665b4a3e8e827c8dda93602ac8a44918f382f9fb1",
+        "queues": [
+          {
+            "id": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+            "version": 2
+          },
+          {
+            "id": "3f116603-e62d-4398-8803-0d9462635568",
+            "version": 2
+          },
+          {
+            "id": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:27:09.215Z"
+    },
+    {
+      "id": "5f0f4e15-54fc-439d-84dd-532f487eaea9",
+      "actor": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "CASE_CLAIMED",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:28:38.158Z"
+    },
+    {
+      "id": "61c4d918-46c9-4947-980d-9a9b6c83a6be",
+      "actor": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "action": "QUEUE_CREATED",
+      "target": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "before": null,
+      "after": {
+        "name": "Airport & Transit Verification",
+        "description": "High-priority intake queue for airport and transit parking discovery",
+        "kind": "GENERAL",
+        "priority": 80,
+        "capacity": 500,
+        "config": {
+          "rule": {
+            "op": "OR",
+            "children": [
+              {
+                "field": "category",
+                "value": "NEW_FACILITY_VERIFICATION"
+              },
+              {
+                "field": "source",
+                "value": "SEARCH"
+              }
+            ]
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority",
+            "owner",
+            "createdAt"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does an authentic vehicle parking facility exist at this location?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 24,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:24:44.669Z"
+    },
+    {
+      "id": "65b6cc23-86b4-45b2-be53-ed111181e693",
+      "actor": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "CASE_RELEASED",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:28:38.228Z"
+    },
+    {
+      "id": "68dd9182-b244-4f86-acab-afdfcdfc2f33",
+      "actor": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "action": "QUEUE_CREATED",
+      "target": "89f59ddc-d141-4fb9-b086-8813f928b7c5",
+      "before": null,
+      "after": {
+        "name": "Airport & Transit Verification",
+        "description": "High-priority intake queue for airport and transit parking discovery",
+        "kind": "GENERAL",
+        "priority": 80,
+        "capacity": 500,
+        "config": {
+          "rule": {
+            "op": "OR",
+            "children": [
+              {
+                "field": "category",
+                "value": "NEW_FACILITY_VERIFICATION"
+              },
+              {
+                "field": "source",
+                "value": "SEARCH"
+              }
+            ]
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority",
+            "owner",
+            "createdAt"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does an authentic vehicle parking facility exist at this location?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 24,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:43:50.108Z"
+    },
+    {
+      "id": "69b86159-ed8e-4253-965e-534715df046e",
+      "actor": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "action": "QUEUE_CREATED",
+      "target": "69930c78-0fef-4253-a282-1f2b28d9e477",
+      "before": null,
+      "after": {
+        "name": "User Problem Reports",
+        "description": "Queue for user-submitted problem reports",
+        "kind": "REPORT",
+        "priority": 90,
+        "capacity": 200,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "REPORT"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [],
+          "slaHours": 12,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:27:08.865Z"
+    },
+    {
+      "id": "6b5555f3-2ba1-442c-a103-d324736e2acc",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": null,
+      "after": {
+        "event": "a6722d5ce955a7a4bdd774e3e083f3d6e298bc10f397b720b9cd383a0575535e",
+        "queues": [
+          {
+            "id": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+            "version": 2
+          },
+          {
+            "id": "3f116603-e62d-4398-8803-0d9462635568",
+            "version": 2
+          },
+          {
+            "id": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe",
+            "version": 2
+          },
+          {
+            "id": "89f59ddc-d141-4fb9-b086-8813f928b7c5",
+            "version": 2
+          },
+          {
+            "id": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:43:50.447Z"
+    },
+    {
+      "id": "6e95641d-1bef-4eb2-8cb3-8503b34fd63f",
+      "actor": "zdYPDbDAff7JFnOb5lTuQVUj5DJqkcd1",
+      "action": "QUEUE_CREATED",
+      "target": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+      "before": null,
+      "after": {
+        "name": "Airport & Transit Verification",
+        "description": "High-priority intake queue for airport and transit parking discovery",
+        "kind": "GENERAL",
+        "priority": 80,
+        "capacity": 500,
+        "config": {
+          "rule": {
+            "op": "OR",
+            "children": [
+              {
+                "field": "category",
+                "value": "NEW_FACILITY_VERIFICATION"
+              },
+              {
+                "field": "source",
+                "value": "SEARCH"
+              }
+            ]
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority",
+            "owner",
+            "createdAt"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does an authentic vehicle parking facility exist at this location?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            },
+            {
+              "key": "access_type",
+              "label": "Public accessibility type",
+              "type": "SELECT",
+              "required": true,
+              "options": [
+                "PUBLIC",
+                "CUSTOMER_ONLY",
+                "RESIDENTIAL_ONLY",
+                "PERMIT_RESTRICTED"
+              ]
+            },
+            {
+              "key": "citation_evidence",
+              "label": "Primary verified evidence item",
+              "type": "EVIDENCE",
+              "required": false,
+              "options": []
+            }
+          ],
+          "slaHours": 24,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:22:00.372Z"
+    },
+    {
+      "id": "714811bb-1aa3-4e61-ac60-8a4a126f13ba",
+      "actor": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "action": "QUEUE_UPDATED",
+      "target": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+      "before": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "after": {
+        "name": "Airport & Transit Verification (Updated)",
+        "description": "Updated SLA and description",
+        "kind": "GENERAL",
+        "priority": 85,
+        "capacity": 600,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "SEARCH"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does facility exist?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 48,
+          "qaPercent": 100
+        },
+        "version": 1,
+        "status": "ACTIVE"
+      },
+      "createdAt": "2026-11-22T00:24:44.763Z"
+    },
+    {
+      "id": "721bce61-bcf2-4103-a212-abe05b3df7a0",
+      "actor": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "action": "QUEUE_CREATED",
+      "target": "ecb6d86b-7668-4de0-903e-26fee53efc49",
+      "before": null,
+      "after": {
+        "name": "User Problem Reports",
+        "description": "Queue for user-submitted problem reports",
+        "kind": "REPORT",
+        "priority": 90,
+        "capacity": 200,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "REPORT"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [],
+          "slaHours": 12,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:28:37.771Z"
+    },
+    {
+      "id": "7846149e-e235-4921-9cc1-9a45847adf01",
+      "actor": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "EVIDENCE_RECORDED",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": null,
+      "after": {
+        "evidenceId": "2a34c437-dccb-4ea4-8dfd-2af18cc6b5c6"
+      },
+      "createdAt": "2026-11-22T00:43:50.702Z"
+    },
+    {
+      "id": "79185aab-35f2-46c8-8f80-05e4ea040d9c",
+      "actor": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "action": "PUBLISH",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": {
+        "status": "PENDING_QA"
+      },
+      "after": {
+        "status": "APPROVED",
+        "reason": "All evidence criteria met. Publishing to production index."
+      },
+      "createdAt": "2026-11-22T00:28:38.646Z"
+    },
+    {
+      "id": "7b6ae24d-a726-4b8f-bd82-bbd41a4b442c",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "201c5b74-cc4f-4c8d-aa9d-7b428d95b549",
+      "before": null,
+      "after": {
+        "event": "0e2aed0335423e1585b9c1827d33f6e1e410708edd6ab865ff0ee6bc1c06bfc6",
+        "queues": [
+          {
+            "id": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+            "version": 2
+          },
+          {
+            "id": "930eb780-e3d5-46d8-94a7-cd9ed7028b7a",
+            "version": 2
+          },
+          {
+            "id": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:25:41.559Z"
+    },
+    {
+      "id": "82b6fd57-6721-438c-8610-caa9afaaa924",
+      "actor": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "CASE_CLAIMED",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:43:50.819Z"
+    },
+    {
+      "id": "872d6471-08df-4b6c-9179-1196a63ba880",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "4e570623-3f43-4907-9b04-93da73c21cbb",
+      "before": null,
+      "after": {
+        "event": "180523c369b8f132bf9e36218325594f96a8807bce6dc7bc3a60b63cd5d57840",
+        "queues": [
+          {
+            "id": "04992f15-f09d-4ab7-9bf7-c69881546c21",
+            "version": 2
+          },
+          {
+            "id": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:24:44.863Z"
+    },
+    {
+      "id": "88f3792b-cdc4-4681-a5d0-554d10187a3b",
+      "actor": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "CASE_CLAIMED",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:28:38.445Z"
+    },
+    {
+      "id": "8e7d0cdf-5e84-4ffb-b8da-77bef5f78b87",
+      "actor": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "action": "QUEUE_CREATED",
+      "target": "b9b17a10-dd10-4473-a0c6-88b9e68bcb68",
+      "before": null,
+      "after": {
+        "name": "User Problem Reports",
+        "description": "Queue for user-submitted problem reports",
+        "kind": "REPORT",
+        "priority": 90,
+        "capacity": 200,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "REPORT"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [],
+          "slaHours": 12,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:24:44.693Z"
+    },
+    {
+      "id": "92a084c4-4fdd-4afb-a659-44cfc9dce753",
+      "actor": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "CASE_CLAIMED",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:28:38.262Z"
+    },
+    {
+      "id": "93dbe77e-e12a-4cfa-b4e1-b2241f075a57",
+      "actor": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "CASE_RELEASED",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:43:50.642Z"
+    },
+    {
+      "id": "9756b15d-5583-4339-9eac-5383414c88cc",
+      "actor": "ZwVzJAv77bf1BluLQuLw6vm5Melr3NdY",
+      "action": "APPROVE",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": {
+        "status": "IN_REVIEW"
+      },
+      "after": {
+        "status": "PENDING_QA",
+        "reason": "Facility validated with official signage and parking entrance coordinates"
+      },
+      "createdAt": "2026-11-22T00:28:38.363Z"
+    },
+    {
+      "id": "9cc51d81-6933-4445-beac-f499034b6dfa",
+      "actor": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "action": "REOPEN",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": {
+        "status": "PENDING_QA"
+      },
+      "after": {
+        "status": "REOPENED",
+        "reason": "Please verify exact hourly parking tariff rate before final publish"
+      },
+      "createdAt": "2026-11-22T00:43:50.786Z"
+    },
+    {
+      "id": "9cf16c1b-5aba-43cc-a394-28366bbff5d2",
+      "actor": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "action": "QUEUE_UPDATED",
+      "target": "89f59ddc-d141-4fb9-b086-8813f928b7c5",
+      "before": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "after": {
+        "name": "Airport & Transit Verification (Updated)",
+        "description": "Updated SLA and description",
+        "kind": "GENERAL",
+        "priority": 85,
+        "capacity": 600,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "SEARCH"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does facility exist?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 48,
+          "qaPercent": 100
+        },
+        "version": 1,
+        "status": "ACTIVE"
+      },
+      "createdAt": "2026-11-22T00:43:50.282Z"
+    },
+    {
+      "id": "9da8a38a-78b3-4f2c-99b0-af1e0a0e73b7",
+      "actor": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "APPROVE",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": {
+        "status": "IN_REVIEW"
+      },
+      "after": {
+        "status": "PENDING_QA",
+        "reason": "Facility validated with official signage and parking entrance coordinates"
+      },
+      "createdAt": "2026-11-22T00:27:09.604Z"
+    },
+    {
+      "id": "a3a7bcd9-91bf-4aaf-aca0-808d0dceff36",
+      "actor": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "action": "STAFF_UPDATED",
+      "target": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "before": null,
+      "after": {
+        "role": "MODERATOR",
+        "active": true,
+        "queues": [
+          "3f116603-e62d-4398-8803-0d9462635568"
+        ]
+      },
+      "createdAt": "2026-11-22T00:27:09.058Z"
+    },
+    {
+      "id": "a4bd3145-3cf2-4d36-a90f-43dafd12a36d",
+      "actor": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "APPROVE",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": {
+        "status": "IN_REVIEW"
+      },
+      "after": {
+        "status": "PENDING_QA",
+        "reason": "Tariff confirmed: 20 INR first 4 hours, verified against official schedule"
+      },
+      "createdAt": "2026-11-22T00:43:50.867Z"
+    },
+    {
+      "id": "aadadc4f-584f-4291-9b62-8f37b0fec33d",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "8e5ea960-44cc-47fd-85df-bedc318b7ef1",
+      "before": null,
+      "after": {
+        "event": "user-report",
+        "queues": [
+          {
+            "id": "4d617624-9621-4305-854d-b845c7baca65",
+            "version": 1
+          },
+          {
+            "id": "b9b17a10-dd10-4473-a0c6-88b9e68bcb68",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:25:43.946Z"
+    },
+    {
+      "id": "aba72af4-8c15-4baa-8938-4e768eec75fc",
+      "actor": "hLSaPT7x3Ti8smqfjqnZg8YGHgtAXHRS",
+      "action": "APPROVE",
+      "target": "cbb7e998-b87f-400f-a648-7f01d7738951",
+      "before": {
+        "status": "IN_REVIEW"
+      },
+      "after": {
+        "status": "PENDING_QA",
+        "reason": "Facility validated with official signage and parking entrance coordinates"
+      },
+      "createdAt": "2026-11-22T00:43:50.751Z"
+    },
+    {
+      "id": "b1752dba-bfd9-4058-9178-ac8f772d6a03",
+      "actor": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "action": "QUEUE_CREATED",
+      "target": "3f116603-e62d-4398-8803-0d9462635568",
+      "before": null,
+      "after": {
+        "name": "Airport & Transit Verification",
+        "description": "High-priority intake queue for airport and transit parking discovery",
+        "kind": "GENERAL",
+        "priority": 80,
+        "capacity": 500,
+        "config": {
+          "rule": {
+            "op": "OR",
+            "children": [
+              {
+                "field": "category",
+                "value": "NEW_FACILITY_VERIFICATION"
+              },
+              {
+                "field": "source",
+                "value": "SEARCH"
+              }
+            ]
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority",
+            "owner",
+            "createdAt"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does an authentic vehicle parking facility exist at this location?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 24,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:27:08.826Z"
+    },
+    {
+      "id": "b2279582-2930-4a18-a478-89fb61ff3330",
+      "actor": "hBd5mo0Qch20YzchAZ9zJQJhEFOAkcYw",
+      "action": "REPORT_RECEIVED",
+      "target": "2a6da663-0b1b-438d-8f23-f1754462f668",
+      "before": null,
+      "after": {
+        "category": "PRICE"
+      },
+      "createdAt": "2026-11-22T00:24:46.118Z"
+    },
+    {
+      "id": "bdf698dc-7a08-4fe8-88a9-cae12c004981",
+      "actor": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "action": "PUBLISH",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": {
+        "status": "PENDING_QA"
+      },
+      "after": {
+        "status": "APPROVED",
+        "reason": "All evidence criteria met. Publishing to production index."
+      },
+      "createdAt": "2026-11-22T00:27:10.024Z"
+    },
+    {
+      "id": "cba46890-790b-4fa4-be95-c25c0ac1c507",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "2a6da663-0b1b-438d-8f23-f1754462f668",
+      "before": null,
+      "after": {
+        "event": "user-report",
+        "queues": [
+          {
+            "id": "b9b17a10-dd10-4473-a0c6-88b9e68bcb68",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:24:46.116Z"
+    },
+    {
+      "id": "ce6fa02d-dfbd-403f-8b65-a6fb5dc66766",
+      "actor": "VEuCJIJDmAkuX8EQIDqJ25FVJV3ltwz3",
+      "action": "QUEUE_UPDATED",
+      "target": "930eb780-e3d5-46d8-94a7-cd9ed7028b7a",
+      "before": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "after": {
+        "name": "Airport & Transit Verification (Updated)",
+        "description": "Updated SLA and description",
+        "kind": "GENERAL",
+        "priority": 85,
+        "capacity": 600,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "SEARCH"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does facility exist?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 48,
+          "qaPercent": 100
+        },
+        "version": 1,
+        "status": "ACTIVE"
+      },
+      "createdAt": "2026-11-22T00:25:41.395Z"
+    },
+    {
+      "id": "d9fec290-b105-4088-9472-d3a92dc36569",
+      "actor": "VEuCJIJDmAkuX8EQIDqJ25FVJV3ltwz3",
+      "action": "QUEUE_CREATED",
+      "target": "930eb780-e3d5-46d8-94a7-cd9ed7028b7a",
+      "before": null,
+      "after": {
+        "name": "Airport & Transit Verification",
+        "description": "High-priority intake queue for airport and transit parking discovery",
+        "kind": "GENERAL",
+        "priority": 80,
+        "capacity": 500,
+        "config": {
+          "rule": {
+            "op": "OR",
+            "children": [
+              {
+                "field": "category",
+                "value": "NEW_FACILITY_VERIFICATION"
+              },
+              {
+                "field": "source",
+                "value": "SEARCH"
+              }
+            ]
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority",
+            "owner",
+            "createdAt"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does an authentic vehicle parking facility exist at this location?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 24,
+          "qaPercent": 100
+        }
+      },
+      "createdAt": "2026-11-22T00:25:41.289Z"
+    },
+    {
+      "id": "dc486471-6f9c-4893-a96f-990620466f3a",
+      "actor": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "APPROVE",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": {
+        "status": "IN_REVIEW"
+      },
+      "after": {
+        "status": "PENDING_QA",
+        "reason": "Tariff confirmed: 20 INR first 4 hours, verified against official schedule"
+      },
+      "createdAt": "2026-11-22T00:27:09.926Z"
+    },
+    {
+      "id": "eac55177-4286-46e6-9cf3-9b32c86d27e4",
+      "actor": "htpxBmvMm5uto3VgH6Ns8OrK2YbumA5X",
+      "action": "CASE_CLAIMED",
+      "target": "4e570623-3f43-4907-9b04-93da73c21cbb",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:24:44.940Z"
+    },
+    {
+      "id": "efcb86df-1ce8-48f0-a034-95084238d360",
+      "actor": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "EVIDENCE_RECORDED",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": null,
+      "after": {
+        "evidenceId": "a34d1574-6c9c-4aac-ae62-80f936fbd073"
+      },
+      "createdAt": "2026-11-22T00:27:09.519Z"
+    },
+    {
+      "id": "f096dee4-da1a-40a8-8f4a-16a75cd0d11e",
+      "actor": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "action": "QUEUE_UPDATED",
+      "target": "5118184d-6563-4e3e-9f0b-7b3eb535c3fe",
+      "before": {
+        "rule": {
+          "op": "OR",
+          "children": [
+            {
+              "field": "category",
+              "value": "NEW_FACILITY_VERIFICATION"
+            },
+            {
+              "field": "source",
+              "value": "SEARCH"
+            }
+          ]
+        },
+        "columns": [
+          "code",
+          "category",
+          "status",
+          "priority",
+          "owner",
+          "createdAt"
+        ],
+        "form": [
+          {
+            "key": "facility_exists",
+            "label": "Does an authentic vehicle parking facility exist at this location?",
+            "type": "BOOLEAN",
+            "required": true,
+            "options": []
+          }
+        ],
+        "slaHours": 24,
+        "qaPercent": 100
+      },
+      "after": {
+        "name": "Airport & Transit Verification (Updated)",
+        "description": "Updated SLA and description",
+        "kind": "GENERAL",
+        "priority": 85,
+        "capacity": 600,
+        "config": {
+          "rule": {
+            "field": "source",
+            "value": "SEARCH"
+          },
+          "columns": [
+            "code",
+            "category",
+            "status",
+            "priority"
+          ],
+          "form": [
+            {
+              "key": "facility_exists",
+              "label": "Does facility exist?",
+              "type": "BOOLEAN",
+              "required": true,
+              "options": []
+            }
+          ],
+          "slaHours": 48,
+          "qaPercent": 100
+        },
+        "version": 1,
+        "status": "ACTIVE"
+      },
+      "createdAt": "2026-11-22T00:28:37.866Z"
+    },
+    {
+      "id": "f5044a28-9410-4647-aab5-32bbe00522d7",
+      "actor": "system",
+      "action": "CASE_ROUTED",
+      "target": "29d6c1dd-5099-4c7b-8633-fa494bd65e83",
+      "before": null,
+      "after": {
+        "event": "9219508ee072ceda2af62fbc36fca29b70cccead9b9e44012613839a869072d8",
+        "queues": [
+          {
+            "id": "2f9a0d02-6d5c-45b0-8263-1af9d9cffaac",
+            "version": 1
+          }
+        ]
+      },
+      "createdAt": "2026-11-22T00:22:00.524Z"
+    },
+    {
+      "id": "f59049bd-21be-4df4-b3dd-754570657b48",
+      "actor": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "action": "REOPEN",
+      "target": "3c83e214-0ee2-4b2a-8945-3a5b1c82319d",
+      "before": {
+        "status": "PENDING_QA"
+      },
+      "after": {
+        "status": "REOPENED",
+        "reason": "Please verify exact hourly parking tariff rate before final publish"
+      },
+      "createdAt": "2026-11-22T00:28:38.407Z"
+    },
+    {
+      "id": "f7206cdb-e26a-4762-a86a-c593cb74e8bf",
+      "actor": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "action": "REOPEN",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": {
+        "status": "PENDING_QA"
+      },
+      "after": {
+        "status": "REOPENED",
+        "reason": "Please verify exact hourly parking tariff rate before final publish"
+      },
+      "createdAt": "2026-11-22T00:27:09.685Z"
+    },
+    {
+      "id": "f8815ebd-2812-403e-be84-d19ce84b54d6",
+      "actor": "AYsWLe6iRNtrZxXzIBke1sKCt19zyPMi",
+      "action": "CASE_CLAIMED",
+      "target": "d21c5663-c6bf-4f08-9963-5fd4e9b47842",
+      "before": null,
+      "after": null,
+      "createdAt": "2026-11-22T00:27:09.769Z"
+    }
+  ],
+  "searchAdmissions": [
+    {
+      "facilityId": "24b944fb-6249-4b14-8efe-52be9befe370",
+      "firstEvent": "cae973b69d380102a5d4d94665b4a3e8e827c8dda93602ac8a44918f382f9fb1",
+      "demand": 1,
+      "createdAt": "2026-11-22T00:27:09.142Z"
+    },
+    {
+      "facilityId": "2c7aed58-d264-4fff-b46a-a2785ff022ae",
+      "firstEvent": "180523c369b8f132bf9e36218325594f96a8807bce6dc7bc3a60b63cd5d57840",
+      "demand": 1,
+      "createdAt": "2026-11-22T00:24:44.827Z"
+    },
+    {
+      "facilityId": "45cb5135-018d-49e8-96e5-5f8ece83f7bd",
+      "firstEvent": "8e9e01c1ae9cd2da021d342a1fdfadb029c2fc05fa7f1ba903ff2ec06a27b7c0",
+      "demand": 1,
+      "createdAt": "2026-11-22T00:28:37.982Z"
+    },
+    {
+      "facilityId": "c0652d86-7fdc-4f4c-938c-f21b09577e63",
+      "firstEvent": "9219508ee072ceda2af62fbc36fca29b70cccead9b9e44012613839a869072d8",
+      "demand": 1,
+      "createdAt": "2026-11-22T00:22:00.489Z"
+    },
+    {
+      "facilityId": "cf3fd2f2-0b44-481e-9e5e-bd87e53d7012",
+      "firstEvent": "0e2aed0335423e1585b9c1827d33f6e1e410708edd6ab865ff0ee6bc1c06bfc6",
+      "demand": 1,
+      "createdAt": "2026-11-22T00:25:41.505Z"
+    },
+    {
+      "facilityId": "ea289587-3605-4811-af77-7ffb13118fe4",
+      "firstEvent": "a6722d5ce955a7a4bdd774e3e083f3d6e298bc10f397b720b9cd383a0575535e",
+      "demand": 1,
+      "createdAt": "2026-11-22T00:43:50.393Z"
+    }
+  ],
+  "parkingIntelligenceCases": [
+    {
+      "id": "24b944fb-6249-4b14-8efe-52be9befe370",
+      "reviewRevision": 1,
+      "googlePlaceId": "test_place_a1c014899a7d45c2"
+    },
+    {
+      "id": "2c7aed58-d264-4fff-b46a-a2785ff022ae",
+      "reviewRevision": 0,
+      "googlePlaceId": "test_place_7d0229890b0b4048"
+    },
+    {
+      "id": "45cb5135-018d-49e8-96e5-5f8ece83f7bd",
+      "reviewRevision": 1,
+      "googlePlaceId": "test_place_1201acf934594fae"
+    },
+    {
+      "id": "c0652d86-7fdc-4f4c-938c-f21b09577e63",
+      "reviewRevision": 0,
+      "googlePlaceId": "test_place_c9438a677e0444cb"
+    },
+    {
+      "id": "cf3fd2f2-0b44-481e-9e5e-bd87e53d7012",
+      "reviewRevision": 0,
+      "googlePlaceId": "test_place_cdb9a9235d35415c"
+    },
+    {
+      "id": "ea289587-3605-4811-af77-7ffb13118fe4",
+      "reviewRevision": 1,
+      "googlePlaceId": "test_place_63addacce1f14db7"
+    }
+  ],
+  "parkingEvidenceReferences": [
+    {
+      "id": "2a34c437-dccb-4ea4-8dfd-2af18cc6b5c6",
+      "caseId": "ea289587-3605-4811-af77-7ffb13118fe4",
+      "source": "PRAKARO_AUDIT",
+      "reference": "https://delhimetrorail.com/parking-facilities/aerocity",
+      "finding": "CONFIRMED_PARKING",
+      "approvedAt": "2026-11-22T00:43:50.696Z",
+      "expiresAt": "2026-11-23T00:43:50.677Z"
+    },
+    {
+      "id": "6e4502c7-f14c-4840-9881-b273ac0f94f4",
+      "caseId": "45cb5135-018d-49e8-96e5-5f8ece83f7bd",
+      "source": "PRAKARO_AUDIT",
+      "reference": "https://delhimetrorail.com/parking-facilities/aerocity",
+      "finding": "CONFIRMED_PARKING",
+      "approvedAt": "2026-11-22T00:28:38.290Z",
+      "expiresAt": "2026-11-23T00:28:38.270Z"
+    },
+    {
+      "id": "a34d1574-6c9c-4aac-ae62-80f936fbd073",
+      "caseId": "24b944fb-6249-4b14-8efe-52be9befe370",
+      "source": "PRAKARO_AUDIT",
+      "reference": "https://delhimetrorail.com/parking-facilities/aerocity",
+      "finding": "CONFIRMED_PARKING",
+      "approvedAt": "2026-11-22T00:27:09.511Z",
+      "expiresAt": "2026-11-23T00:27:09.458Z"
+    }
+  ],
+  "parkingHumanLabels": [
+    {
+      "id": "0017b8ff-0c2e-4b95-b134-d89077addd15",
+      "caseId": "ea289587-3605-4811-af77-7ffb13118fe4",
+      "reviewedAt": "2026-11-22T00:43:50.900Z",
+      "classification": "LIKELY_PARKING",
+      "access": "UNKNOWN",
+      "pricing": "UNKNOWN",
+      "decision": "CONFIRM_PARKING",
+      "evidenceReferences": [
+        "2a34c437-dccb-4ea4-8dfd-2af18cc6b5c6"
+      ],
+      "notes": "All evidence criteria met. Publishing to production index.",
+      "reviewerId": "5SZQqV8sGxtyO96IJ8013FACAyh2agkp",
+      "revision": 1,
+      "expiresAt": "2026-11-23T00:43:50.677Z",
+      "evidenceFingerprint": "b360cc740848855ea7afd1be1a5828cf8be553f3715b3d6d8fdff1a9d9684eab",
+      "policyVersion": "parking-display-v1"
+    },
+    {
+      "id": "79ac37dc-1951-4619-9142-9446ef951e68",
+      "caseId": "24b944fb-6249-4b14-8efe-52be9befe370",
+      "reviewedAt": "2026-11-22T00:27:10.000Z",
+      "classification": "LIKELY_PARKING",
+      "access": "UNKNOWN",
+      "pricing": "UNKNOWN",
+      "decision": "CONFIRM_PARKING",
+      "evidenceReferences": [
+        "a34d1574-6c9c-4aac-ae62-80f936fbd073"
+      ],
+      "notes": "All evidence criteria met. Publishing to production index.",
+      "reviewerId": "SHj7VZTeTVRdfsUGhhXWwZLj6KWwMviw",
+      "revision": 1,
+      "expiresAt": "2026-11-23T00:27:09.458Z",
+      "evidenceFingerprint": "a53cffdc67331d7eb18f081f7714268b7f084b0bd36237698a461cea1bfb8737",
+      "policyVersion": "parking-display-v1"
+    },
+    {
+      "id": "a045fb86-81ef-4a3d-a60c-8263140fc64b",
+      "caseId": "45cb5135-018d-49e8-96e5-5f8ece83f7bd",
+      "reviewedAt": "2026-11-22T00:28:38.612Z",
+      "classification": "LIKELY_PARKING",
+      "access": "UNKNOWN",
+      "pricing": "UNKNOWN",
+      "decision": "CONFIRM_PARKING",
+      "evidenceReferences": [
+        "6e4502c7-f14c-4840-9881-b273ac0f94f4"
+      ],
+      "notes": "All evidence criteria met. Publishing to production index.",
+      "reviewerId": "f1Y5BPhjVlb3iX3Hc9eCsn9dovnva8WN",
+      "revision": 1,
+      "expiresAt": "2026-11-23T00:28:38.270Z",
+      "evidenceFingerprint": "24b0e6e7fc7102019ccbb98ca67ed74ce70af0a1c263c4a7e02e7a7a419603ce",
+      "policyVersion": "parking-display-v1"
+    }
+  ]
+}
