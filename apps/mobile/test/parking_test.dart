@@ -100,6 +100,16 @@ class FakeParkingRepository implements ParkingRepository {
   }) async {
     return const [];
   }
+
+  @override
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    String? notes,
+    CancelToken? cancelToken,
+  }) async {
+    return true;
+  }
 }
 
 void main() {
@@ -1486,6 +1496,16 @@ class _DelayedMockRepo implements ParkingRepository {
   }) async {
     return const [];
   }
+
+  @override
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    String? notes,
+    CancelToken? cancelToken,
+  }) async {
+    return true;
+  }
 }
 
 class _DynamicTimingRepo implements ParkingRepository {
@@ -1525,5 +1545,15 @@ class _DynamicTimingRepo implements ParkingRepository {
     CancelToken? cancelToken,
   }) async {
     return const [];
+  }
+
+  @override
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    String? notes,
+    CancelToken? cancelToken,
+  }) async {
+    return true;
   }
 }

@@ -144,6 +144,16 @@ class MockParkingRepositoryForPhotos implements ParkingRepository {
     }
     return photos;
   }
+
+  @override
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    String? notes,
+    CancelToken? cancelToken,
+  }) async {
+    return true;
+  }
 }
 
 class MockNavService extends NavigationService {

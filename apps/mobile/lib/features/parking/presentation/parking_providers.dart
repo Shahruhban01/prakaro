@@ -29,6 +29,26 @@ final parkingRepositoryProvider = Provider<ParkingRepository>((ref) {
   return ParkingRepositoryImpl(remoteDataSource);
 });
 
+typedef ReportParkingFn = Future<bool> Function({
+  required String placeId,
+  required String category,
+  String? notes,
+});
+
+final reportParkingProvider = Provider<ReportParkingFn>((ref) {
+  final repo = ref.watch(parkingRepositoryProvider);
+  return ({
+    required String placeId,
+    required String category,
+    String? notes,
+  }) =>
+      repo.reportFacility(
+        placeId: placeId,
+        category: category,
+        notes: notes,
+      );
+});
+
 /// Visual presentation mode for the parking feature.
 enum ParkingViewMode {
   list,
@@ -246,7 +266,7 @@ class ParkingMapState {
     final useIndependentFilters = verificationAvailable && discoverySettings.filteringEnabled;
     final filtered = locations.where((loc) {
       final verification = loc.verification;
-      if (mode == ParkingDiscoveryMode.verifiedOnly && verification?.isVerified != true) {
+      if (mode == ParkingDiscoveryMode.verifiedOnly && verification?.isApproved != true) {
         return false;
       }
       final independentPrice = useIndependentFilters ? verification?.pricing : null;

@@ -20,6 +20,7 @@ class ParkingVerificationLabel extends StatelessWidget {
     final available = !unavailable && !verification.isUnavailable;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isVerified = available && verification.status == ParkingFacilityStatus.verified;
+    final isSupported = available && verification.status == ParkingFacilityStatus.supported;
     final title = available ? verification.label : 'Verification unavailable';
     final restricted = available && verification.isRestricted;
 
@@ -27,7 +28,9 @@ class ParkingVerificationLabel extends StatelessWidget {
       if (explain && (!available || verification.status == ParkingFacilityStatus.unconfirmed))
         'Parking information has not been independently verified.',
       if (explain && available && verification.reviewedAt != null)
-        'Independently verified on ${MaterialLocalizations.of(context).formatMediumDate(verification.reviewedAt!.toLocal())}',
+        isSupported
+            ? 'Verified by AI triage on ${MaterialLocalizations.of(context).formatMediumDate(verification.reviewedAt!.toLocal())}'
+            : 'Independently verified on ${MaterialLocalizations.of(context).formatMediumDate(verification.reviewedAt!.toLocal())}',
       if (available && explain)
         for (final reason in verification.reasonCodes)
           if (reasonMessages[reason] case final String message) message,
@@ -76,6 +79,58 @@ class ParkingVerificationLabel extends StatelessWidget {
                     fontSize: 11.5,
                     fontWeight: FontWeight.w400,
                     color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857),
+                    height: 1.3,
+                  ),
+                ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    if (isSupported) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1B4B) : const Color(0xFFEEF2FF),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+          border: Border.all(
+            color: isDark ? const Color(0xFF6366F1) : const Color(0xFFC7D2FE),
+            width: 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 14.0,
+                  color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                ),
+                const SizedBox(width: 6.0),
+                Text(
+                  restricted ? '$title · Restricted access' : title,
+                  style: TextStyle(
+                    fontSize: 12.0,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFF818CF8) : const Color(0xFF3730A3),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
+            if (explain && reasons.isNotEmpty) ...[
+              const SizedBox(height: 4.0),
+              for (final reason in reasons)
+                Text(
+                  reason,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w400,
+                    color: isDark ? const Color(0xFFC7D2FE) : const Color(0xFF4338CA),
                     height: 1.3,
                   ),
                 ),

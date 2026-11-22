@@ -28,6 +28,7 @@ abstract class ParkingRemoteDataSource {
   Future<bool> reportFacility({
     required String placeId,
     required String category,
+    String? notes,
     CancelToken? cancelToken,
   });
 }
@@ -55,13 +56,16 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
     required double longitude,
     int? radius,
     bool userSearch = false,
+    String? mode = 'ALL_CANDIDATES',
     CancelToken? cancelToken,
   }) async {
     final queryParams = <String, dynamic>{
       'latitude': latitude,
       'longitude': longitude,
-      'mode': 'ALL_CANDIDATES',
     };
+    if (mode != null) {
+      queryParams['mode'] = mode;
+    }
     if (radius != null) {
       queryParams['radius'] = radius;
     }
@@ -174,16 +178,21 @@ class ParkingRemoteDataSourceImpl implements ParkingRemoteDataSource {
   Future<bool> reportFacility({
     required String placeId,
     required String category,
+    String? notes,
     CancelToken? cancelToken,
   }) async {
     try {
       final cleanId = placeId.startsWith('google:') ? placeId.substring(7) : placeId;
+      final payload = <String, dynamic>{
+        'placeId': cleanId,
+        'category': category,
+      };
+      if (notes != null && notes.trim().isNotEmpty) {
+        payload['notes'] = notes.trim();
+      }
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/api/v1/moderation/reports',
-        data: {
-          'placeId': cleanId,
-          'category': category,
-        },
+        data: payload,
         cancelToken: cancelToken,
       );
       return response.statusCode == 200;

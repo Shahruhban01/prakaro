@@ -13,6 +13,7 @@ import '../../domain/parking_location.dart';
 import '../saved_providers.dart';
 import 'parking_photo_gallery.dart';
 import 'parking_verification_label.dart';
+import 'report_parking_bottom_sheet.dart';
 
 /// Modal bottom sheet presenting verified facility metadata, photo gallery,
 /// and direct navigation trigger in a refined consumer interface.
@@ -282,7 +283,49 @@ class _ParkingDetailsSheetState extends ConsumerState<ParkingDetailsSheet> {
                       const SizedBox(height: 12),
                     ],
 
-                    // 5. Source Attribution
+                    // 5. User Problem Reporting Action
+                    Align(
+                      alignment: Alignment.center,
+                      child: InkWell(
+                        onTap: () {
+                          AppHaptics.lightImpact();
+                          ReportParkingBottomSheet.show(context, facility: loc);
+                        },
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.flag_outlined,
+                                size: 14.0,
+                                color: isDark ? AppTheme.textTertiaryDark : AppTheme.textTertiaryLight,
+                              ),
+                              const SizedBox(width: 6.0),
+                              Flexible(
+                                child: Text(
+                                  'Report incorrect information',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12.0,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // 6. Source Attribution
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

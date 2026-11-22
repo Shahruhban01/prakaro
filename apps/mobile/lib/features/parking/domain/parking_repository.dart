@@ -39,4 +39,11 @@ abstract class ParkingRepository {
     String id, {
     CancelToken? cancelToken,
   });
+
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    String? notes,
+    CancelToken? cancelToken,
+  });
 }

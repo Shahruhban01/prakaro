@@ -81,6 +81,16 @@ class FakeParkingRepo implements ParkingRepository {
   }) async {
     return const [];
   }
+
+  @override
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    String? notes,
+    dynamic cancelToken,
+  }) async {
+    return true;
+  }
 }
 
 class FakeLocationService extends LocationService {

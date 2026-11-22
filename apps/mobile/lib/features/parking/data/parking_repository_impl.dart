@@ -75,4 +75,19 @@ class ParkingRepositoryImpl implements ParkingDiscoveryRepository {
       cancelToken: cancelToken,
     );
   }
+
+  @override
+  Future<bool> reportFacility({
+    required String placeId,
+    required String category,
+    String? notes,
+    CancelToken? cancelToken,
+  }) {
+    return _remoteDataSource.reportFacility(
+      placeId: placeId,
+      category: category,
+      notes: notes,
+      cancelToken: cancelToken,
+    );
+  }
 }

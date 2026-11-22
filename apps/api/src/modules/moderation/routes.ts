@@ -867,7 +867,12 @@ export async function moderationRoutes(app: FastifyInstance) {
 
   // User Reports Endpoint (Report Incorrect Information)
   app.post('/reports', { config: { rateLimit: { max: 5, timeWindow: '1 hour' } } }, async (req) => {
-    const userId = await userSession(req);
+    let userId = 'anonymous_driver';
+    try {
+      userId = await userSession(req);
+    } catch {
+      userId = `guest-${(req.headers['x-forwarded-for'] || req.ip || 'mobile-driver').toString().slice(0, 32)}`;
+    }
     const b = z
       .object({
         placeId: z.string().regex(/^[A-Za-z0-9_-]{1,191}$/),
