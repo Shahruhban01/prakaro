@@ -8,20 +8,15 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-api.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? sessionStorage.getItem('prakaro_auth_token') : null;
-  if (token && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 export type Actor = {
   userId: string;
   role:
     | 'SUPER_ADMIN'
     | 'ADMIN'
     | 'MODERATION_ADMIN'
+    | 'MANAGER'
+    | 'MOD_SUPERVISOR'
+    | 'QA_SUPERVISOR'
     | 'MODERATION_MANAGER'
     | 'SUPERVISOR'
     | 'QA_REVIEWER'
@@ -29,6 +24,10 @@ export type Actor = {
     | 'VIEWER';
   admin: boolean;
   superAdmin?: boolean;
+  organization?: string | null;
+  organizationId?: string | null;
+  lob?: string | null;
+  queueDelegated?: boolean;
   queues: string[];
   email?: string;
   name?: string;
@@ -53,9 +52,11 @@ export type Config = {
   columns: string[];
   slaHours: number;
   qaPercent: number;
+  reviewPolicy?: string;
 };
 
 export type Queue = {
+  organizationId?: string | null;
   id: string;
   code: string;
   name: string;
@@ -67,7 +68,13 @@ export type Queue = {
   version: number;
   config: Config;
   taskCount?: number;
+  intakeEnabled?: boolean;
 };
+
+export function canConfigureQueue(actor?: Actor, queue?: Queue) {
+  return actor?.superAdmin === true || actor?.role === 'SUPER_ADMIN' ||
+    (actor?.queueDelegated === true && (!queue || queue.organizationId === actor.organizationId));
+}
 
 export type CaseRow = {
   id: string;
@@ -209,6 +216,8 @@ export function useData<T>(url: string, enabled: boolean = true) {
     queryFn: async () => (await api.get<T>(url)).data,
     enabled,
     retry: false,
+    refetchInterval: url === '/session' ? 30_000 : false,
+    refetchOnWindowFocus: url === '/session' ? 'always' : false,
     staleTime: 5000,
   });
 }

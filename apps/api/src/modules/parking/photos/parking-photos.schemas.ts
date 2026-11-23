@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const facilityIdParamSchema = z.object({
   id: z
-    .string({ required_error: 'Facility ID is required.' })
+    .string({ error: (issue) => issue.input === undefined ? 'Facility ID is required.' : undefined })
     .trim()
     .min(1, 'Facility ID cannot be empty.')
     .max(255, 'Facility ID exceeds maximum length.'),
@@ -10,12 +10,12 @@ export const facilityIdParamSchema = z.object({
 
 export const photoMediaParamsSchema = z.object({
   id: z
-    .string({ required_error: 'Facility ID is required.' })
+    .string({ error: (issue) => issue.input === undefined ? 'Facility ID is required.' : undefined })
     .trim()
     .min(1, 'Facility ID cannot be empty.')
     .max(255, 'Facility ID exceeds maximum length.'),
   photoIndex: z.coerce
-    .number({ invalid_type_error: 'Photo index must be a number.' })
+    .number({ error: 'Photo index must be a number.' })
     .int('Photo index must be an integer.')
     .min(0, 'Photo index cannot be negative.')
     .max(9, 'Photo index exceeds maximum allowed index.'),

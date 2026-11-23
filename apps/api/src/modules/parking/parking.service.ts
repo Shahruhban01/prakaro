@@ -126,8 +126,7 @@ export class ParkingService {
       mode === 'VERIFIED_ONLY'
         ? ordered.filter(
             ({ verification }) =>
-              verification?.facilityStatus === 'INDEPENDENTLY_VERIFIED' ||
-              verification?.facilityStatus === 'STRONGLY_SUPPORTED',
+              verification?.facilityStatus === 'INDEPENDENTLY_VERIFIED',
           )
         : ordered;
     const notice = !available

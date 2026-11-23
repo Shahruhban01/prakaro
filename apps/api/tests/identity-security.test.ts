@@ -30,11 +30,26 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
   let restrictedQueueId: string;
   let otherQueueId: string;
   let testCaseId: string;
-  let testTaskId: string;
   let testIntelligenceId: string;
 
+  let organizationId = '';
+  let lobId = '';
+  let otherLobId = '';
   before(async () => {
     await app.ready();
+    const org = await prisma.organization.create({
+      data: { name: 'Synthetic test organization', code: randomUUID(), createdBy: 'test' },
+    });
+    organizationId = org.id;
+    const lob = await prisma.lob.create({
+      data: { name: 'Synthetic test LOB', code: randomUUID(), createdBy: 'test', organizationId },
+    });
+    lobId = lob.id;
+    otherLobId = (
+      await prisma.lob.create({
+        data: { name: 'Other LOB', code: randomUUID(), createdBy: 'test', organizationId },
+      })
+    ).id;
 
     // 1. Provision Super Admin
     superAdminEmail = `sec-super-${randomUUID()}@prakaro.test`;
@@ -69,6 +84,8 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
     modAdminEmail = `sec-modadmin-${randomUUID()}@prakaro.test`;
     const ma = await prisma.moderator.create({
       data: {
+        organizationId,
+        lobId,
         name: 'Sec Moderation Admin',
         email: modAdminEmail,
         status: 'ACTIVE',
@@ -97,6 +114,8 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
     moderator1Email = `sec-mod1-${randomUUID()}@prakaro.test`;
     const m1 = await prisma.moderator.create({
       data: {
+        organizationId,
+        lobId,
         name: 'Sec Moderator 1',
         email: moderator1Email,
         status: 'ACTIVE',
@@ -125,6 +144,8 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
     moderator2Email = `sec-mod2-${randomUUID()}@prakaro.test`;
     const m2 = await prisma.moderator.create({
       data: {
+        organizationId,
+        lobId: otherLobId,
         name: 'Sec Moderator 2',
         email: moderator2Email,
         status: 'ACTIVE',
@@ -172,6 +193,8 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
       headers: { authorization: `Bearer ${superAdminToken}` },
       payload: {
         name: 'Restricted Queue 1',
+        organizationId,
+        lobIds: [lobId],
         kind: 'GENERAL',
         priority: 50,
         capacity: 100,
@@ -193,6 +216,7 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
       headers: { authorization: `Bearer ${superAdminToken}` },
       payload: {
         name: 'Other Queue 2',
+        organizationId,
         kind: 'ACCESS',
         priority: 60,
         capacity: 100,
@@ -246,26 +270,44 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
       include: { tasks: true },
     });
     testCaseId = c.id;
-    testTaskId = c.tasks[0].id;
   });
 
   after(async () => {
     if (testIntelligenceId) {
-      await prisma.moderationSubmission.deleteMany({ where: { case: { facilityId: testIntelligenceId } } }).catch(() => {});
-      await prisma.moderationTask.deleteMany({ where: { case: { facilityId: testIntelligenceId } } }).catch(() => {});
-      await prisma.moderationCase.deleteMany({ where: { facilityId: testIntelligenceId } }).catch(() => {});
-      await prisma.searchAdmission.deleteMany({ where: { facilityId: testIntelligenceId } }).catch(() => {});
-      await prisma.parkingIntelligenceCase.deleteMany({ where: { id: testIntelligenceId } }).catch(() => {});
+      await prisma.moderationSubmission
+        .deleteMany({ where: { case: { facilityId: testIntelligenceId } } })
+        .catch(() => {});
+      await prisma.moderationTask
+        .deleteMany({ where: { case: { facilityId: testIntelligenceId } } })
+        .catch(() => {});
+      await prisma.moderationCase
+        .deleteMany({ where: { facilityId: testIntelligenceId } })
+        .catch(() => {});
+      await prisma.searchAdmission
+        .deleteMany({ where: { facilityId: testIntelligenceId } })
+        .catch(() => {});
+      await prisma.parkingIntelligenceCase
+        .deleteMany({ where: { id: testIntelligenceId } })
+        .catch(() => {});
     }
     const qIds = [restrictedQueueId, otherQueueId].filter(Boolean);
     if (qIds.length) {
-      await prisma.moderationMembership.deleteMany({ where: { queueId: { in: qIds } } }).catch(() => {});
+      await prisma.queueConfigurationVersion.deleteMany({ where: { queueId: { in: qIds } } });
+      await prisma.queueLobAccess.deleteMany({ where: { queueId: { in: qIds } } });
+      await prisma.queueSubscription.deleteMany({ where: { queueId: { in: qIds } } });
+      await prisma.moderationMembership
+        .deleteMany({ where: { queueId: { in: qIds } } })
+        .catch(() => {});
       await prisma.moderationTask.deleteMany({ where: { queueId: { in: qIds } } }).catch(() => {});
       await prisma.moderationQueue.deleteMany({ where: { id: { in: qIds } } }).catch(() => {});
     }
     if (superAdminId) {
-      await prisma.superAdminSession.deleteMany({ where: { userId: superAdminId } }).catch(() => {});
-      await prisma.superAdminAccount.deleteMany({ where: { userId: superAdminId } }).catch(() => {});
+      await prisma.superAdminSession
+        .deleteMany({ where: { userId: superAdminId } })
+        .catch(() => {});
+      await prisma.superAdminAccount
+        .deleteMany({ where: { userId: superAdminId } })
+        .catch(() => {});
       await prisma.superAdmin.deleteMany({ where: { id: superAdminId } }).catch(() => {});
     }
     const mIds = [modAdminId, moderator1Id, moderator2Id].filter(Boolean);
@@ -280,6 +322,8 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
       await prisma.user.deleteMany({ where: { id: ordinaryUserId } }).catch(() => {});
     }
     await app.close();
+    await prisma.lob.deleteMany({ where: { id: { in: [lobId, otherLobId] } } });
+    await prisma.organization.deleteMany({ where: { id: organizationId } });
     await prisma.$disconnect();
   });
 
@@ -355,25 +399,24 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
       assert.strictEqual(res.statusCode, 403);
     });
 
-    it('moderator cannot claim a task from an unassigned queue (409 Conflict)', async () => {
+    it('moderator cannot claim a task from an unassigned queue (403 Forbidden)', async () => {
       // Mod 2 is not assigned to restrictedQueue
       const res = await app.inject({
         method: 'POST',
         url: `/api/v1/moderation/cases/${testCaseId}/claim`,
         headers: { authorization: `Bearer ${moderator2Token}` },
       });
-      assert.strictEqual(res.statusCode, 409);
+      assert.strictEqual(res.statusCode, 403);
     });
 
-    it('assigned moderator can claim task from their authorized queue', async () => {
+    it('authorized moderator cannot bypass the AUX prerequisite', async () => {
       // Mod 1 is assigned to restrictedQueue
       const res = await app.inject({
         method: 'POST',
         url: `/api/v1/moderation/cases/${testCaseId}/claim`,
         headers: { authorization: `Bearer ${moderator1Token}` },
       });
-      assert.strictEqual(res.statusCode, 200);
-      assert.strictEqual(JSON.parse(res.body).ok, true);
+      assert.strictEqual(res.statusCode, 403);
     });
   });
 
@@ -481,111 +524,13 @@ describe('Phase 10: Authorization Penetration Tests & Identity Boundary Hardenin
     });
   });
 
-  describe('5. Independent QA Gate Enforcement', () => {
-    it('original reviewer cannot approve/publish their own review (409/403 Conflict)', async () => {
-      // Release Mod 1 claim if claimed
-      await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/release`,
-        headers: { authorization: `Bearer ${moderator1Token}` },
-      });
-
-      // Mod 1 claims the case
-      await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/claim`,
-        headers: { authorization: `Bearer ${moderator1Token}` },
-      });
-
-      // Attach evidence by Mod 1
-      const evRes = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/evidence`,
-        headers: { authorization: `Bearer ${moderator1Token}` },
-        payload: {
-          source: 'PRAKARO_AUDIT',
-          reference: 'https://maps.google.com/test-evidence',
-          finding: 'CONFIRMED_PARKING',
-          expiresAt: new Date(Date.now() + 86400000).toISOString(),
-        },
-      });
-      if (evRes.statusCode !== 200) {
-        console.error('Evidence injection failed:', evRes.statusCode, evRes.body);
-      }
-
-      // Fetch case to get evidence ID
-      const caseData = await prisma.moderationCase.findUnique({
-        where: { id: testCaseId },
-        include: { admission: true },
-      });
-      const ev = await prisma.parkingEvidenceReference.findFirst({
-        where: { caseId: caseData!.facilityId },
-      });
-
-      // Submit review by Mod 1
-      await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/reviews`,
-        headers: { authorization: `Bearer ${moderator1Token}` },
-        payload: {
-          taskId: testTaskId,
-          revision: caseData!.revision,
-          action: 'APPROVE',
-          answers: {},
-          evidenceIds: [ev!.id],
-          reason: 'Verified by field moderator',
-        },
-      });
-
-      // Mod 1 attempts QA approval on their own review
-      const updatedCase = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      const qaSelfApprovalRes = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/qa`,
-        headers: { authorization: `Bearer ${moderator1Token}` },
-        payload: {
-          action: 'PUBLISH',
-          revision: updatedCase!.revision,
-          reason: 'Attempting to self-approve my own review',
-        },
-      });
-
-      // Must be rejected because review.reviewerId === a.userId
-      if (![403, 409].includes(qaSelfApprovalRes.statusCode)) {
-        console.error('qaSelfApprovalRes returned:', qaSelfApprovalRes.statusCode, qaSelfApprovalRes.body);
-      }
-      assert.ok(
-        [403, 409].includes(qaSelfApprovalRes.statusCode),
-        `Expected 403 or 409 but got ${qaSelfApprovalRes.statusCode}`,
-      );
-      // 1. Plain MODERATOR cannot perform QA (403 Forbidden)
-      assert.strictEqual(qaSelfApprovalRes.statusCode, 403);
-      assert.ok(
-        JSON.parse(qaSelfApprovalRes.body).error.message.includes('Insufficient role permissions'),
-      );
-
-      // 2. Now promote Mod 1 temporarily to QA_REVIEWER, and try to approve their own review
-      await prisma.moderator.update({
-        where: { id: moderator1Id },
-        data: { role: 'QA_REVIEWER' },
-      });
-
-      const qaReviewerSelfApprovalRes = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/qa`,
-        headers: { authorization: `Bearer ${moderator1Token}` },
-        payload: {
-          action: 'PUBLISH',
-          revision: updatedCase!.revision,
-          reason: 'Attempting self-approval as QA reviewer',
-        },
-      });
-
-      // Must be rejected with 409 Conflict: Independent second reviewer required
-      assert.strictEqual(qaReviewerSelfApprovalRes.statusCode, 409);
-      assert.ok(
-        JSON.parse(qaReviewerSelfApprovalRes.body).error.message.includes('Independent second reviewer required'),
-      );
+  it('rejects legacy QA publication while Phase 2 is read-only', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/moderation/cases/' + testCaseId + '/qa',
+      headers: { authorization: `Bearer ${superAdminToken}` },
+      payload: { action: 'PUBLISH', revision: 0, reason: 'Synthetic' },
     });
+    assert.equal(res.statusCode, 403);
   });
 });

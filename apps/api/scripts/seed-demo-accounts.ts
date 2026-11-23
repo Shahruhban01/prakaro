@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { hashPassword } from 'better-auth/crypto';
 import { prisma } from '../src/common/database/prisma';
 
@@ -7,7 +6,7 @@ async function main() {
 
   // 1. Super Admin: admin@prakaro.app / Admin123!
   const saEmail = 'admin@prakaro.app';
-  const saPass = 'Admin123!';
+  const saPass = process.env.PRAKARO_TEST_ADMIN_PASSWORD || 'PrakaroAdmin123!';
   const saHashed = await hashPassword(saPass);
 
   const sa = await prisma.superAdmin.upsert({
@@ -44,6 +43,38 @@ async function main() {
     });
   }
 
+  // 1.5 Organization & LOB for active moderators
+  const defaultOrg = await prisma.organization.upsert({
+    where: { code: 'PRAKARO_CORE_OPS' },
+    create: {
+      code: 'PRAKARO_CORE_OPS',
+      name: 'Prakaro Core Operations',
+      description: 'Default organization for Prakaro trust & safety operations',
+      active: true,
+      createdBy: sa.id,
+    },
+    update: {
+      name: 'Prakaro Core Operations',
+      active: true,
+    },
+  });
+
+  const defaultLob = await prisma.lob.upsert({
+    where: { code: 'PARKING_VERIFICATION' },
+    create: {
+      code: 'PARKING_VERIFICATION',
+      name: 'Parking Verification Line',
+      description: 'Parking discovery verification line of business',
+      active: true,
+      organizationId: defaultOrg.id,
+      createdBy: sa.id,
+    },
+    update: {
+      organizationId: defaultOrg.id,
+      active: true,
+    },
+  });
+
   // 2. Moderation Admin: modadmin@prakaro.app / ModAdmin123!
   const maEmail = 'modadmin@prakaro.app';
   const maPass = 'ModAdmin123!';
@@ -56,12 +87,16 @@ async function main() {
       email: maEmail,
       role: 'MODERATION_ADMIN',
       status: 'ACTIVE',
+      organizationId: defaultOrg.id,
+      lobId: defaultLob.id,
       emailVerified: true,
     },
     update: {
       name: 'Prakaro Moderation Admin',
       role: 'MODERATION_ADMIN',
       status: 'ACTIVE',
+      organizationId: defaultOrg.id,
+      lobId: defaultLob.id,
       emailVerified: true,
     },
   });
@@ -97,12 +132,16 @@ async function main() {
       email: modEmail,
       role: 'MODERATOR',
       status: 'ACTIVE',
+      organizationId: defaultOrg.id,
+      lobId: defaultLob.id,
       emailVerified: true,
     },
     update: {
       name: 'Frontline Moderator',
       role: 'MODERATOR',
       status: 'ACTIVE',
+      organizationId: defaultOrg.id,
+      lobId: defaultLob.id,
       emailVerified: true,
     },
   });
@@ -138,12 +177,16 @@ async function main() {
       email: qaEmail,
       role: 'QA_REVIEWER',
       status: 'ACTIVE',
+      organizationId: defaultOrg.id,
+      lobId: defaultLob.id,
       emailVerified: true,
     },
     update: {
       name: 'Quality Assurance Auditor',
       role: 'QA_REVIEWER',
       status: 'ACTIVE',
+      organizationId: defaultOrg.id,
+      lobId: defaultLob.id,
       emailVerified: true,
     },
   });

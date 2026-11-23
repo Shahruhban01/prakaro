@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Question } from '../api';
 
@@ -13,6 +13,32 @@ const questionTypes: Question['type'][] = [
   'REASON',
   'NOTES',
 ];
+
+function QuestionChoices({ question, onChange }: {
+  question: Question;
+  onChange: (options: string[]) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const tags = question.type === 'REASON';
+  return (
+    <label className="block text-[11px] font-medium text-slate-500">
+      {tags ? 'Policy tags (optional, comma-delimited)' : 'Choices (comma-delimited)'}
+      <input
+        type="text"
+        required={!tags}
+        placeholder={tags ? 'e.g. Operator confirmation, Unclear evidence' : 'e.g. Yes, No, Unknown'}
+        className="mt-1 w-full text-xs px-2.5 py-1 border border-slate-300 rounded bg-white"
+        value={draft ?? question.options.join(', ')}
+        onChange={(event) => {
+          const text = event.target.value;
+          setDraft(text);
+          onChange([...new Set(text.split(',').map((option) => option.trim()).filter(Boolean))]);
+        }}
+        onBlur={() => setDraft(null)}
+      />
+    </label>
+  );
+}
 
 export function FormBuilder({
   questions,
@@ -103,27 +129,8 @@ export function FormBuilder({
                 </div>
               </div>
 
-              {['SELECT', 'MULTI'].includes(q.type) && (
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-500 mb-1">
-                    Choices (comma-delimited)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Yes, No, Unknown"
-                    className="w-full text-xs px-2.5 py-1 border border-slate-300 rounded bg-white"
-                    value={q.options.join(', ')}
-                    onChange={(e) =>
-                      updateQuestion(idx, {
-                        options: e.target.value
-                          .split(',')
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </div>
+              {['SELECT', 'MULTI', 'REASON'].includes(q.type) && (
+                <QuestionChoices key={q.type} question={q} onChange={(options) => updateQuestion(idx, { options })} />
               )}
             </div>
 

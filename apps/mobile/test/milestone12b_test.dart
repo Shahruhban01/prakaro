@@ -194,6 +194,15 @@ void main() {
                   'openingStatus': 'open',
                 },
                 {
+                  'id': 'supported',
+                  'name': 'Supported',
+                  'latitude': 10.005,
+                  'longitude': 20.0,
+                  'verification': {
+                    'facilityStatus': 'STRONGLY_SUPPORTED',
+                  },
+                },
+                {
                   'id': 'verified',
                   'name': 'Verified',
                   'latitude': 10.01,
@@ -263,7 +272,7 @@ void main() {
       final stale = container.read(parkingMapProvider);
       expect(stale.isStaleResults, isTrue);
       expect(stale.effectiveDiscoveryMode, ParkingDiscoveryMode.allCandidates);
-      expect(stale.filteredLocations, hasLength(2));
+      expect(stale.filteredLocations, hasLength(3));
       expect(requests, 2);
     },
   );

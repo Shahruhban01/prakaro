@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ParkingCircle, Lock, Mail, AlertCircle, ArrowRight, ShieldAlert, Users } from 'lucide-react';
 import { api } from '../api';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const Login: React.FC = () => {
   const [authDomain, setAuthDomain] = useState<'moderator' | 'super_admin'>('moderator');
@@ -11,6 +12,7 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +25,14 @@ export const Login: React.FC = () => {
         : '/api/moderator-auth/sign-in/email';
 
     try {
-      const res = await axios.post(
+      sessionStorage.removeItem('prakaro_auth_token');
+      delete api.defaults.headers.common.Authorization;
+      queryClient.clear();
+      const signedOut=await Promise.allSettled(['moderator-auth', 'super-admin-auth'].map(domain =>
+        axios.post('/api/'+domain+'/sign-out', {}, {timeout:5000,headers:{'X-Prakaro-Console':'1'}})));
+      const locked=signedOut.find(item=>item.status==='rejected'&&item.reason?.response?.data?.error?.code==='ACTIVE_CASE');
+      if(locked?.status==='rejected')throw locked.reason;
+      await axios.post(
         endpoint,
         { email, password },
         {
@@ -32,11 +41,9 @@ export const Login: React.FC = () => {
         },
       );
 
-      const token = res.data?.token || res.data?.session?.token;
-      if (token) {
-        sessionStorage.setItem('prakaro_auth_token', token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
+      sessionStorage.removeItem('prakaro_auth_token');
+      delete api.defaults.headers.common.Authorization;
+      queryClient.clear();
 
       navigate('/dashboard');
     } catch (err: any) {

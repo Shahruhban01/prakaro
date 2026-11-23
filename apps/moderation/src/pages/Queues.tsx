@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Settings, Eye, Layers, ShieldAlert } from 'lucide-react';
 import type { Queue, Actor } from '../api';
-import { useData } from '../api';
+import { canConfigureQueue, useData } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
 
@@ -10,7 +10,7 @@ export const Queues: React.FC = () => {
   const { data: queues, isLoading } = useData<Queue[]>('/queues');
   const { data: session } = useData<Actor>('/session');
 
-  const isSuperAdmin = session?.superAdmin === true || session?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = canConfigureQueue(session);
 
   return (
     <div className="space-y-6">
@@ -92,7 +92,7 @@ export const Queues: React.FC = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
-                        {isSuperAdmin && (
+                        {canConfigureQueue(session, q) && (
                           <Link
                             to={`/queues/${q.id}/settings`}
                             className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded"

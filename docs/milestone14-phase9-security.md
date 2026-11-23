@@ -1,0 +1,7 @@
+# Phase 9 authorization and exports
+
+Workforce and executive endpoints reuse Better Auth, organization/LOB assignment, team scopes, current employee authorization and existing console CSRF validation. Executives receive aggregates, available queues, scoped roster data and no reporter details or evidence. Organization administrators cannot invoke platform organization comparison. Managers can assign only employees in their team scope and cannot save organization-wide assumptions or alert rules.
+
+CSV exports authorize the requested report and filters on the server. Schedule and attendance files cap the underlying result at 2,500 rows, reporting periods cap at 93 local dates, and the export route has a rate limit. Cells are quoted and strings beginning with spreadsheet control characters or formula operators are prefixed as text. Response headers prevent browser caching. Export audit records contain scope, type, bounds and line count, without the actual CSV content.
+
+Schedules preserve historical attribution and reasons. Database row locks, checked intervals, unique open alert keys and optimistic revisions protect concurrent edits. The short executive polling cache is restricted to authorized broad administrator views, shares only an equivalent tenant scope and expires four seconds after calculation. Staff identity is checked before each lookup. Scoped team and employee pages bypass it.

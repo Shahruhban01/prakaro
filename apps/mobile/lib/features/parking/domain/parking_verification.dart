@@ -66,10 +66,6 @@ class ParkingVerification {
       validUntil?.isAfter(DateTime.now()) ??
       status != ParkingFacilityStatus.verified;
   bool get isVerified => isCurrent && status == ParkingFacilityStatus.verified;
-  bool get isApproved =>
-      isCurrent &&
-      (status == ParkingFacilityStatus.verified ||
-          status == ParkingFacilityStatus.supported);
   bool get isUnavailable =>
       !isCurrent || reasonCodes.contains('VERIFICATION_UNAVAILABLE');
   bool get isRestricted =>

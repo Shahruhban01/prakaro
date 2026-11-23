@@ -51,6 +51,8 @@ build/
 **/ios/release
 
 # Coverage and testing
+apps/moderation/test-results/
+apps/moderation/playwright-report/
 coverage/
 *.lcov
 .nyc_output

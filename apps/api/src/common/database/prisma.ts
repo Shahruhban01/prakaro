@@ -13,7 +13,7 @@ export const prisma =
         url: env.DATABASE_URL,
       },
     },
-    log: env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+    log: env.NODE_ENV === 'production' ? [] : ['warn', 'error'],
   });
 
 if (env.NODE_ENV !== 'production') {
@@ -24,7 +24,7 @@ export async function connectDatabase(): Promise<void> {
   try {
     await prisma.$connect();
   } catch (error) {
-    console.error('Failed to connect to MySQL database:', error);
+    console.error('Failed to connect to MySQL database', error instanceof Error ? error.name : 'Unknown');
     throw error;
   }
 }
@@ -33,6 +33,6 @@ export async function disconnectDatabase(): Promise<void> {
   try {
     await prisma.$disconnect();
   } catch (error) {
-    console.error('Error disconnecting from MySQL database:', error);
+    console.error('Failed to disconnect from MySQL database', error instanceof Error ? error.name : 'Unknown');
   }
 }

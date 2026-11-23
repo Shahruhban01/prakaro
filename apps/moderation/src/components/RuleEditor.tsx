@@ -3,7 +3,7 @@ import { Plus, Trash2, Layers } from 'lucide-react';
 import type { Rule } from '../api';
 
 const fields = [
-  'category',
+  'category','reportCategory',
   'source',
   'status',
   'classification',

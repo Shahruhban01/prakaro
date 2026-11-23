@@ -1,12 +1,13 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Settings, Layers, ListFilter } from 'lucide-react';
-import type { Queue, CaseRow } from '../api';
-import { useData } from '../api';
+import type { Actor, Queue, CaseRow } from '../api';
+import { canConfigureQueue, useData } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
 
 export const QueueDetail: React.FC = () => {
+  const { data: session } = useData<Actor>('/session');
   const { id } = useParams<{ id: string }>();
   const { data: queue, isLoading: queueLoading } = useData<Queue>(`/queues/${id}`);
   const { data: casesData, isLoading: casesLoading } = useData<{ items: CaseRow[]; total: number }>(
@@ -45,10 +46,10 @@ export const QueueDetail: React.FC = () => {
           <p className="text-xs text-slate-500 mt-0.5">{queue.description || 'No description provided.'}</p>
         </div>
 
-        <Link to={`/queues/${queue.id}/settings`} className="btn-secondary text-xs">
+        {canConfigureQueue(session, queue) && <Link to={`/queues/${queue.id}/settings`} className="btn-secondary text-xs">
           <Settings className="w-4 h-4" />
           Edit Queue Settings
-        </Link>
+        </Link>}
       </div>
 
       {/* Queue Configurations Summary */}

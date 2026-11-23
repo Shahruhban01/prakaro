@@ -1,3 +1,19 @@
+import {
+  accessibleQueue,
+  canConfigure,
+  queueSnapshot,
+  queueStatus,
+  queueVisibility,
+  registerQueueOperations,
+  releaseLegacyLeases,
+  replaceGrants,
+  serializable,
+} from './queue-operations';
+import { registerContinuousModeration } from './continuous-routes';
+import { registerAnalytics } from './analytics';
+import { registerQa } from './qa/routes';
+import { registerPolicies } from './policy/routes';
+import { registerExecutiveOperations } from './operations/routes';
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { fromNodeHeaders } from 'better-auth/node';
 import { hashPassword } from 'better-auth/crypto';
@@ -7,12 +23,9 @@ import { auth, moderatorAuth, superAdminAuth } from '../../config/auth';
 import { env } from '../../config/env';
 import { prisma } from '../../common/database/prisma';
 import { AppError, ForbiddenError, UnauthorizedError } from '../../common/errors/app-error';
+import { replyToPoolTimeout } from '../../common/errors/database-unavailable';
 import { audit, increment, route } from './intake';
-import { configSchema, queueInput, roles, validateAnswers } from './config';
-import { currentEvidence, fingerprintReview } from '../intelligence/intelligence.discovery';
-import { publishReview } from '../intelligence/intelligence.review';
-import { evidenceSchema } from '../intelligence/intelligence.schemas';
-import { evaluateRules } from '../intelligence/intelligence.rules';
+import { queueInput, roles } from './config';
 import { smokeTestGeminiModel } from '../intelligence/intelligence.gemini';
 
 const fail = (message: string) => new AppError(409, 'MODERATION_CONFLICT', message);
@@ -34,7 +47,7 @@ async function userSession(req: FastifyRequest) {
  * Staff session resolver (strictly for Super Admins and Moderators)
  * Rejects ordinary user sessions with 403 Forbidden.
  */
-async function staff(req: FastifyRequest) {
+export async function staff(req: FastifyRequest) {
   const headers = fromNodeHeaders(req.headers);
 
   // 1. Try Super Admin auth session
@@ -58,6 +71,13 @@ async function staff(req: FastifyRequest) {
       admin: true,
       superAdmin: true,
       queues: [] as string[],
+      organizationId: null,
+      lobId: null,
+      organization: null,
+      lob: null,
+      queueDelegated: false,
+      requiresTeam: false,
+      hasTeam: false,
       actorType: 'SUPER_ADMIN' as const,
     };
   }
@@ -71,20 +91,65 @@ async function staff(req: FastifyRequest) {
   if (modResult?.user?.id) {
     const mod = await prisma.moderator.findUnique({
       where: { id: modResult.user.id },
-      include: { memberships: { select: { queueId: true } } },
+      include: { organization: true, lob: true },
     });
-    if (!mod || mod.status !== 'ACTIVE') {
+    if (
+      !mod ||
+      mod.status !== 'ACTIVE' ||
+      !mod.organization?.active ||
+      !mod.lob?.active ||
+      mod.lob.organizationId !== mod.organizationId
+    ) {
       throw new ForbiddenError('Moderator account is inactive or deactivated.');
     }
-    const admin = ['SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN'].includes(mod.role);
+    const queueDelegated =
+      ['ADMIN', 'MODERATION_ADMIN'].includes(mod.role) && mod.organization.queueDelegated;
+    const requiresTeam = [
+      'MANAGER',
+      'MODERATION_MANAGER',
+      'SUPERVISOR',
+      'MOD_SUPERVISOR',
+      'QA_SUPERVISOR',
+    ].includes(mod.role);
+    const hasTeam =
+      requiresTeam &&
+      Boolean(
+        await prisma.workforceTeamLink.findFirst({
+          where: {
+            moderatorId: mod.id,
+            kind: { in: ['MANAGER', 'SUPERVISOR'] },
+            team: { active: true, organizationId: mod.organizationId! },
+          },
+          select: { teamId: true },
+        }),
+      );
+    const base = {
+      superAdmin: false,
+      organizationId: mod.organizationId,
+      lobId: mod.lobId,
+      queueDelegated,
+      requiresTeam,
+      hasTeam,
+    };
+    const allowedQueues = await prisma.moderationQueue.findMany({
+      where: queueVisibility(base),
+      select: { id: true },
+    });
     return {
       userId: mod.id,
       email: mod.email,
       name: mod.name,
       role: mod.role,
-      admin,
+      admin: false,
       superAdmin: false,
-      queues: mod.memberships.map((m) => m.queueId),
+      queues: allowedQueues.map((queue) => queue.id),
+      requiresTeam,
+      hasTeam,
+      organizationId: mod.organizationId,
+      lobId: mod.lobId,
+      organization: mod.organization.name,
+      lob: mod.lob.name,
+      queueDelegated,
       actorType: 'MODERATOR' as const,
     };
   }
@@ -96,7 +161,9 @@ async function staff(req: FastifyRequest) {
   });
 
   if (userResult?.user?.id) {
-    throw new ForbiddenError('Ordinary mobile users are not permitted to access moderation services.');
+    throw new ForbiddenError(
+      'Ordinary mobile users are not permitted to access moderation services.',
+    );
   }
 
   // 4. No valid session at all -> 401 Unauthorized
@@ -136,15 +203,24 @@ export async function moderationRoutes(app: FastifyInstance) {
       // User problem reports are mobile app endpoints; allow mobile clients without console Origin checks
       return;
     }
-    if (req.method !== 'GET' && req.method !== 'HEAD' && (!req.headers.authorization || req.headers.origin)) {
+    if (
+      req.method !== 'GET' &&
+      req.method !== 'HEAD' &&
+      (!req.headers.authorization || req.headers.origin)
+    ) {
       const allowed = new URL(process.env.MODERATION_ORIGIN ?? env.BETTER_AUTH_URL).origin;
-      if (req.headers.origin && req.headers.origin !== allowed && req.headers['x-prakaro-console'] !== '1') {
+      if (
+        req.headers.origin
+          ? req.headers.origin !== allowed || req.headers['x-prakaro-console'] !== '1'
+          : !req.headers.authorization?.startsWith('Bearer ')
+      ) {
         throw new ForbiddenError();
       }
     }
   });
 
-  app.setErrorHandler((error, _req, reply) => {
+  app.setErrorHandler((error, req, reply) => {
+    if (replyToPoolTimeout(error, req, reply)) return reply;
     if (error instanceof AppError) {
       return reply.status(error.statusCode).send({
         error: { code: error.code, message: error.message },
@@ -155,7 +231,29 @@ export async function moderationRoutes(app: FastifyInstance) {
         error: { code: 'VALIDATION_ERROR', message: error.message },
       });
     }
-    app.log.error(error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (['P2002', 'P2003', 'P2034'].includes(error.code))
+        return reply.status(409).send({
+          error: {
+            code: 'CONFLICT',
+            message:
+              'The record changed or conflicts with an existing assignment. Reload and retry.',
+          },
+        });
+      if (error.code === 'P2025')
+        return reply
+          .status(404)
+          .send({ error: { code: 'NOT_FOUND', message: 'Record not found.' } });
+    }
+    if (error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number' &&
+      error.statusCode >= 400 && error.statusCode < 500) {
+      return reply.status(error.statusCode).send({ error: {
+        code: 'code' in error && typeof error.code === 'string' ? error.code : 'INVALID_REQUEST',
+        message: 'The request could not be processed.',
+      } });
+    }
+    req.log.error({ event: 'http.failure', route: req.routeOptions.url, errorName: error instanceof Error ? error.name : 'Unknown' },
+      'Moderation request failed');
     return reply.status(500).send({
       error: { code: 'INTERNAL_SERVER_ERROR', message: 'Internal server error occurred.' },
     });
@@ -172,88 +270,157 @@ export async function moderationRoutes(app: FastifyInstance) {
       queues: a.queues,
       email: a.email,
       name: a.name,
+      organization: a.organization,
+      lob: a.lob,
+      organizationId: a.organizationId,
+      queueDelegated: a.queueDelegated,
     };
   };
 
   app.get('/profile', getStaffSession);
   app.get('/session', getStaffSession);
 
-  // Moderation Queues Management
+  registerQueueOperations(app, staff);
+  registerContinuousModeration(app);
+  registerQa(app, staff);
+  registerPolicies(app, staff);
+  registerExecutiveOperations(app, staff);
   app.get('/queues', async (req) => {
-    const a = await staff(req);
+    const actor = await staff(req);
     return prisma.moderationQueue.findMany({
-      where: a.admin ? {} : { id: { in: a.queues }, status: 'ACTIVE' },
-      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+      where: queueVisibility(actor),
+      include: { organization: { select: { name: true } } },
+      orderBy: [{ priority: 'desc' }, { id: 'asc' }],
       take: 100,
     });
   });
-
   app.post('/queues', async (req) => {
-    const a = await staff(req);
-    // Only Super Admin can create queues
-    if (!a.superAdmin && a.role !== 'SUPER_ADMIN') {
-      throw new ForbiddenError('Only Super Admin can create moderation queues.');
-    }
-    const b = queueInput.parse(req.body);
-    const seq = await increment(prisma, 'queue-sequence');
-    const code = 'QUEUE-' + b.kind + '-' + String(seq).padStart(3, '0');
-    return prisma.$transaction(async (tx) => {
-      const q = await tx.moderationQueue.create({
-        data: { ...b, code, createdBy: a.userId },
-      });
-      await audit(tx, a.userId, 'QUEUE_CREATED', q.id, b, undefined, a.actorType, a.userId);
-      return q;
-    });
-  });
-
-  app.get('/queues/:id', async (req) => {
-    const a = await staff(req);
-    const q = await prisma.moderationQueue.findUniqueOrThrow({ where: { id: id(req) } });
-    if (!a.admin && !a.queues.includes(q.id)) throw new ForbiddenError();
-    return q;
-  });
-
-  const updateQueueHandler = async (req: FastifyRequest) => {
-    const a = await staff(req);
-    // Only Super Admin can modify queue settings and routing rules
-    if (!a.superAdmin && a.role !== 'SUPER_ADMIN') {
-      throw new ForbiddenError('Only Super Admin can modify queue configurations and routing rules.');
-    }
-    const b = z
-      .object({
-        name: z.string().trim().min(1).max(100).optional(),
-        description: z.string().max(500).optional(),
-        kind: z.string().optional(),
-        status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED']).optional(),
-        priority: z.number().int().min(0).max(100).optional(),
-        capacity: z.number().int().min(1).max(10000).optional(),
-        version: z.number().int().optional(),
-        config: configSchema.optional(),
+    const actor = await staff(req);
+    if (!actor.superAdmin && !actor.queueDelegated) throw new ForbiddenError();
+    const input = queueInput
+      .extend({
+        organizationId: z.string().uuid().optional(),
+        code: z
+          .string()
+          .regex(/^[A-Z0-9_-]{2,40}$/)
+          .optional(),
+        status: queueStatus.default('ACTIVE'),
+        intakeEnabled: z.boolean().default(false),
+        lobIds: z.array(z.string().uuid()).max(100).default([]),
       })
-      .strict()
       .parse(req.body);
-
+    const { organizationId: requested, code: customCode, lobIds, ...data } = input;
+    const organizationId = requested ?? actor.organizationId;
+    if (!organizationId || !canConfigure(actor, organizationId))
+      throw new ForbiddenError('Choose an organization you administer.');
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await prisma.$transaction(async (tx) => {
+          if (!(await tx.organization.findFirst({ where: { id: organizationId, active: true } })))
+            throw fail('Choose an active organization.');
+          const code =
+            customCode ??
+            'QUEUE-' +
+              data.kind +
+              '-' +
+              String(await increment(tx, 'queue-sequence')).padStart(3, '0');
+          const queue = await tx.moderationQueue.create({
+            data: { ...data, organizationId, code, createdBy: actor.userId },
+          });
+          if (lobIds.length) await replaceGrants(tx, actor, queue, lobIds);
+          await queueSnapshot(tx, actor, queue);
+          await audit(
+            tx,
+            actor.userId,
+            'QUEUE_CREATED',
+            queue.id,
+            { organizationId, code },
+            undefined,
+            actor.actorType,
+            actor.userId,
+          );
+          return queue;
+        }, serializable);
+      } catch (error) {
+        if (
+          attempt >= 2 ||
+          !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+          error.code !== 'P2034'
+        )
+          throw error;
+      }
+    }
+  });
+  app.get('/queues/:id', async (req) => accessibleQueue(prisma, await staff(req), id(req)));
+  const updateQueueHandler = async (req: FastifyRequest) => {
+    const actor = await staff(req);
+    const { version, organizationId, lobIds, ...changes } = queueInput
+      .partial()
+      .extend({
+        version: z.number().int().positive(),
+        organizationId: z.string().uuid().optional(),
+        status: queueStatus.optional(),
+        intakeEnabled: z.boolean().optional(),
+        lobIds: z.array(z.string().uuid()).max(100).optional(),
+      })
+      .parse(req.body);
     return prisma.$transaction(async (tx) => {
       const before = await tx.moderationQueue.findUniqueOrThrow({ where: { id: id(req) } });
-      const q = await tx.moderationQueue.update({
-        where: { id: id(req) },
-        data: {
-          ...b,
-          ...(b.config ? { version: { increment: 1 } } : {}),
-        },
+      if (!canConfigure(actor, before.organizationId)) throw new ForbiddenError();
+      if (before.version !== version) throw fail('Reload the latest queue version before saving.');
+      if (organizationId && organizationId !== before.organizationId) {
+        if (before.organizationId || !actor.superAdmin)
+          throw new ForbiddenError('Only unowned legacy queues can be assigned.');
+        if (!(await tx.organization.findFirst({ where: { id: organizationId, active: true } })))
+          throw fail('Choose an active organization.');
+        if (
+          await tx.moderationTask.findFirst({
+            where: {
+              queueId: before.id,
+              case: {
+                tasks: {
+                  some: {
+                    queue: {
+                      organizationId: { not: organizationId },
+                      AND: { organizationId: { not: null } },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        ) {
+          throw fail('A historical case is already assigned to another organization.');
+        }
+      }
+      const updated = await tx.moderationQueue.update({
+        where: { id: before.id, version },
+        data: { ...changes, organizationId, version: { increment: 1 } },
       });
-      await audit(tx, a.userId, 'QUEUE_UPDATED', q.id, b, before, a.actorType, a.userId);
-      return q;
-    });
+      if (changes.status && changes.status !== 'ACTIVE')
+        await releaseLegacyLeases(tx, actor, updated.id);
+      if (lobIds) await replaceGrants(tx, actor, updated, lobIds);
+      await queueSnapshot(tx, actor, updated);
+      await audit(
+        tx,
+        actor.userId,
+        'QUEUE_UPDATED',
+        updated.id,
+        { ...changes, version: updated.version },
+        { version: before.version },
+        actor.actorType,
+        actor.userId,
+      );
+      return updated;
+    }, serializable);
   };
-
   app.put('/queues/:id', updateQueueHandler);
   app.patch('/queues/:id', updateQueueHandler);
 
   // Moderators Management
   app.get('/moderators', async (req) => {
     const a = await staff(req);
-    permit(a, 'SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN', 'MODERATION_MANAGER', 'SUPERVISOR');
+    if (!a.superAdmin) throw new ForbiddenError();
     const list = await prisma.moderator.findMany({
       include: {
         memberships: true,
@@ -270,7 +437,7 @@ export async function moderationRoutes(app: FastifyInstance) {
 
   app.post('/moderators', async (req) => {
     const a = await staff(req);
-    permit(a, 'SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN');
+    if (!a.superAdmin) throw new ForbiddenError();
     const b = z
       .object({
         name: z.string().min(1).max(100).optional(),
@@ -278,7 +445,7 @@ export async function moderationRoutes(app: FastifyInstance) {
         password: z.string().min(8).max(100).optional(),
         role: roles,
         active: z.boolean().default(true),
-        queues: z.array(z.string().uuid()).max(50).default([]),
+        queues: z.array(z.never()).length(0).default([]),
       })
       .strict()
       .parse(req.body);
@@ -294,10 +461,17 @@ export async function moderationRoutes(app: FastifyInstance) {
             (r) => r === 'SUPER_ADMIN' || r === 'ADMIN' || r === 'MODERATION_ADMIN',
           ))
       ) {
-        throw new ForbiddenError('Insufficient permissions to assign administrative roles or modify own role.');
+        throw new ForbiddenError(
+          'Insufficient permissions to assign administrative roles or modify own role.',
+        );
       }
 
-      const status = b.active ? 'ACTIVE' : 'DEACTIVATED';
+      if (b.role === 'SUPER_ADMIN') throw new ForbiddenError();
+      const status = b.active
+        ? prior?.organizationId && prior.lobId
+          ? prior.status
+          : 'PENDING_ASSIGNMENT'
+        : 'DEACTIVATED';
       const mappedRole = b.role === 'ADMIN' ? 'MODERATION_ADMIN' : b.role;
 
       let modId = prior?.id;
@@ -347,15 +521,6 @@ export async function moderationRoutes(app: FastifyInstance) {
         }
       }
 
-      if (modId) {
-        await tx.moderationMembership.deleteMany({ where: { moderatorId: modId } });
-        if (b.queues.length > 0) {
-          await tx.moderationMembership.createMany({
-            data: [...new Set(b.queues)].map((queueId) => ({ moderatorId: modId!, queueId })),
-          });
-        }
-      }
-
       await audit(
         tx,
         a.userId,
@@ -374,7 +539,8 @@ export async function moderationRoutes(app: FastifyInstance) {
   // Super Admins Management (Strictly restricted to SUPER_ADMIN)
   app.get('/super-admins', async (req) => {
     const a = await staff(req);
-    if (!a.superAdmin) throw new ForbiddenError('Only platform Super Admins can list Super Admins.');
+    if (!a.superAdmin)
+      throw new ForbiddenError('Only platform Super Admins can list Super Admins.');
     return prisma.superAdmin.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,
@@ -383,7 +549,8 @@ export async function moderationRoutes(app: FastifyInstance) {
 
   app.post('/super-admins', async (req) => {
     const a = await staff(req);
-    if (!a.superAdmin) throw new ForbiddenError('Only platform Super Admins can provision Super Admins.');
+    if (!a.superAdmin)
+      throw new ForbiddenError('Only platform Super Admins can provision Super Admins.');
     const b = z
       .object({
         name: z.string().min(1).max(100),
@@ -395,7 +562,8 @@ export async function moderationRoutes(app: FastifyInstance) {
 
     return prisma.$transaction(async (tx) => {
       const existing = await tx.superAdmin.findUnique({ where: { email: b.email } });
-      if (existing) throw new AppError(409, 'CONFLICT', 'Super admin with this email already exists.');
+      if (existing)
+        throw new AppError(409, 'CONFLICT', 'Super admin with this email already exists.');
 
       const hashedPassword = await hashPassword(b.password);
       const created = await tx.superAdmin.create({
@@ -417,7 +585,16 @@ export async function moderationRoutes(app: FastifyInstance) {
         },
       });
 
-      await audit(tx, a.userId, 'SUPER_ADMIN_PROVISIONED', created.id, { email: b.email }, undefined, 'SUPER_ADMIN', a.userId);
+      await audit(
+        tx,
+        a.userId,
+        'SUPER_ADMIN_PROVISIONED',
+        created.id,
+        { email: b.email },
+        undefined,
+        'SUPER_ADMIN',
+        a.userId,
+      );
       return { ok: true, id: created.id };
     });
   });
@@ -425,7 +602,7 @@ export async function moderationRoutes(app: FastifyInstance) {
   // Analytics & Metrics
   const getAnalyticsHandler = async (req: FastifyRequest) => {
     const a = await staff(req);
-    permit(a);
+    permit(a, 'ADMIN', 'MODERATION_ADMIN');
     const [totalCases, queued, inReview, pendingQa, approved, rejected] = await Promise.all([
       prisma.moderationCase.count({ where: scope(a) }),
       prisma.moderationCase.count({ where: { status: 'QUEUED', ...scope(a) } }),
@@ -443,12 +620,12 @@ export async function moderationRoutes(app: FastifyInstance) {
   };
 
   app.get('/analytics', getAnalyticsHandler);
-  app.get('/analytics/overview', getAnalyticsHandler);
+  registerAnalytics(app, staff);
 
   // System Audit Trail
   app.get('/audit-log', async (req) => {
     const a = await staff(req);
-    permit(a);
+    if (!a.superAdmin) throw new ForbiddenError();
     return prisma.moderationAudit.findMany({
       take: 100,
       orderBy: { createdAt: 'desc' },
@@ -459,6 +636,20 @@ export async function moderationRoutes(app: FastifyInstance) {
   app.get('/cases', async (req) => {
     const a = await staff(req);
     const p = readPage(req);
+    if (!p.queue) {
+      const operational = ['PENDING_QA', 'ESCALATED'].includes(p.status ?? '');
+      if (!operational) throw new ForbiddenError('Open cases from a queue.');
+      permit(
+        a,
+        'QA_REVIEWER',
+        'QA_SUPERVISOR',
+        'SUPERVISOR',
+        'MOD_SUPERVISOR',
+        'MANAGER',
+        'MODERATION_MANAGER',
+      );
+    }
+
     if (p.queue && !a.admin && !a.queues.includes(p.queue)) throw new ForbiddenError();
 
     const where: Prisma.ModerationCaseWhereInput = {
@@ -469,10 +660,7 @@ export async function moderationRoutes(app: FastifyInstance) {
       ...(p.mine === 'true' ? { owner: a.userId } : {}),
       ...(p.search
         ? {
-            OR: [
-              { code: { contains: p.search } },
-              { facilityId: { contains: p.search } },
-            ],
+            OR: [{ code: { contains: p.search } }, { facilityId: { contains: p.search } }],
           }
         : {}),
     };
@@ -483,11 +671,27 @@ export async function moderationRoutes(app: FastifyInstance) {
       orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
       skip: (p.page - 1) * 20,
       take: 20,
-      include: {
+      select: {
+        id: true,
+        code: true,
+        facilityId: true,
+        category: true,
+        status: true,
+        trigger: true,
+        priority: true,
+        owner: true,
+        leaseUntil: true,
+        createdAt: true,
+        revision: true,
         tasks: {
-          include: { queue: { select: { id: true, name: true, kind: true, code: true } } },
+          where: queueScope(a),
+          select: {
+            id: true,
+            queueId: true,
+            deadline: true,
+            queue: { select: { id: true, name: true, kind: true, code: true } },
+          },
         },
-        admission: true,
       },
     });
 
@@ -499,333 +703,18 @@ export async function moderationRoutes(app: FastifyInstance) {
     };
   });
 
-  // Case Details
-  app.get('/cases/:id', async (req) => {
-    const a = await staff(req);
-    const c = await prisma.moderationCase.findFirstOrThrow({
-      where: { id: id(req), ...scope(a) },
-      include: {
-        tasks: { include: { queue: true } },
-        admission: {
-          include: {
-            facility: true,
-          },
-        },
-        reviews: { orderBy: { createdAt: 'desc' } },
-      },
+  // Reject the historical mutation entry points explicitly while Phase 2 is read-only.
+  for (const operation of ['claim', 'release', 'evidence', 'reviews', 'qa']) {
+    app.post('/cases/:id/' + operation, async (req) => {
+      await staff(req);
+      throw new ForbiddenError('Operational moderation requires persisted AUX and reservations.');
     });
-
-    const [evidence, runs, labels] = await Promise.all([
-      prisma.parkingEvidenceReference.findMany({
-        where: { caseId: c.facilityId, ...currentEvidence(new Date()).where },
-        orderBy: { id: 'asc' },
-      }),
-      prisma.parkingVerificationRun.findMany({
-        where: { caseId: c.facilityId },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        include: { version: true },
-      }),
-      prisma.parkingHumanLabel.findMany({
-        where: { caseId: c.facilityId },
-        orderBy: { reviewedAt: 'desc' },
-        take: 5,
-      }),
-    ]);
-
-    const googlePlaceId = c.admission?.facility?.googlePlaceId ?? c.facilityId;
-    const displayName = c.admission?.facility?.displayName ?? 'Parking Facility';
-    const formattedAddress = c.admission?.facility?.formattedAddress ?? 'Address unavailable';
-    const latitude = c.admission?.facility?.latitude ?? null;
-    const longitude = c.admission?.facility?.longitude ?? null;
-    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayName)}&query_place_id=${googlePlaceId}`;
-
-    let userReport: { category: string; notes?: string | null; reportedAt?: Date; reporterId?: string } | null = null;
-    if (c.trigger === 'REPORT' || c.category === 'USER_REPORT_REVIEW') {
-      const meta = (c.metadata as any) || {};
-      const reportAudit = await prisma.moderationAudit.findFirst({
-        where: { target: c.id, action: 'REPORT_RECEIVED' },
-        orderBy: { createdAt: 'desc' },
-      });
-      userReport = {
-        category: meta.category ?? (reportAudit?.after as any)?.category ?? 'GENERAL_INACCURACY',
-        notes: meta.notes ?? (reportAudit?.after as any)?.notes ?? null,
-        reportedAt: reportAudit?.createdAt ?? c.createdAt,
-        reporterId: reportAudit?.actorId ?? 'Mobile App User',
-      };
-    }
-
-    const facilityDetails = {
-      displayName,
-      formattedAddress,
-      latitude,
-      longitude,
-      googlePlaceId,
-      googleMapsUrl,
-      placeMetadata: c.admission?.facility?.placeMetadata ?? null,
-      userReport,
-    };
-
-    return {
-      ...c,
-      evidence,
-      runs,
-      historicalLabels: labels,
-      facilityDetails,
-      userReport,
-    };
-  });
-
-  // Claim Case (Atomic Lease)
-  app.post('/cases/:id/claim', async (req) => {
-    const a = await staff(req);
-    permit(a, 'MODERATOR', 'SUPERVISOR', 'MODERATION_MANAGER', 'SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN');
-    const now = new Date();
-    return prisma.$transaction(async (tx) => {
-      const result = await tx.moderationCase.updateMany({
-        where: {
-          id: id(req),
-          tasks: { some: { ...queueScope(a), queue: { status: 'ACTIVE' } } },
-          status: { in: ['QUEUED', 'IN_REVIEW', 'AWAITING_EVIDENCE', 'REOPENED'] },
-          OR: [{ owner: null }, { leaseUntil: { lt: now } }, { owner: a.userId }],
-        },
-        data: {
-          owner: a.userId,
-          status: 'IN_REVIEW',
-          leaseUntil: new Date(+now + 1800000), // 30 min lease
-          revision: { increment: 1 },
-        },
-      });
-      if (!result.count) throw fail('Case is unavailable for claiming.');
-      await audit(tx, a.userId, 'CASE_CLAIMED', id(req), undefined, undefined, a.actorType, a.userId);
-      return { ok: true };
-    });
-  });
-
-  // Release Case
-  app.post('/cases/:id/release', async (req) => {
-    const a = await staff(req);
-    permit(a, 'MODERATOR', 'SUPERVISOR', 'MODERATION_MANAGER', 'SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN');
-    return prisma.$transaction(async (tx) => {
-      const result = await tx.moderationCase.updateMany({
-        where: { id: id(req), owner: a.userId, status: 'IN_REVIEW' },
-        data: { owner: null, leaseUntil: null, status: 'QUEUED', revision: { increment: 1 } },
-      });
-      if (!result.count) throw fail('Case is not currently claimed by you.');
-      await audit(tx, a.userId, 'CASE_RELEASED', id(req), undefined, undefined, a.actorType, a.userId);
-      return { ok: true };
-    });
-  });
-
-  // Record Independent Evidence
-  app.post('/cases/:id/evidence', async (req) => {
-    const a = await staff(req);
-    permit(a, 'MODERATOR', 'SUPERVISOR', 'MODERATION_MANAGER', 'SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN');
-    const b = evidenceSchema
-      .omit({ id: true })
-      .extend({
-        reference: z.string().min(3).max(500),
-        expiresAt: z.string().datetime(),
-      })
-      .strict()
-      .parse(req.body);
-
-    return prisma.$transaction(
-      async (tx) => {
-        const c = await tx.moderationCase.findFirstOrThrow({
-          where: { id: id(req), ...scope(a), owner: a.userId, status: 'IN_REVIEW', leaseUntil: { gt: new Date() } },
-        });
-        if (
-          new Date(b.expiresAt) <= new Date() ||
-          (await tx.parkingEvidenceReference.count({
-            where: { caseId: c.facilityId, ...currentEvidence(new Date()).where },
-          })) >= 12
-        ) {
-          throw fail('Evidence expired or the active evidence limit was reached.');
-        }
-        const row = await tx.parkingEvidenceReference.create({
-          data: { ...b, caseId: c.facilityId, approvedAt: new Date() },
-        });
-        await audit(tx, a.userId, 'EVIDENCE_RECORDED', c.id, { evidenceId: row.id }, undefined, a.actorType, a.userId);
-        return row;
-      },
-      { isolationLevel: 'Serializable' },
-    );
-  });
-
-  // Submit Human Review Decision
-  app.post('/cases/:id/reviews', async (req) => {
-    const a = await staff(req);
-    permit(a, 'MODERATOR', 'SUPERVISOR', 'MODERATION_MANAGER', 'SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN');
-    const b = z
-      .object({
-        taskId: z.string().uuid(),
-        revision: z.number().int(),
-        action: z.enum(['APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'ESCALATE', 'SAVE_DRAFT']),
-        answers: z.record(z.union([z.string().max(1000), z.number(), z.array(z.string()).max(24)])),
-        evidenceIds: z.array(z.string().uuid()).max(12),
-        reason: z.string().trim().min(1).max(500),
-      })
-      .strict()
-      .parse(req.body);
-
-    return prisma.$transaction(
-      async (tx) => {
-        const c = await tx.moderationCase.findFirstOrThrow({
-          where: { id: id(req), ...scope(a), revision: b.revision, owner: a.userId, status: 'IN_REVIEW', leaseUntil: { gt: new Date() } },
-        });
-        const task = await tx.moderationTask.findFirstOrThrow({
-          where: { id: b.taskId, caseId: c.id, ...queueScope(a), queue: { status: 'ACTIVE' } },
-        });
-        const records = await tx.parkingEvidenceReference.findMany({
-          where: { caseId: c.facilityId, ...currentEvidence(new Date()).where },
-          orderBy: { id: 'asc' },
-        });
-        const cited = records.filter((r) => b.evidenceIds.includes(r.id));
-        if (cited.length !== b.evidenceIds.length) throw fail('Select active evidence from this case.');
-
-        if (b.action !== 'SAVE_DRAFT' && !validateAnswers(configSchema.parse(task.form).form, b.answers, b.evidenceIds)) {
-          throw fail('Review answers are incomplete or invalid.');
-        }
-
-        const rule = evaluateRules(
-          cited.map((r, i) =>
-            evidenceSchema.parse({
-              ...{ source: r.source, finding: r.finding },
-              id: 'E' + (i + 1),
-            }),
-          ),
-        );
-
-        if (
-          (b.action === 'APPROVE' && rule.classification !== 'LIKELY_PARKING') ||
-          (b.action === 'REJECT' && rule.classification !== 'LIKELY_NOT_PARKING')
-        ) {
-          throw fail('Independent evidence does not support the decision.');
-        }
-
-        await tx.moderationSubmission.create({
-          data: {
-            taskId: task.id,
-            action: b.action,
-            reason: b.reason,
-            evidenceIds: b.evidenceIds,
-            answers: b.answers,
-            caseId: c.id,
-            reviewerId: a.userId,
-            queueVersion: task.queueVersion,
-            fingerprint: fingerprintReview(records),
-          },
-        });
-
-        const status =
-          b.action === 'ESCALATE'
-            ? 'ESCALATED'
-            : b.action === 'REQUEST_MORE_EVIDENCE'
-              ? 'AWAITING_EVIDENCE'
-              : b.action === 'SAVE_DRAFT'
-                ? 'IN_REVIEW'
-                : 'PENDING_QA';
-
-        await tx.moderationCase.update({
-          where: { id: c.id, revision: b.revision },
-          data: {
-            status,
-            revision: { increment: 1 },
-            ...(b.action === 'SAVE_DRAFT' ? {} : { owner: null, leaseUntil: null }),
-          },
-        });
-        await audit(tx, a.userId, b.action, c.id, { status, reason: b.reason }, { status: c.status }, a.actorType, a.userId);
-        return { status };
-      },
-      { isolationLevel: 'Serializable' },
-    );
-  });
-
-  // QA Gate: Publish or Reopen
-  app.post('/cases/:id/qa', async (req) => {
-    const a = await staff(req);
-    permit(a, 'QA_REVIEWER', 'SUPERVISOR', 'SUPER_ADMIN', 'ADMIN', 'MODERATION_ADMIN');
-    const b = z
-      .object({
-        action: z.enum(['PUBLISH', 'REOPEN']),
-        revision: z.number().int(),
-        reason: z.string().min(1).max(500),
-      })
-      .strict()
-      .parse(req.body);
-
-    return prisma.$transaction(
-      async (tx) => {
-        const c = await tx.moderationCase.findFirstOrThrow({
-          where: { id: id(req), ...scope(a), revision: b.revision },
-          include: {
-            reviews: { take: 1, orderBy: { createdAt: 'desc' } },
-            admission: { include: { facility: true } },
-          },
-        });
-        const review = c.reviews[0];
-        if (!review || review.reviewerId === a.userId) {
-          throw fail('Independent second reviewer required.');
-        }
-        let status = 'REOPENED';
-        const activeKey = c.facilityId + ':' + c.category;
-
-        if (b.action === 'PUBLISH') {
-          if (c.status !== 'PENDING_QA' || !['APPROVE', 'REJECT'].includes(review.action)) {
-            throw fail('Case is not awaiting publication.');
-          }
-          const evidence = await tx.parkingEvidenceReference.findMany({
-            where: { caseId: c.facilityId, ...currentEvidence(new Date()).where },
-            orderBy: { id: 'asc' },
-          });
-          if (fingerprintReview(evidence) !== review.fingerprint) {
-            throw fail('Evidence changed. Reopen for review.');
-          }
-          status = review.action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
-          await publishReview(tx, a.userId, c.facilityId, {
-            expectedRevision: c.admission.facility.reviewRevision,
-            decision: status === 'APPROVED' ? 'CONFIRM_PARKING' : 'CONFIRM_NON_PARKING',
-            evidenceIds: review.evidenceIds as string[],
-            expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
-            reason: b.reason,
-          });
-        } else {
-          if (!['PENDING_QA', 'ESCALATED', 'APPROVED', 'REJECTED'].includes(c.status)) {
-            throw fail('Case cannot be reopened.');
-          }
-          if (['APPROVED', 'REJECTED'].includes(c.status)) {
-            await publishReview(tx, a.userId, c.facilityId, {
-              expectedRevision: c.admission.facility.reviewRevision,
-              decision: 'NEEDS_EVIDENCE',
-              evidenceIds: [],
-              expiresAt: new Date(Date.now() + 86400000).toISOString(),
-              reason: b.reason,
-            });
-          }
-        }
-
-        await tx.moderationCase.update({
-          where: { id: c.id, revision: b.revision },
-          data: {
-            status,
-            activeKey: status === 'REOPENED' ? activeKey : null,
-            owner: null,
-            leaseUntil: null,
-            revision: { increment: 1 },
-          },
-        });
-        await audit(tx, a.userId, b.action, c.id, { status, reason: b.reason }, { status: c.status }, a.actorType, a.userId);
-        return { status };
-      },
-      { isolationLevel: 'Serializable' },
-    );
-  });
+  }
 
   // AI Status & Discovery
   app.get('/ai/providers', async (req) => {
     const a = await staff(req);
-    permit(a);
+    if (!a.superAdmin) throw new ForbiddenError();
     const day = new Date().toISOString().slice(0, 10);
     const budget = await prisma.parkingAiDailyBudget.findUnique({ where: { utcDay: day } });
     const priority = env.AI_PROVIDER_PRIORITY.includes('gemini')
@@ -844,7 +733,7 @@ export async function moderationRoutes(app: FastifyInstance) {
 
   app.post('/ai/test', async (req) => {
     const a = await staff(req);
-    permit(a);
+    if (!a.superAdmin) throw new ForbiddenError();
     const key = env.GOOGLE_GEMINI_API_KEY || env.GEMINI_API_KEY || '';
     const model = env.GOOGLE_GEMINI_MODEL || env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
     if (!key) return { ok: false, message: 'Google Gemini API key is not configured.' };
@@ -854,7 +743,7 @@ export async function moderationRoutes(app: FastifyInstance) {
   // Intake Policies & Budget
   app.get('/intake-policies', async (req) => {
     const a = await staff(req);
-    permit(a);
+    if (!a.superAdmin) throw new ForbiddenError();
     const day = new Date().toISOString().slice(0, 10);
     const counter = await prisma.moderationCounter.findUnique({ where: { key: 'cases:' + day } });
     return {
@@ -871,12 +760,20 @@ export async function moderationRoutes(app: FastifyInstance) {
     try {
       userId = await userSession(req);
     } catch {
-      userId = `guest-${(req.headers['x-forwarded-for'] || req.ip || 'mobile-driver').toString().slice(0, 32)}`;
+      userId = 'anonymous_driver';
     }
     const b = z
       .object({
         placeId: z.string().regex(/^[A-Za-z0-9_-]{1,191}$/),
-        category: z.enum(['NOT_PARKING', 'PRIVATE', 'WRONG_LOCATION', 'PRICE', 'HOURS', 'CLOSED', 'OTHER']),
+        category: z.enum([
+          'NOT_PARKING',
+          'PRIVATE',
+          'WRONG_LOCATION',
+          'PRICE',
+          'HOURS',
+          'CLOSED',
+          'OTHER',
+        ]),
         notes: z.string().max(500).optional(),
       })
       .strict()
@@ -889,6 +786,8 @@ export async function moderationRoutes(app: FastifyInstance) {
           include: { admission: true },
         });
 
+        if (f && f.googlePlaceId !== b.placeId)
+          throw fail('Facility reference conflicts with an existing identifier.');
         if (!f) {
           f = await tx.parkingIntelligenceCase.create({
             data: {
@@ -926,17 +825,17 @@ export async function moderationRoutes(app: FastifyInstance) {
           f.id,
           'USER_REPORT_REVIEW',
           'REPORT',
-          { category: b.category, source: 'REPORT' },
+          { reportCategory: b.category, source: 'REPORT' },
           'user-report',
           reportMeta,
         );
-        if (!c) throw fail('Report queue is unavailable.');
+
         await audit(
           tx,
           userId,
           'REPORT_RECEIVED',
-          c.id,
-          { category: b.category, notes: b.notes ?? null, placeId: b.placeId },
+          c?.id ?? f.id,
+          { routed: Boolean(c), category: b.category, notes: b.notes ?? null, placeId: b.placeId },
           undefined,
           'USER',
           userId,

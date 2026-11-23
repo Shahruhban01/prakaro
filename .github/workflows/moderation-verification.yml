@@ -1,0 +1,123 @@
+name: Moderation verification
+on:
+  pull_request:
+  push:
+permissions:
+  contents: read
+
+jobs:
+  console:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --prefix apps/moderation
+      - run: npm audit --prefix apps/moderation --audit-level=high
+      - run: npm --prefix apps/moderation run build
+      - run: npm --prefix apps/moderation test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moderation-console
+          path: apps/moderation/dist
+
+  native-canonical-migrations:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4.13
+        env:
+          MYSQL_ROOT_PASSWORD: phase10-local-only
+          MYSQL_ROOT_HOST: "%"
+          MYSQL_DATABASE: prakaro_ci_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:phase10-local-only@127.0.0.1:3306/prakaro_ci_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --prefix apps/api
+      - run: npx prisma validate
+        working-directory: apps/api
+      - run: npx prisma migrate deploy
+        working-directory: apps/api
+
+  isolated-regression:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4.13
+        env:
+          MYSQL_ROOT_PASSWORD: phase10-local-only
+          MYSQL_ROOT_HOST: "%"
+          MYSQL_DATABASE: prakaro_ci_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:phase10-local-only@127.0.0.1:3306/prakaro_ci_test
+      BETTER_AUTH_SECRET: synthetic-ci-only-identity-secret-phase10
+      AI_VERIFICATION_ENABLED: "false"
+      MODERATION_ORIGIN: http://127.0.0.1:5173
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      PRAKARO_TEST_ADMIN_EMAIL: platform@example.test
+      PRAKARO_TEST_ADMIN_PASSWORD: SyntheticPhase10Fixture123!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --prefix apps/api
+      - run: npm ci --prefix apps/moderation
+      - run: npm audit --prefix apps/api --audit-level=high
+      - run: npm run api:lint
+      - run: npm run api:build
+      - run: |
+          overlay=$(node scripts/mysql84-validation-overlay.mjs)
+          npx prisma migrate deploy --schema "$overlay"
+        working-directory: apps/api
+      - run: npm run api:test
+      - run: >
+          npx tsx -e "import { initialize } from './src/modules/moderation/setup';
+          initialize(process.env.PRAKARO_TEST_ADMIN_EMAIL!, process.env.PRAKARO_TEST_ADMIN_PASSWORD!,
+          'CI operator').catch(() => { process.exitCode = 1 })"
+        working-directory: apps/api
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/moderation
+      - run: npm --prefix apps/moderation run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: moderation-browser-results
+          path: apps/moderation/test-results
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moderation-api
+          path: |
+            apps/api/dist
+            apps/api/package*.json
+            apps/api/prisma
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.44.0"
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

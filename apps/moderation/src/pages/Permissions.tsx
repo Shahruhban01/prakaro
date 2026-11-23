@@ -9,7 +9,7 @@ const ROLES = [
   },
   {
     role: 'ADMIN',
-    description: 'Administrative operator. Manages queues, visual rules, review form schemas, and team assignments.',
+    description: 'Organization director. Manages the assigned organization and configures its queues when delegated.',
     permissions: ['Create/Edit Queues', 'Assign Moderators', 'View Audit Log', 'Configure AI'],
   },
   {
@@ -29,7 +29,7 @@ const ROLES = [
   },
   {
     role: 'MODERATOR',
-    description: 'Frontline verification specialist claiming tasks in assigned queues and evaluating evidence.',
+    description: 'Subscribes to queues authorized for their LOB and inspects cases in read-only View mode.',
     permissions: ['Claim Tasks in Assigned Queues', 'Record Evidence', 'Submit Structured Decisions'],
   },
   {

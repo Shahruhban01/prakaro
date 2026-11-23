@@ -252,9 +252,9 @@ async function main() {
     headers: { authorization: `Bearer ${moderatorToken}` },
   });
   assert.strictEqual(queuesRes.statusCode, 200);
-  const queuesList = JSON.parse(queuesRes.body);
-  assert.ok(queuesList.every((q: any) => q.id === queueId), 'Moderator sees only assigned queue');
-  console.log(`  ✓ Moderator restricted to authorized queue(s): [${queuesList.map((q: any) => q.code).join(', ')}]`);
+  const queuesList: { id: string; code: string }[] = JSON.parse(queuesRes.body);
+  assert.ok(queuesList.every((q) => q.id === queueId), 'Moderator sees only assigned queue');
+  console.log(`  ✓ Moderator restricted to authorized queue(s): [${queuesList.map((q) => q.code).join(', ')}]`);
 
   // STEP 16: Claim an available task.
   console.log('STEP 16: Claiming an available task...');

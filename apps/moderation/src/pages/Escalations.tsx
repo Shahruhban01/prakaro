@@ -45,7 +45,7 @@ export const Escalations: React.FC = () => {
                 casesData.items.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50/60">
                     <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                      <Link to={`/cases/${c.id}`} className="hover:text-blue-600 hover:underline">
+                      <Link to={c.tasks?.[0] ? `/queues/${c.tasks[0].queueId}/cases/${c.id}` : "/queues"} className="hover:text-blue-600 hover:underline">
                         {c.code}
                       </Link>
                     </td>
@@ -61,7 +61,7 @@ export const Escalations: React.FC = () => {
                       {new Date(c.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <Link to={`/cases/${c.id}`} className="btn-primary text-xs py-1 px-3 bg-rose-600 hover:bg-rose-700">
+                      <Link to={c.tasks?.[0] ? `/queues/${c.tasks[0].queueId}/cases/${c.id}` : "/queues"} className="btn-primary text-xs py-1 px-3 bg-rose-600 hover:bg-rose-700">
                         Arbitrate Case <ArrowRight className="w-3 h-3" />
                       </Link>
                     </td>

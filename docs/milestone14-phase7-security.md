@@ -1,0 +1,7 @@
+# Phase 7 security
+
+QA uses the existing Better Auth console identity, CSRF checks, and staff authorization. Platform admins operate across organizations. Organization admins configure their own policies and see their organization. QA supervisors manage assignments, dispositions and corrections within permitted LOBs and queues. Auditors claim work in their granted scope and cannot claim or assess their own decision. Team leads use authorized current team membership. Moderators can view and dispute assessed decisions they submitted.
+
+Each API command validates data and enforces capability on the server. The review ID alone does not grant access. Assignment version, reviewer identity, active staff/queue scope, database leases and state transitions protect against stale requests. Unique constraints and row locks prevent repeated assessments, claims and publication. QA audit events record actions, actor, timestamp, correlation ID and relevant prior/new state.
+
+Snapshot evidence is limited to bounded, approved independent references viewed during the original decision. It carries no Google Places photo, raw provider response, searcher identity or coordinates. The UI renders references and annotations as text. The snapshot does not add a media proxy, AI prompt, or new AI call. Operator-entered explanations belong to the restricted QA workflow and should contain only facts needed for review.

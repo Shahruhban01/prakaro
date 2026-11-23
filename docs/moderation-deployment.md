@@ -1,23 +1,25 @@
 # Operations & Production Deployment Guide
 
+Phase 10 release status is **NO-GO**. Use the [controlled deployment runbook](milestone14-phase10-deployment.md) for migration preflight, native MySQL compatibility, and approval requirements.
+
 ## 1. System Requirements & Port Allocation
 
 | Component | Technology | Default Port | Environment Directory |
 | :--- | :--- | :--- | :--- |
-| **Fastify API Backend** | Node.js 20+, TypeScript, Fastify | `3000` | `apps/api/` |
+| **Fastify API Backend** | Node.js 22+, TypeScript, Fastify | `3000` | `apps/api/` |
 | **Moderation Console** | React 19, Vite, Tailwind CSS v4 | `5173` | `apps/moderation/` |
 | **Flutter Mobile App** | Flutter 3.29+, Dart 3.7+ | Mobile / Emulator | `apps/mobile/` |
-| **Database** | MySQL 8.0+ | `3306` | `prakaro_db` |
+| **Database** | MySQL 8.4 LTS | `3306` | `prakaro_db` |
 
 ---
 
 ## 2. Step-by-Step Production Deployment
 
 ### Step 1: Database Migration
-Ensure the MySQL database is running and apply the Prisma schema:
+After approval and a successful native MySQL preflight using an isolated schema, apply the checked-in migration history:
 ```bash
 cd apps/api
-npx prisma db push --skip-generate
+npx prisma migrate deploy
 ```
 
 ### Step 2: Build the Fastify Backend
@@ -35,8 +37,9 @@ The production bundle is compiled to `apps/moderation/dist/` (`index.html`, mini
 
 ### Step 4: Run Health & Smoke Checks
 ```bash
-# Verify Fastify health endpoint
+# Verify Fastify liveness and database readiness
 curl http://localhost:3000/health
+curl http://localhost:3000/ready
 
 # Verify AI Model smoke test
 curl -X POST http://localhost:3000/api/v1/moderation/ai/test \
@@ -47,10 +50,9 @@ curl -X POST http://localhost:3000/api/v1/moderation/ai/test \
 
 ## 3. Production Environment Checklist (`apps/api/.env`)
 
-- [x] `DATABASE_URL` configured to high-availability MySQL instance.
-- [x] `BETTER_AUTH_SECRET` generated with 256-bit entropy (`openssl rand -hex 32`).
-- [x] `GOOGLE_GEMINI_API_KEY` configured and verified with `gemini-3.5-flash-lite`.
-- [x] `MODERATION_INTAKE_ENABLED=true` active.
-- [x] `MODERATION_DAILY_CASE_LIMIT=50` to safeguard review SLA.
-- [x] `AI_MAX_CALLS_PER_DAY=100` ceiling enforced.
-- [x] `CORS_ORIGIN` restricted to `http://localhost:5173` and trusted production console domains.
+- [ ] `DATABASE_URL` points to the approved MySQL instance and uses the dedicated runtime account.
+- [ ] `BETTER_AUTH_SECRET` is randomly generated and injected by the release secret manager.
+- [ ] AI remains disabled until explicitly approved. Configure the key and test the configured model only if enabling the provider.
+- [ ] Intake and AI budgets reflect approved operational limits.
+- [ ] `BETTER_AUTH_URL` and `MODERATION_ORIGIN` set to the approved HTTPS origins.
+- [ ] `TRUSTED_PROXY_CIDRS` contains only the approved proxy addresses where needed.

@@ -1,0 +1,11 @@
+# Phase 5 moderation workspace architecture
+
+The subscribed queue opens `/queues/:id/moderate` inside the authenticated workforce layout. The layout owns one attendance query and supplies its snapshot to the workspace. The header AUX interval and the reservation have separate start times.
+
+The workspace reads `GET /api/v1/moderation/queues/:id/moderate/current` to restore a session. This endpoint never allocates. Start and Retry invoke the existing allocator. The API returns server time alongside reservation timestamps. The client estimates local clock offset from each response and recomputes elapsed wall-clock seconds after focus or wake. The server writes handling duration in seconds when it accepts the decision.
+
+Continuous responses include only the task for the active queue. Facility context excludes raw provider metadata and coordinates. Restoration, renewal, allocation and submission require active workforce access, an eligible queue grant, and subscription. Allocation retries read committed candidates so concurrent workers can see cases that other reservations have taken while retaining uniform random selection.
+
+The case reservation keys the form. Server responses replace the query snapshot only for the applicable reservation. Heartbeats renew leases and return the new deadline. Network failures keep the in-page draft. An ambiguous submission retries the same payload against the same reservation, whose unique handling record supplies an idempotent replay. A stale lease cannot publish. Session exit uses the existing transactional leave endpoint, which releases any active case before ending the session.
+
+The task’s saved queue configuration controls the form, reason tags and policy reference. A queue administrator can add tags as choices on a Reason question using the existing queue form builder. Reason questions with empty choices remain free text. Fastify validates the configuration and citations before persisting a decision. An approval calls the existing intelligence review publication service, which checks current independent evidence and limits verification expiry. Rejection and escalation record the case decision without asserting unsupported facility facts. No schema migration is required for Phase 5. Existing random selection, reservation constraints and the optional QA model continue to apply.

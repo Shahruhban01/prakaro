@@ -26,13 +26,21 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
   let createdQueueId: string;
   let reportQueueId: string;
   let testCaseId: string;
-  let testTaskId: string;
   let testPlaceId: string;
   let testIntelligenceId: string;
-  let currentCaseRevision = 0;
 
+  let organizationId = '';
+  let lobId = '';
   before(async () => {
     await app.ready();
+    const org = await prisma.organization.create({
+      data: { name: 'Synthetic test organization', code: randomUUID(), createdBy: 'test' },
+    });
+    organizationId = org.id;
+    const lob = await prisma.lob.create({
+      data: { name: 'Synthetic test LOB', code: randomUUID(), createdBy: 'test', organizationId },
+    });
+    lobId = lob.id;
 
     // 1. Create Super Admin in super_admins & sign in via /api/super-admin-auth/sign-in/email
     const adminEmail = `admin-${randomUUID()}@prakaro.test`;
@@ -70,6 +78,8 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
     const hashedModPassword = await hashPassword(modPassword);
     const moderator = await prisma.moderator.create({
       data: {
+        organizationId,
+        lobId,
         name: 'Field Moderator',
         email: modEmail,
         status: 'ACTIVE',
@@ -101,6 +111,8 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
     const hashedViewerPassword = await hashPassword(viewerPassword);
     const viewer = await prisma.moderator.create({
       data: {
+        organizationId,
+        lobId,
         name: 'Auditor Viewer',
         email: viewerEmail,
         status: 'ACTIVE',
@@ -146,17 +158,38 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
     // Clean up in reverse dependency order
     const queueIds = [createdQueueId, reportQueueId].filter(Boolean);
     if (testIntelligenceId) {
-      await prisma.moderationSubmission.deleteMany({ where: { case: { facilityId: testIntelligenceId } } }).catch(() => {});
-      await prisma.moderationTask.deleteMany({ where: { case: { facilityId: testIntelligenceId } } }).catch(() => {});
-      await prisma.moderationCase.deleteMany({ where: { facilityId: testIntelligenceId } }).catch(() => {});
-      await prisma.searchAdmission.deleteMany({ where: { facilityId: testIntelligenceId } }).catch(() => {});
-      await prisma.parkingEvidenceReference.deleteMany({ where: { caseId: testIntelligenceId } }).catch(() => {});
-      await prisma.parkingHumanLabel.deleteMany({ where: { caseId: testIntelligenceId } }).catch(() => {});
-      await prisma.parkingIntelligenceCase.deleteMany({ where: { id: testIntelligenceId } }).catch(() => {});
+      await prisma.moderationSubmission
+        .deleteMany({ where: { case: { facilityId: testIntelligenceId } } })
+        .catch(() => {});
+      await prisma.moderationTask
+        .deleteMany({ where: { case: { facilityId: testIntelligenceId } } })
+        .catch(() => {});
+      await prisma.moderationCase
+        .deleteMany({ where: { facilityId: testIntelligenceId } })
+        .catch(() => {});
+      await prisma.searchAdmission
+        .deleteMany({ where: { facilityId: testIntelligenceId } })
+        .catch(() => {});
+      await prisma.parkingEvidenceReference
+        .deleteMany({ where: { caseId: testIntelligenceId } })
+        .catch(() => {});
+      await prisma.parkingHumanLabel
+        .deleteMany({ where: { caseId: testIntelligenceId } })
+        .catch(() => {});
+      await prisma.parkingIntelligenceCase
+        .deleteMany({ where: { id: testIntelligenceId } })
+        .catch(() => {});
     }
     if (queueIds.length) {
-      await prisma.moderationMembership.deleteMany({ where: { queueId: { in: queueIds } } }).catch(() => {});
-      await prisma.moderationTask.deleteMany({ where: { queueId: { in: queueIds } } }).catch(() => {});
+      await prisma.queueConfigurationVersion.deleteMany({ where: { queueId: { in: queueIds } } });
+      await prisma.queueLobAccess.deleteMany({ where: { queueId: { in: queueIds } } });
+      await prisma.queueSubscription.deleteMany({ where: { queueId: { in: queueIds } } });
+      await prisma.moderationMembership
+        .deleteMany({ where: { queueId: { in: queueIds } } })
+        .catch(() => {});
+      await prisma.moderationTask
+        .deleteMany({ where: { queueId: { in: queueIds } } })
+        .catch(() => {});
       await prisma.moderationQueue.deleteMany({ where: { id: { in: queueIds } } }).catch(() => {});
     }
     if (adminUserId) {
@@ -166,8 +199,12 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
     }
     const modIds = [modUserId, viewerUserId].filter(Boolean);
     if (modIds.length) {
-      await prisma.moderatorSession.deleteMany({ where: { userId: { in: modIds } } }).catch(() => {});
-      await prisma.moderatorAccount.deleteMany({ where: { userId: { in: modIds } } }).catch(() => {});
+      await prisma.moderatorSession
+        .deleteMany({ where: { userId: { in: modIds } } })
+        .catch(() => {});
+      await prisma.moderatorAccount
+        .deleteMany({ where: { userId: { in: modIds } } })
+        .catch(() => {});
       await prisma.moderator.deleteMany({ where: { id: { in: modIds } } }).catch(() => {});
     }
     if (unprivilegedUserId) {
@@ -176,6 +213,8 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
       await prisma.user.deleteMany({ where: { id: unprivilegedUserId } }).catch(() => {});
     }
     await app.close();
+    await prisma.lob.deleteMany({ where: { id: lobId } });
+    await prisma.organization.deleteMany({ where: { id: organizationId } });
     await prisma.$disconnect();
   });
 
@@ -240,6 +279,8 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
         headers: { authorization: `Bearer ${adminToken}` },
         payload: {
           name: 'Airport & Transit Verification',
+          organizationId,
+          intakeEnabled: true,
           description: 'High-priority intake queue for airport and transit parking discovery',
           kind: 'GENERAL',
           priority: 80,
@@ -286,6 +327,8 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
         headers: { authorization: `Bearer ${adminToken}` },
         payload: {
           name: 'User Problem Reports',
+          organizationId,
+          intakeEnabled: true,
           description: 'Queue for user-submitted problem reports',
           kind: 'REPORT',
           priority: 90,
@@ -389,26 +432,57 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
   });
 
   describe('3. Staff Assignment & Queue-Level Authorization', () => {
-    it('assigns moderator to the active queue', async () => {
-      const res = await app.inject({
+    it('grants access to the LOB and keeps subscriptions separate', async () => {
+      const moderator = { authorization: `Bearer ${modToken}` },
+        admin = { authorization: `Bearer ${adminToken}` };
+      const path = '/api/v1/moderation/queues/' + createdQueueId;
+      const direct = await app.inject({
         method: 'POST',
         url: '/api/v1/moderation/moderators',
-        headers: { authorization: `Bearer ${adminToken}` },
-        payload: {
-          email: modEmail,
-          role: 'MODERATOR',
-          active: true,
-          queues: [createdQueueId],
-        },
+        headers: admin,
+        payload: { email: modEmail, role: 'MODERATOR', queues: [createdQueueId] },
       });
-      assert.strictEqual(res.statusCode, 200);
-      const result = JSON.parse(res.body);
-      assert.strictEqual(result.ok, true);
-
-      const membership = await prisma.moderationMembership.findFirst({
-        where: { moderatorId: modUserId, queueId: createdQueueId },
+      assert.equal(direct.statusCode, 400);
+      assert.equal((await app.inject({ url: path, headers: moderator })).statusCode, 403);
+      const grant = await app.inject({
+        method: 'PUT',
+        url: path + '/lobs',
+        headers: admin,
+        payload: { lobIds: [lobId], version: 2 },
       });
-      assert.ok(membership, 'Moderator membership should be saved');
+      assert.equal(grant.statusCode, 200, grant.body);
+      assert.equal((await app.inject({ url: path, headers: moderator })).statusCode, 200);
+      assert.equal(
+        (await app.inject({ url: '/api/v1/moderation/my-queues', headers: moderator })).json()
+          .length,
+        0,
+      );
+      const results = await Promise.all(
+        [1, 2].map(() =>
+          app.inject({ method: 'POST', url: path + '/subscribe', headers: moderator, payload: {} }),
+        ),
+      );
+      assert.ok(results.some((result) => result.statusCode === 200));
+      assert.ok(results.every((result) => [200, 409].includes(result.statusCode)));
+      assert.equal(
+        await prisma.queueSubscription.count({
+          where: { queueId: createdQueueId, unsubscribedAt: null },
+        }),
+        1,
+      );
+      assert.equal(
+        (
+          await app.inject({
+            method: 'POST',
+            url: path + '/subscribe',
+            headers: moderator,
+            payload: { moderatorId: viewerUserId },
+          })
+        ).statusCode,
+        400,
+      );
+      const mine = await app.inject({ url: '/api/v1/moderation/my-queues', headers: moderator });
+      assert.equal(mine.json()[0].id, createdQueueId);
     });
 
     it('lists all moderators for supervisor and admin', async () => {
@@ -430,7 +504,7 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
       const candidate: ParkingFacility = {
         id: `google:${testPlaceId}`,
         name: 'Aerocity Metro Parking',
-        location: { latitude: 28.556, longitude: 77.100 },
+        location: { latitude: 28.556, longitude: 77.1 },
         address: 'Aerocity, New Delhi',
         verification: {
           facilityStatus: 'UNCONFIRMED',
@@ -468,8 +542,6 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
       assert.ok(ourTask, 'Task in createdQueueId must exist');
 
       testCaseId = modCase.id;
-      testTaskId = ourTask.id;
-      currentCaseRevision = modCase.revision;
 
       // Repeat admission with identical facility - verify deduplication (activeKey prevents duplicate case)
       const secondEventId = randomUUID();
@@ -499,190 +571,89 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
     });
   });
 
-  describe('5. Task Lifecycle: Claim, Lease Expiration & Release', () => {
-    it('allows assigned moderator to claim task and acquires lease', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/claim`,
-        headers: { authorization: `Bearer ${modToken}` },
-      });
-      assert.strictEqual(res.statusCode, 200);
-
-      const modCase = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      assert.strictEqual(modCase?.owner, modUserId);
-      assert.strictEqual(modCase?.status, 'IN_REVIEW');
-      assert.ok(modCase?.leaseUntil && new Date(modCase.leaseUntil) > new Date());
-      currentCaseRevision = modCase!.revision;
+  it('renders queue-contained read-only cases, reports metrics, and denies revoked access', async () => {
+    const moderator = { authorization: `Bearer ${modToken}` },
+      admin = { authorization: `Bearer ${adminToken}` };
+    const path = '/api/v1/moderation/queues/' + createdQueueId;
+    const caseView = await app.inject({ url: path + '/cases/' + testCaseId, headers: moderator });
+    assert.equal(caseView.statusCode, 200, caseView.body);
+    const wrongQueue = await app.inject({
+      url: '/api/v1/moderation/queues/' + reportQueueId + '/cases/' + testCaseId,
+      headers: admin,
     });
-
-    it('prevents another user from claiming an actively leased task (409 Conflict)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/claim`,
-        headers: { authorization: `Bearer ${adminToken}` },
-      });
-      assert.strictEqual(res.statusCode, 409);
-      const err = JSON.parse(res.body);
-      assert.strictEqual(err.error.message, 'Case is unavailable for claiming.');
+    assert.equal(wrongQueue.statusCode, 404);
+    const snapshot = await app.inject({ url: path + '/metrics', headers: moderator });
+    assert.equal(snapshot.statusCode, 200, snapshot.body);
+    assert.deepEqual(snapshot.json(), {
+      pending: 1,
+      inProgress: 0,
+      completed: 0,
+      completedToday: 0,
+      activeModerators: 0,
+      subscribedModerators: 1,
+      ahtSeconds: null,
+      reportingTimezone: 'UTC',
     });
-
-    it('allows assigned moderator to release task back to queue', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/release`,
-        headers: { authorization: `Bearer ${modToken}` },
-      });
-      assert.strictEqual(res.statusCode, 200);
-
-      const modCase = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      assert.strictEqual(modCase?.owner, null);
-      assert.strictEqual(modCase?.leaseUntil, null);
-      assert.strictEqual(modCase?.status, 'QUEUED');
-      currentCaseRevision = modCase!.revision;
-    });
-  });
-
-  describe('6. Evidence Addition & Human Review Submission', () => {
-    let evidenceId: string;
-
-    it('allows claiming again and appending independent evidence citation', async () => {
-      // Re-claim
-      const claimRes = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/claim`,
-        headers: { authorization: `Bearer ${modToken}` },
-      });
-      assert.strictEqual(claimRes.statusCode, 200);
-
-      const modCase = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      currentCaseRevision = modCase!.revision;
-
-      // Append evidence
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/evidence`,
-        headers: { authorization: `Bearer ${modToken}` },
-        payload: {
-          source: 'PRAKARO_AUDIT',
-          finding: 'CONFIRMED_PARKING',
-          reference: 'https://delhimetrorail.com/parking-facilities/aerocity',
-          expiresAt: new Date(Date.now() + 86400000).toISOString(),
-        },
-      });
-      assert.strictEqual(res.statusCode, 200);
-      const result = JSON.parse(res.body);
-      assert.ok(result.id);
-      evidenceId = result.id;
-    });
-
-    it('submits human review and transitions case to PENDING_QA', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/reviews`,
-        headers: { authorization: `Bearer ${modToken}` },
-        payload: {
-          taskId: testTaskId,
-          revision: currentCaseRevision,
-          action: 'APPROVE',
-          reason: 'Facility validated with official signage and parking entrance coordinates',
-          evidenceIds: [evidenceId],
-          answers: {
-            facility_exists: 'YES',
-          },
-        },
-      });
-      assert.strictEqual(res.statusCode, 200);
-      const updatedCase = JSON.parse(res.body);
-      assert.strictEqual(updatedCase.status, 'PENDING_QA');
-
-      const modCase = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      currentCaseRevision = modCase!.revision;
-    });
-  });
-
-  describe('7. QA Gate: Rejection/Reopening vs. Publishing', () => {
-    it('allows QA Reviewer or Super Admin to REOPEN a pending case for re-evaluation', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/qa`,
-        headers: { authorization: `Bearer ${adminToken}` },
-        payload: {
-          action: 'REOPEN',
-          revision: currentCaseRevision,
-          reason: 'Please verify exact hourly parking tariff rate before final publish',
-        },
-      });
-      assert.strictEqual(res.statusCode, 200);
-      const modCase = JSON.parse(res.body);
-      assert.strictEqual(modCase.status, 'REOPENED');
-
-      const refreshed = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      currentCaseRevision = refreshed!.revision;
-    });
-
-    it('re-submits review after addressing feedback', async () => {
-      // Moderator claims again
-      const claimRes = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/claim`,
-        headers: { authorization: `Bearer ${modToken}` },
-      });
-      assert.strictEqual(claimRes.statusCode, 200);
-
-      const refreshed = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      currentCaseRevision = refreshed!.revision;
-
-      const evidence = await prisma.parkingEvidenceReference.findFirst({
-        where: { caseId: testIntelligenceId },
-      });
-
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/reviews`,
-        headers: { authorization: `Bearer ${modToken}` },
-        payload: {
-          taskId: testTaskId,
-          revision: currentCaseRevision,
-          action: 'APPROVE',
-          reason: 'Tariff confirmed: 20 INR first 4 hours, verified against official schedule',
-          evidenceIds: [evidence!.id],
-          answers: {
-            facility_exists: 'YES',
-          },
-        },
-      });
-      assert.strictEqual(res.statusCode, 200);
-      const updated = JSON.parse(res.body);
-      assert.strictEqual(updated.status, 'PENDING_QA');
-
-      const postReviewCase = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      currentCaseRevision = postReviewCase!.revision;
-    });
-
-    it('publishes verified parking decision, records human label and clears active case key', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/v1/moderation/cases/${testCaseId}/qa`,
-        headers: { authorization: `Bearer ${adminToken}` },
-        payload: {
-          action: 'PUBLISH',
-          revision: currentCaseRevision,
-          reason: 'All evidence criteria met. Publishing to production index.',
-        },
-      });
-      assert.strictEqual(res.statusCode, 200);
-      const published = JSON.parse(res.body);
-      assert.strictEqual(published.status, 'APPROVED');
-
-      const closedCase = await prisma.moderationCase.findUnique({ where: { id: testCaseId } });
-      assert.strictEqual(closedCase?.activeKey, null, 'Active key must be cleared upon closure');
-
-      const humanLabel = await prisma.parkingHumanLabel.findFirst({
-        where: { caseId: testIntelligenceId },
-      });
-      assert.ok(humanLabel, 'Human label must be published');
-      assert.strictEqual(humanLabel.decision, 'CONFIRM_PARKING');
-    });
+    assert.equal(
+      (await app.inject({ method: 'POST', url: path + '/moderate', headers: moderator }))
+        .statusCode,
+      409,
+    );
+    for (const action of ['claim', 'reviews', 'evidence', 'qa', 'release']) {
+      assert.equal(
+        (
+          await app.inject({
+            method: 'POST',
+            url: '/api/v1/moderation/cases/' + testCaseId + '/' + action,
+            headers: moderator,
+            payload: {},
+          })
+        ).statusCode,
+        403,
+      );
+    }
+    assert.equal(
+      (await prisma.moderationCase.findUniqueOrThrow({ where: { id: testCaseId } })).owner,
+      null,
+    );
+    assert.equal(
+      (await app.inject({ method: 'DELETE', url: path + '/subscribe', headers: moderator }))
+        .statusCode,
+      200,
+    );
+    assert.ok(
+      (await prisma.queueSubscription.findFirstOrThrow({ where: { queueId: createdQueueId } }))
+        .unsubscribedAt,
+    );
+    assert.equal(
+      (await app.inject({ method: 'POST', url: path + '/subscribe', headers: moderator }))
+        .statusCode,
+      200,
+    );
+    assert.equal(
+      (
+        await app.inject({
+          method: 'PUT',
+          url: path + '/lobs',
+          headers: admin,
+          payload: { version: 3, lobIds: [] },
+        })
+      ).statusCode,
+      200,
+    );
+    assert.equal(
+      (await app.inject({ url: path + '/metrics', headers: moderator })).statusCode,
+      403,
+    );
+    assert.equal(
+      (await app.inject({ method: 'POST', url: path + '/subscribe', headers: moderator }))
+        .statusCode,
+      403,
+    );
+    assert.equal(
+      (await app.inject({ url: '/api/v1/moderation/my-queues', headers: moderator })).json().length,
+      0,
+    );
   });
 
   describe('8. AI Model Discovery & Smoke Test', () => {
@@ -697,18 +668,6 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
       assert.ok(body.geminiModel, 'geminiModel should be reported');
       assert.strictEqual(body.geminiModel, 'gemini-3.5-flash-lite');
       assert.ok(body.priority.includes('gemini'));
-    });
-
-    it('executes AI smoke test endpoint returning structured triage result', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/v1/moderation/ai/test',
-        headers: { authorization: `Bearer ${adminToken}` },
-      });
-      assert.strictEqual(res.statusCode, 200);
-      const data = JSON.parse(res.body);
-      assert.strictEqual(data.ok, true);
-      assert.ok(data.text);
     });
   });
 
@@ -726,6 +685,11 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
       assert.strictEqual(res.statusCode, 200);
       const body = JSON.parse(res.body);
       assert.strictEqual(body.ok, true);
+      const routed = await prisma.moderationCase.findFirst({
+        where: { facilityId: testIntelligenceId, trigger: 'REPORT' },
+        include: { tasks: true },
+      });
+      assert.equal(routed?.tasks[0]?.queueId, reportQueueId);
     });
 
     it('queries immutable audit trail and analytics metrics', async () => {
@@ -740,9 +704,14 @@ describe('Milestone 13: Search-Driven Parking Verification & Moderation Platform
       assert.ok(auditEntries.length > 0);
       assert.ok(
         auditEntries.some((e: { action: string }) =>
-          ['QUEUE_CREATED', 'CASE_ROUTED', 'CASE_CLAIMED', 'CASE_RELEASED', 'PUBLISH', 'REPORT_RECEIVED'].includes(
-            e.action,
-          ),
+          [
+            'QUEUE_CREATED',
+            'CASE_ROUTED',
+            'CASE_CLAIMED',
+            'CASE_RELEASED',
+            'PUBLISH',
+            'REPORT_RECEIVED',
+          ].includes(e.action),
         ),
       );
 

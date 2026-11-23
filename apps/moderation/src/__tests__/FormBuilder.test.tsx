@@ -37,4 +37,15 @@ describe('FormBuilder', () => {
       { key: 'q1', label: 'Updated Question Prompt', type: 'BOOLEAN', required: true, options: [] },
     ]);
   });
+
+  it('configures reason tags and keeps the comma while typing another tag', () => {
+    const question: Question = { key: 'reason', label: 'Verification basis', type: 'REASON', required: true, options: [] };
+    const onChange = vi.fn();
+    render(<FormBuilder questions={[question]} onChange={onChange} />);
+    const tags = screen.getByLabelText(/Policy tags/) as HTMLInputElement;
+    fireEvent.change(tags, { target: { value: 'Inspection,' } });
+    expect(tags.value).toBe('Inspection,');
+    fireEvent.change(tags, { target: { value: 'Inspection, Operator confirmation' } });
+    expect(onChange).toHaveBeenLastCalledWith([{ ...question, options: ['Inspection', 'Operator confirmation'] }]);
+  });
 });

@@ -1,0 +1,7 @@
+# Phase 8 clarifications
+
+An authenticated moderator with an active, subscribed, policy-pinned reservation can open one clarification thread for that reservation. The question and resulting messages are retained with the original case, queue, LOB and version. Authorized supervisors see unassigned or assigned work in their scope. A first response assigns the thread to its supervisor. A supervisor can answer, request more information, or escalate. The original moderator can follow up or resolve an answered thread. A supervisor can close a resolved thread.
+
+Thread states include Open, Answered, Needs information, Escalated, Resolved and Closed. Each amendment appends a message, advances a revision, and records a tenant-scoped audit event. Stable client message IDs allow an exact retry without duplicated text or state changes. Escalation makes the item available to policy administrators, who can create an amendment draft from the policy.
+
+Clarification polling is separate from moderation state. Asking or answering does not change AUX, submit a decision, release a reservation or extend a lease. The existing heartbeat and lease remain authoritative. After the lease expires the moderator can read their thread in Clarifications. A supervisor chooses between a case-specific answer and an explanation of the pinned policy. Both are recorded as guidance. A policy amendment requires a separate draft and publication.

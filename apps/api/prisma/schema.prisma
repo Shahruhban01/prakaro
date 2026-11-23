@@ -87,14 +87,14 @@ model Verification {
 // ----------------------------------------------------
 
 model SuperAdmin {
-  id                    String                @id @default(uuid())
+  id                    String              @id @default(uuid())
   name                  String
-  email                 String                @unique
-  emailVerified         Boolean               @default(false)
+  email                 String              @unique
+  emailVerified         Boolean             @default(false)
   image                 String?
-  status                String                @default("ACTIVE")
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
+  status                String              @default("ACTIVE")
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
   lastLoginAt           DateTime?
   createdBySuperAdminId String?
   sessions              SuperAdminSession[]
@@ -154,6 +154,7 @@ model SuperAdminVerification {
 // ----------------------------------------------------
 
 model Moderator {
+  scheduleAssignments WorkforceShiftAssignment[]
   id            String                 @id @default(uuid())
   name          String
   email         String                 @unique
@@ -173,6 +174,23 @@ model Moderator {
   assignedCases ModerationCase[]
   reviews       ModerationSubmission[]
 
+  employeeCode       String?             @unique
+  organizationId     String?
+  lobId              String?
+  organization       Organization?       @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lob                Lob?                @relation(fields: [lobId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Restrict)
+  teamLinks          WorkforceTeamLink[]
+  queueSubscriptions QueueSubscription[]
+  attendance         AttendanceSession[]
+  workSessions       ModerationWorkSession[]
+  caseReservations   ModerationCaseReservation[]
+  handlingRecords    CaseHandlingRecord[]
+  decisionVersions   ModerationDecisionVersion[]
+  qaOriginalReviews  QaSample[] @relation("QaOriginalModerator")
+  qaAssignments      QaSample[] @relation("QaAssignee")
+  qaAssessments      QaAssessment[]
+
+  @@unique([id, organizationId])
   @@map("moderators")
 }
 
@@ -376,22 +394,39 @@ model ParkingAiDailyBudget {
 }
 
 model ModerationQueue {
-  id          String                 @id @default(uuid())
-  code        String                 @unique
-  name        String
-  description String                 @default("")
-  kind        String
-  status      String                 @default("ACTIVE")
-  priority    Int                    @default(0)
-  capacity    Int                    @default(500)
-  version     Int                    @default(1)
-  config      Json
-  createdBy   String
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  memberships ModerationMembership[]
-  tasks       ModerationTask[]
+  workforceAlertRules WorkforceAlertRule[]
+  policyAssignments PolicyAssignment[]
+  clarifications PolicyClarification[]
+  qaPolicies      QaPolicy[]
+  qaSamples       QaSample[]
+  organizationId String?
+  organization   Organization?          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  id             String                 @id @default(uuid())
+  code           String                 @unique
+  name           String
+  description    String                 @default("")
+  kind           String
+  status         String                 @default("ACTIVE")
+  priority       Int                    @default(0)
+  capacity       Int                    @default(500)
+  version        Int                    @default(1)
+  config         Json
+  createdBy      String
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  memberships    ModerationMembership[]
+  tasks          ModerationTask[]
 
+  access        QueueLobAccess[]
+  subscriptions QueueSubscription[]
+  versions      QueueConfigurationVersion[]
+  intakeEnabled Boolean                     @default(false)
+  workSessions     ModerationWorkSession[]
+  caseReservations ModerationCaseReservation[]
+  handlingRecords  CaseHandlingRecord[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
   @@map("moderation_queue")
 }
 
@@ -445,6 +480,9 @@ model ModerationCase {
   moderator  Moderator?             @relation(fields: [owner], references: [id], onDelete: SetNull)
   tasks      ModerationTask[]
   reviews    ModerationSubmission[]
+  reservations     ModerationCaseReservation[]
+  handlingRecords  CaseHandlingRecord[]
+  decisionVersions ModerationDecisionVersion[]
 
   @@index([status, priority])
   @@index([owner])
@@ -462,6 +500,7 @@ model ModerationTask {
   case         ModerationCase  @relation(fields: [caseId], references: [id])
 
   @@unique([caseId, queueId])
+  @@index([queueId, caseId])
   @@map("moderation_task")
 }
 
@@ -486,6 +525,8 @@ model ModerationSubmission {
 }
 
 model ModerationAudit {
+  organizationId String?
+
   id            String   @id @default(uuid())
   actor         String
   actorType     String   @default("MODERATOR") @db.VarChar(32)
@@ -500,4 +541,654 @@ model ModerationAudit {
   @@index([target, createdAt])
   @@index([actorId, actorType])
   @@map("moderation_audit")
+}
+
+model Organization {
+  reportingTimezone String @default("UTC") @db.VarChar(100)
+  workforceShifts WorkforceShift[]
+  workforceAssignments WorkforceShiftAssignment[]
+  capacityPlans WorkforceCapacityPlan[]
+  workforceAlertRules WorkforceAlertRule[]
+  moderationPolicies ModerationPolicy[]
+  policyAssignments PolicyAssignment[]
+  clarifications PolicyClarification[]
+  qaPolicies     QaPolicy[]
+  qaSamples      QaSample[]
+  queues         ModerationQueue[]
+  queueDelegated Boolean           @default(false)
+  id             String            @id @default(uuid())
+  code           String            @unique
+  name           String
+  description    String            @default("")
+  active         Boolean           @default(true)
+  createdBy      String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  lobs           Lob[]
+  staff          Moderator[]
+  teams          WorkforceTeam[]
+
+  @@map("organizations")
+}
+
+model Lob {
+  workforceAssignments WorkforceShiftAssignment[]
+  policyAssignments PolicyAssignment[]
+  clarifications PolicyClarification[]
+  qaPolicies     QaPolicy[]
+  qaSamples      QaSample[]
+  id             String           @id @default(uuid())
+  code           String           @unique
+  name           String
+  description    String           @default("")
+  active         Boolean          @default(true)
+  organizationId String?
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy      String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  staff          Moderator[]
+  queueAccess    QueueLobAccess[]
+
+  @@unique([id, organizationId])
+  @@map("lobs")
+}
+
+model WorkforceTeam {
+  workforceAssignments WorkforceShiftAssignment[]
+  id             String              @id @default(uuid())
+  code           String
+  name           String
+  kind           String
+  active         Boolean             @default(true)
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  links          WorkforceTeamLink[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([organizationId, code])
+  @@unique([id, organizationId])
+  @@map("workforce_teams")
+}
+
+model WorkforceTeamLink {
+  teamId         String
+  moderatorId    String
+  organizationId String
+  team           WorkforceTeam @relation(fields: [teamId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  moderator      Moderator     @relation(fields: [moderatorId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Restrict)
+  kind           String
+  createdAt      DateTime      @default(now())
+
+  @@id([teamId, moderatorId])
+  @@map("workforce_team_links")
+}
+
+model QueueLobAccess {
+  queueId        String
+  lobId          String
+  organizationId String
+  queue          ModerationQueue @relation(fields: [queueId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Restrict)
+  lob            Lob             @relation(fields: [lobId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Restrict)
+  grantedAt      DateTime        @default(now())
+  revokedAt      DateTime?
+  actorId        String
+  actorType      String
+
+  @@id([queueId, lobId])
+  @@index([lobId, revokedAt])
+  @@map("queue_lob_access")
+}
+
+model QueueSubscription {
+  moderatorId    String
+  queueId        String
+  moderator      Moderator       @relation(fields: [moderatorId], references: [id], onDelete: Restrict)
+  queue          ModerationQueue @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  subscribedAt   DateTime        @default(now())
+  unsubscribedAt DateTime?
+
+  @@id([moderatorId, queueId])
+  @@index([queueId, unsubscribedAt])
+  @@map("queue_subscription")
+}
+
+model QueueConfigurationVersion {
+  queueId   String
+  version   Int
+  queue     ModerationQueue @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  snapshot  Json
+  actorId   String
+  actorType String
+  createdAt DateTime        @default(now())
+
+  @@id([queueId, version])
+  @@map("queue_configuration_version")
+}
+
+enum AuxStatus {
+  MODERATING
+  NON_MODERATING
+  BREAK
+  MEETING
+  OFFLINE
+  TRAINING
+}
+
+enum AttendanceEnd {
+  USER_LOGOUT
+  SESSION_EXPIRED
+  ADMIN_TERMINATED
+  DISCONNECTED_TIMEOUT
+}
+
+model AttendanceSession {
+  id              String               @id @default(uuid())
+  moderatorId     String
+  moderator       Moderator            @relation(fields: [moderatorId], references: [id], onDelete: Cascade)
+  organizationId  String
+  lobId           String
+  authSessionId   String
+  activeKey       String?              @unique
+  loginAt         DateTime
+  startedAt       DateTime
+  endedAt         DateTime?
+  lastHeartbeatAt DateTime
+  endReason       AttendanceEnd?
+  version         Int                  @default(0)
+  intervals       AuxInterval[]
+  events          AuxTransitionAudit[]
+  workSessions    ModerationWorkSession[]
+
+  @@index([moderatorId, startedAt])
+  @@index([authSessionId, startedAt])
+  @@index([endedAt, lastHeartbeatAt])
+  @@index([organizationId, startedAt], map: "attendance_report_org_start")
+  @@index([lobId, startedAt], map: "attendance_report_lob_start")
+  @@map("attendance_session")
+}
+
+model AuxInterval {
+  id        String            @id @default(uuid())
+  sessionId String
+  session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  openKey   String?           @unique
+  state     AuxStatus
+  startedAt DateTime
+  endedAt   DateTime?
+
+  @@index([sessionId, startedAt])
+  @@map("aux_interval")
+}
+
+model AuxTransitionAudit {
+  id        String            @id @default(uuid())
+  sessionId String
+  session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actorId   String
+  source    String
+  previous  AuxStatus?
+  next      AuxStatus?
+  createdAt DateTime
+
+  @@index([sessionId, createdAt])
+  @@map("aux_transition_audit")
+}
+
+// ----------------------------------------------------
+// Milestone 14 Phase 4: Continuous Moderation Models
+// ----------------------------------------------------
+
+enum ModerationSessionStatus {
+  ACTIVE
+  ENDED
+  INTERRUPTED
+  EXPIRED
+}
+
+enum ReservationStatus {
+  ACTIVE
+  COMPLETED
+  RELEASED
+  EXPIRED
+}
+
+model ModerationWorkSession {
+  id                  String                    @id @default(uuid())
+  moderatorId         String
+  moderator           Moderator                 @relation(fields: [moderatorId], references: [id], onDelete: Restrict)
+  queueId             String
+  queue               ModerationQueue           @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  attendanceSessionId String?
+  attendanceSession   AttendanceSession?        @relation(fields: [attendanceSessionId], references: [id], onDelete: SetNull)
+  activeKey           String?                   @unique
+  status              ModerationSessionStatus   @default(ACTIVE)
+  startedAt           DateTime                  @default(now())
+  endedAt             DateTime?
+  endReason           String?
+  casesCompleted      Int                       @default(0)
+  submitAndLeaveCount Int                       @default(0)
+  lastActivityAt      DateTime                  @default(now())
+
+  reservations        ModerationCaseReservation[]
+  handlingRecords     CaseHandlingRecord[]
+
+  @@index([moderatorId, startedAt])
+  @@index([queueId, status])
+  @@map("moderation_work_session")
+}
+
+model ModerationCaseReservation {
+  pinnedPolicyId String?
+  pinnedPolicy PolicyVersion? @relation(fields: [pinnedPolicyId], references: [id], onDelete: Restrict)
+  clarification PolicyClarification?
+  id                 String                @id @default(uuid())
+  caseId             String
+  case               ModerationCase        @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  moderatorId        String
+  moderator          Moderator             @relation(fields: [moderatorId], references: [id], onDelete: Restrict)
+  sessionId          String
+  session            ModerationWorkSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  queueId            String
+  queue              ModerationQueue       @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  status             ReservationStatus     @default(ACTIVE)
+  activeCaseKey      String?               @unique
+  activeModeratorKey String?               @unique
+  reservedAt         DateTime              @default(now())
+  leaseExpiresAt     DateTime
+  releasedAt         DateTime?
+  releaseReason      String?
+
+  handlingRecord     CaseHandlingRecord?
+
+  @@index([sessionId, status])
+  @@index([moderatorId, status])
+  @@index([queueId, status])
+  @@index([leaseExpiresAt])
+  @@index([queueId, status, leaseExpiresAt], map: "reservation_report_queue_lease")
+  @@index([queueId, status, releasedAt], map: "reservation_report_queue_release")
+  @@map("moderation_case_reservation")
+}
+
+model ModerationDecisionVersion {
+  pinnedPolicyId String?
+  pinnedPolicy PolicyVersion? @relation(fields: [pinnedPolicyId], references: [id], onDelete: Restrict)
+  policyTags Json?
+  id             String              @id @default(uuid())
+  caseId         String
+  case           ModerationCase      @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  version        Int                 @default(1)
+  moderatorId    String
+  moderator      Moderator           @relation(fields: [moderatorId], references: [id], onDelete: Restrict)
+  action         String
+  reason         String              @db.VarChar(500)
+  evidenceIds    Json
+  answers        Json
+  policyVersion  Int                 @default(1)
+  effective      Boolean             @default(true)
+  qaEligible     Boolean             @default(true)
+  qaSnapshot     Json?
+  publicationLabelId String?
+  createdAt      DateTime            @default(now())
+
+  handlingRecord CaseHandlingRecord?
+  qaSample       QaSample?
+  qaCorrection   QaCorrection?
+
+  @@index([caseId, version])
+  @@unique([caseId, version], map: "decision_case_version_unique")
+  @@index([moderatorId, createdAt])
+  @@map("moderation_decision_version")
+}
+
+model WorkforceShift {
+  id String @id @default(uuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name String @db.VarChar(100)
+  timezone String @db.VarChar(100)
+  startLocal String @db.Char(5)
+  endLocal String @db.Char(5)
+  breakMinutes Int @default(0)
+  lateGraceMinutes Int @default(0)
+  earlyGraceMinutes Int @default(0)
+  active Boolean @default(true)
+  revision Int @default(0)
+  createdBy String
+  createdAt DateTime @default(now())
+  assignments WorkforceShiftAssignment[]
+  @@unique([organizationId, name])
+  @@map("workforce_shift")
+}
+
+model WorkforceShiftAssignment {
+  id String @id @default(uuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employeeId String
+  employee Moderator @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  lobId String
+  lob Lob @relation(fields: [lobId], references: [id], onDelete: Restrict)
+  teamId String?
+  team WorkforceTeam? @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  shiftId String?
+  shift WorkforceShift? @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  kind String @db.VarChar(16)
+  startsAt DateTime
+  endsAt DateTime
+  localDate String @db.Char(10)
+  timezone String @db.VarChar(100)
+  shiftName String @db.VarChar(100)
+  breakMinutes Int
+  lateGraceMinutes Int
+  earlyGraceMinutes Int
+  reason String @db.VarChar(500)
+  seriesId String
+  createdBy String
+  createdAt DateTime @default(now())
+  cancelledAt DateTime?
+  @@index([employeeId, cancelledAt, startsAt, endsAt], map: "workforce_schedule_employee_range")
+  @@index([organizationId, startsAt, endsAt], map: "workforce_schedule_org_range")
+  @@index([teamId, startsAt, endsAt], map: "workforce_schedule_team_range")
+  @@map("workforce_shift_assignment")
+}
+
+model WorkforceCapacityPlan {
+  organizationId String @id
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  utilizationPercent Int
+  trainingMeetingMinutes Int
+  fallbackAhtSeconds Int?
+  queueWeights Json
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt
+  @@map("workforce_capacity_plan")
+}
+
+model WorkforceAlertRule {
+  id String @id @default(uuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  queueId String?
+  queue ModerationQueue? @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  metric String @db.VarChar(32)
+  threshold Int
+  severity String @db.VarChar(12)
+  enabled Boolean
+  intervalSeconds Int
+  cooldownSeconds Int
+  nextEvaluationAt DateTime @default(now())
+  revision Int @default(1)
+  events WorkforceAlertEvent[]
+  @@index([enabled, nextEvaluationAt])
+  @@index([organizationId, queueId])
+  @@map("workforce_alert_rule")
+}
+
+model WorkforceAlertEvent {
+  id String @id @default(uuid())
+  ruleId String
+  rule WorkforceAlertRule @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  activeKey String? @unique
+  observed Int
+  threshold Int
+  severity String @db.VarChar(12)
+  triggeredAt DateTime @default(now())
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  resolvedAt DateTime?
+  @@index([ruleId, triggeredAt])
+  @@map("workforce_alert_event")
+}
+
+model ModerationPolicy {
+  id String @id @default(uuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name String @db.VarChar(100)
+  description String @db.VarChar(500)
+  category String @db.VarChar(80)
+  createdBy String
+  createdAt DateTime @default(now())
+  versions PolicyVersion[]
+  @@unique([organizationId, name])
+  @@index([organizationId, createdAt])
+  @@map("moderation_policy")
+}
+
+model PolicyVersion {
+  id String @id @default(uuid())
+  policyId String
+  policy ModerationPolicy @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  number Int
+  revision Int @default(0)
+  status String @db.VarChar(16)
+  document Json
+  changeSummary String @db.VarChar(500)
+  contentHash String? @db.Char(64)
+  createdBy String
+  publisherId String?
+  createdAt DateTime @default(now())
+  publishedAt DateTime?
+  archivedAt DateTime?
+  assignments PolicyAssignment[]
+  reservations ModerationCaseReservation[]
+  decisions ModerationDecisionVersion[]
+  clarifications PolicyClarification[]
+  @@unique([policyId, number])
+  @@index([policyId, status, number])
+  @@map("policy_version")
+}
+
+model PolicyAssignment {
+  id String @id @default(uuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lobId String?
+  lob Lob? @relation(fields: [lobId], references: [id], onDelete: Restrict)
+  queueId String?
+  queue ModerationQueue? @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  activeKey String? @unique
+  scopeKey String
+  versionId String
+  version PolicyVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  effectiveFrom DateTime @default(now())
+  effectiveTo DateTime?
+  createdBy String
+  @@index([scopeKey, effectiveFrom])
+  @@index([organizationId, effectiveTo])
+  @@map("policy_assignment")
+}
+
+model PolicyClarification {
+  id String @id @default(uuid())
+  reservationId String @unique
+  reservation ModerationCaseReservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lobId String
+  lob Lob @relation(fields: [lobId], references: [id], onDelete: Restrict)
+  queueId String
+  queue ModerationQueue @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  versionId String
+  version PolicyVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  status String @db.VarChar(20)
+  supervisorId String?
+  revision Int @default(0)
+  createdAt DateTime @default(now())
+  messages ClarificationMessage[]
+  @@index([organizationId, status, createdAt])
+  @@index([lobId, queueId, createdAt])
+  @@map("policy_clarification")
+}
+
+model ClarificationMessage {
+  id String @id
+  clarificationId String
+  clarification PolicyClarification @relation(fields: [clarificationId], references: [id], onDelete: Restrict)
+  actorId String
+  actorType String @db.VarChar(32)
+  kind String @db.VarChar(24)
+  text String @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  @@index([clarificationId, createdAt, id])
+  @@map("clarification_message")
+}
+
+model QaPolicy {
+  id             String @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lobId          String?
+  lob            Lob? @relation(fields: [lobId], references: [id], onDelete: Restrict)
+  queueId        String?
+  queue          ModerationQueue? @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  scopeKey       String
+  activeKey      String? @unique
+  version        Int
+  rate           Int
+  enabled        Boolean
+  passScore      Int @default(100)
+  failScore      Int @default(0)
+  effectiveFrom  DateTime @default(now())
+  effectiveTo    DateTime?
+  createdBy      String
+  samples        QaSample[]
+
+  @@unique([scopeKey, version])
+  @@index([organizationId, effectiveFrom])
+  @@map("qa_policy")
+}
+
+model QaSample {
+  id             String @id @default(uuid())
+  decisionId     String @unique
+  decision       ModerationDecisionVersion @relation(fields: [decisionId], references: [id], onDelete: Restrict)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lobId          String
+  lob            Lob @relation(fields: [lobId], references: [id], onDelete: Restrict)
+  queueId        String
+  queue          ModerationQueue @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  moderatorId    String
+  moderator      Moderator @relation("QaOriginalModerator", fields: [moderatorId], references: [id], onDelete: Restrict)
+  policyId       String?
+  policy         QaPolicy? @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  completedAt    DateTime
+  evaluatedAt    DateTime @default(now())
+  sampledAt      DateTime?
+  draw           Int?
+  selection      String
+  status         String?
+  assignedTo     String?
+  assignee       Moderator? @relation("QaAssignee", fields: [assignedTo], references: [id], onDelete: Restrict)
+  activeReviewer String? @unique
+  assignedAt     DateTime?
+  startedAt      DateTime?
+  leaseUntil     DateTime?
+  assignmentVersion Int @default(0)
+  assessment     QaAssessment?
+  dispute        QaDispute?
+  correction     QaCorrection?
+
+  @@index([organizationId, completedAt])
+  @@index([organizationId, lobId, status, sampledAt])
+  @@index([queueId, completedAt])
+  @@index([moderatorId, completedAt])
+  @@index([organizationId, status, leaseUntil])
+  @@map("qa_sample")
+}
+
+model QaAssessment {
+  id              String @id @default(uuid())
+  sampleId        String @unique
+  sample          QaSample @relation(fields: [sampleId], references: [id], onDelete: Restrict)
+  auditorId       String
+  auditor         Moderator @relation(fields: [auditorId], references: [id], onDelete: Restrict)
+  originalOutcome String
+  originalScore   Int
+  finalOutcome    String?
+  finalScore      Int?
+  finalizedAt     DateTime?
+  category        String?
+  severity        String?
+  policyReference String? @db.VarChar(240)
+  notes           String? @db.VarChar(500)
+  proposedAction  String?
+  submittedAt     DateTime @default(now())
+  handlingSeconds Int
+  fingerprint     String @db.Char(64)
+
+  @@index([auditorId, submittedAt])
+  @@index([finalOutcome, finalizedAt])
+  @@map("qa_assessment")
+}
+
+model QaDispute {
+  id          String @id @default(uuid())
+  sampleId    String @unique
+  sample      QaSample @relation(fields: [sampleId], references: [id], onDelete: Restrict)
+  openedBy    String
+  reason      String @db.VarChar(500)
+  status      String
+  openedAt    DateTime @default(now())
+  resolvedBy  String?
+  resolution  String? @db.VarChar(500)
+  resolvedAt  DateTime?
+
+  @@index([status, openedAt])
+  @@map("qa_dispute")
+}
+
+model QaCorrection {
+  id                String @id @default(uuid())
+  sampleId          String @unique
+  sample            QaSample @relation(fields: [sampleId], references: [id], onDelete: Restrict)
+  requestedBy       String
+  action            String
+  reason            String @db.VarChar(500)
+  evidenceIds       Json
+  expectedRevision  Int
+  requestedAt       DateTime @default(now())
+  reviewerId        String?
+  startedAt         DateTime?
+  leaseUntil        DateTime?
+  approvedAt        DateTime?
+  handlingSeconds   Int?
+  publicationLabelId String?
+  resultDecisionId  String? @unique
+  resultDecision    ModerationDecisionVersion? @relation(fields: [resultDecisionId], references: [id], onDelete: Restrict)
+
+  @@index([approvedAt, requestedAt])
+  @@map("qa_correction")
+}
+
+model CaseHandlingRecord {
+  id                 String                     @id @default(uuid())
+  caseId             String
+  case               ModerationCase             @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  moderatorId        String
+  moderator          Moderator                  @relation(fields: [moderatorId], references: [id], onDelete: Restrict)
+  queueId            String
+  queue              ModerationQueue            @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  sessionId          String
+  session            ModerationWorkSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reservationId      String                     @unique
+  reservation        ModerationCaseReservation  @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  decisionVersionId  String?                    @unique
+  decisionVersion    ModerationDecisionVersion? @relation(fields: [decisionVersionId], references: [id], onDelete: SetNull)
+  startedAt          DateTime
+  submittedAt        DateTime
+  durationSeconds    Int
+  action             String
+  actionType         String?
+  isSubmitAndLeave   Boolean                    @default(false)
+  isRemoderation     Boolean                    @default(false)
+
+  @@index([moderatorId, submittedAt])
+  @@index([queueId, submittedAt])
+  @@index([submittedAt], map: "handling_report_submitted")
+  @@index([sessionId])
+  @@map("case_handling_record")
 }

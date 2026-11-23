@@ -6,13 +6,18 @@ import { env } from './env';
 
 const trustedOrigins = [
   ...(process.env.MODERATION_ORIGIN ? [new URL(process.env.MODERATION_ORIGIN).origin] : []),
-  env.BETTER_AUTH_URL,
-  'http://localhost:3000',
+  new URL(env.BETTER_AUTH_URL).origin,
+  ...(env.NODE_ENV === 'production' ? [] : ['http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://10.0.2.2:3000',
   'http://localhost:5173',
-  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5173']),
 ];
+
+const sessionCookie = {
+  useSecureCookies: env.NODE_ENV === 'production' || env.BETTER_AUTH_URL.startsWith('https:'),
+  ipAddress: { ipAddressHeaders: ['x-prakaro-client-ip'] },
+};
 
 // 1. Ordinary Mobile Users Auth (/api/auth)
 export const auth = betterAuth({
@@ -27,6 +32,7 @@ export const auth = betterAuth({
     enabled: true,
   },
   advanced: {
+    ...sessionCookie,
     cookiePrefix: 'prakaro_user',
   },
   plugins: [bearer()],
@@ -58,6 +64,7 @@ export const moderatorAuth = betterAuth({
     disableSignUp: true, // Disallow public self-registration
   },
   advanced: {
+    ...sessionCookie,
     cookiePrefix: 'prakaro_moderator',
   },
   plugins: [bearer()],
@@ -89,6 +96,7 @@ export const superAdminAuth = betterAuth({
     disableSignUp: true, // Disallow public self-registration
   },
   advanced: {
+    ...sessionCookie,
     cookiePrefix: 'prakaro_super_admin',
   },
   plugins: [bearer()],

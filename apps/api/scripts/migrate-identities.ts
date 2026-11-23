@@ -1,16 +1,26 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
+import { Prisma, type Account, type User } from '@prisma/client';
 import { prisma } from '../src/common/database/prisma';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+type LegacyStaff = { userId: string; active: boolean; role: string };
+type LegacyColumn = { Field: string };
+type LegacyCount = { cnt: bigint };
+
+function hasSqlCode(error: unknown, code: string) {
+  return error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2010' && String(error.meta?.code) === code;
+}
 
 async function runMigration() {
   try {
     console.log('--- PHASE 4: IDENTITY ARCHITECTURE MIGRATION ---');
 
     // 1. Check existing tables
-    const existingTables = (await prisma.$queryRawUnsafe<any[]>('SHOW TABLES')) || [];
-    const tableNames = existingTables.map((t) => Object.values(t)[0] as string);
+    const existingTables = await prisma.$queryRawUnsafe<Record<string, string>[]>('SHOW TABLES');
+    const tableNames = existingTables.flatMap((table) => Object.values(table));
     console.log('Current tables:', tableNames.join(', '));
 
     const userTableName = tableNames.includes('users') ? 'users' : 'user';
@@ -164,7 +174,7 @@ async function runMigration() {
     `);
 
     // 4. Add status to user table if missing
-    const userCols = (await prisma.$queryRawUnsafe<any[]>(`SHOW COLUMNS FROM \`${userTableName}\``)) || [];
+    const userCols = await prisma.$queryRawUnsafe<LegacyColumn[]>(`SHOW COLUMNS FROM \`${userTableName}\``);
     const userColNames = userCols.map((c) => c.Field);
     if (!userColNames.includes('status')) {
       console.log(`Adding status column to ${userTableName}...`);
@@ -172,7 +182,7 @@ async function runMigration() {
     }
 
     // 5. Add actor columns to moderation_audit if missing
-    const auditCols = (await prisma.$queryRawUnsafe<any[]>('SHOW COLUMNS FROM `moderation_audit`')) || [];
+    const auditCols = await prisma.$queryRawUnsafe<LegacyColumn[]>('SHOW COLUMNS FROM `moderation_audit`');
     const auditColNames = auditCols.map((c) => c.Field);
     if (!auditColNames.includes('actorType')) {
       console.log('Adding actorType, actorId, actorSnapshot to moderation_audit...');
@@ -188,7 +198,7 @@ async function runMigration() {
     // 6. Migrate existing moderation staff
     if (tableNames.includes('moderation_staff')) {
       console.log('Migrating staff records from moderation_staff...');
-      const staffRows = (await prisma.$queryRawUnsafe<any[]>('SELECT * FROM `moderation_staff`')) || [];
+      const staffRows = await prisma.$queryRawUnsafe<LegacyStaff[]>('SELECT * FROM `moderation_staff`');
       console.log(`Found ${staffRows.length} staff records to migrate.`);
 
       const migratedUserIds: string[] = [];
@@ -196,14 +206,14 @@ async function runMigration() {
       for (const staff of staffRows) {
         migratedUserIds.push(staff.userId);
 
-        const users = (await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM \`${userTableName}\` WHERE \`id\` = ?`, staff.userId)) || [];
+        const users = await prisma.$queryRawUnsafe<User[]>(`SELECT * FROM \`${userTableName}\` WHERE \`id\` = ?`, staff.userId);
         const user = users[0];
         if (!user) {
           console.warn(`User ${staff.userId} for staff role ${staff.role} not found in ${userTableName}`);
           continue;
         }
 
-        const accounts = (await prisma.$queryRawUnsafe<any[]>('SELECT * FROM `account` WHERE `userId` = ?', staff.userId)) || [];
+        const accounts = await prisma.$queryRawUnsafe<Account[]>('SELECT * FROM `account` WHERE `userId` = ?', staff.userId);
 
         if (staff.role === 'SUPER_ADMIN') {
           console.log(`Migrating super admin: ${user.email} (${user.id})`);
@@ -292,13 +302,14 @@ async function runMigration() {
 
       // 7. Update moderation_membership foreign key and column
       console.log('Updating moderation_membership...');
-      const membershipCols = (await prisma.$queryRawUnsafe<any[]>('SHOW COLUMNS FROM `moderation_membership`')) || [];
+      const membershipCols = await prisma.$queryRawUnsafe<LegacyColumn[]>('SHOW COLUMNS FROM `moderation_membership`');
       const membershipColNames = membershipCols.map((c) => c.Field);
 
       // Drop old foreign keys on moderation_membership
       try {
         await prisma.$executeRawUnsafe('ALTER TABLE `moderation_membership` DROP FOREIGN KEY `moderation_membership_userId_fkey`');
-      } catch (e: any) {
+      } catch (error) {
+        if (!hasSqlCode(error, '1091')) throw error;
         console.log('Foreign key moderation_membership_userId_fkey already dropped or not present');
       }
 
@@ -313,7 +324,8 @@ async function runMigration() {
           ADD CONSTRAINT \`moderation_membership_moderatorId_fkey\`
           FOREIGN KEY (\`moderatorId\`) REFERENCES \`moderators\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
         `);
-      } catch (e: any) {
+      } catch (error) {
+        if (!hasSqlCode(error, '1826')) throw error;
         console.log('Foreign key moderation_membership_moderatorId_fkey already present');
       }
 
@@ -329,7 +341,8 @@ async function runMigration() {
           ADD CONSTRAINT \`moderation_case_owner_fkey\`
           FOREIGN KEY (\`owner\`) REFERENCES \`moderators\`(\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
         `);
-      } catch (e: any) {
+      } catch (error) {
+        if (!hasSqlCode(error, '1826')) throw error;
         console.log('Foreign key moderation_case_owner_fkey already present');
       }
 
@@ -341,7 +354,8 @@ async function runMigration() {
           ADD CONSTRAINT \`moderation_submission_reviewerId_fkey\`
           FOREIGN KEY (\`reviewerId\`) REFERENCES \`moderators\`(\`id\`) ON DELETE RESTRICT ON UPDATE CASCADE
         `);
-      } catch (e: any) {
+      } catch (error) {
+        if (!hasSqlCode(error, '1826')) throw error;
         console.log('Foreign key moderation_submission_reviewerId_fkey already present');
       }
 
@@ -354,7 +368,9 @@ async function runMigration() {
         }
         try {
           await prisma.$executeRawUnsafe('ALTER TABLE `moderation_staff` DROP FOREIGN KEY `moderation_staff_userId_fkey`');
-        } catch (e: any) {}
+        } catch (error) {
+          if (!hasSqlCode(error, '1091')) throw error;
+        }
         await prisma.$executeRawUnsafe('DROP TABLE IF EXISTS `moderation_staff`');
         for (const uid of migratedUserIds) {
           await prisma.$executeRawUnsafe(`DELETE FROM \`${userTableName}\` WHERE \`id\` = ?`, uid);
@@ -371,9 +387,9 @@ async function runMigration() {
     console.log('--- MIGRATION COMPLETED SUCCESSFULLY ---');
 
     // 12. Validation checks
-    const userCount = await prisma.$queryRawUnsafe<any[]>('SELECT COUNT(*) as cnt FROM `users`');
-    const superAdminCount = await prisma.$queryRawUnsafe<any[]>('SELECT COUNT(*) as cnt FROM `super_admins`');
-    const moderatorCount = await prisma.$queryRawUnsafe<any[]>('SELECT COUNT(*) as cnt FROM `moderators`');
+    const userCount = await prisma.$queryRawUnsafe<LegacyCount[]>('SELECT COUNT(*) as cnt FROM `users`');
+    const superAdminCount = await prisma.$queryRawUnsafe<LegacyCount[]>('SELECT COUNT(*) as cnt FROM `super_admins`');
+    const moderatorCount = await prisma.$queryRawUnsafe<LegacyCount[]>('SELECT COUNT(*) as cnt FROM `moderators`');
 
     console.log('Final Database Counts:');
     console.log(`- Ordinary Users: ${userCount[0].cnt}`);

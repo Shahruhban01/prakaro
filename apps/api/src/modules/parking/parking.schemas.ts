@@ -22,8 +22,8 @@ function createCoordinateSchema(name: string, min: number, max: number) {
     },
     z
       .number({
-        required_error: `${name} is required.`,
-        invalid_type_error: `${name} must be a valid number.`,
+        error: (issue) => issue.input === undefined ? `${name} is required.` :
+          typeof issue.input === 'number' ? `${name} must be a finite number.` : `${name} must be a valid number.`,
       })
       .refine((n) => Number.isFinite(n), {
         message: `${name} must be a finite number.`,
@@ -55,7 +55,7 @@ function createRadiusSchema() {
     },
     z
       .number({
-        invalid_type_error: 'Radius must be a valid number.',
+        error: (issue) => typeof issue.input === 'number' ? 'Radius must be a finite number.' : 'Radius must be a valid number.',
       })
       .refine((n) => Number.isFinite(n), {
         message: 'Radius must be a finite number.',
@@ -82,7 +82,7 @@ function createBooleanSchema(defaultValue: boolean) {
       return 'INVALID_BOOLEAN';
     }
     return val;
-  }, z.boolean({ invalid_type_error: 'Value must be a boolean (true or false).' }).default(defaultValue));
+  }, z.boolean({ error: 'Value must be a boolean (true or false).' }).default(defaultValue));
 }
 
 export const nearbyParkingQuerySchema = z.object({
@@ -91,18 +91,18 @@ export const nearbyParkingQuerySchema = z.object({
   radius: createRadiusSchema(),
   pricing: z
     .enum(['all', 'free', 'paid'], {
-      errorMap: () => ({ message: "Pricing filter must be one of: 'all', 'free', 'paid'." }),
+      error: "Pricing filter must be one of: 'all', 'free', 'paid'.",
     })
     .default('all'),
   openNow: createBooleanSchema(false),
   access: z
     .enum(['all', 'public'], {
-      errorMap: () => ({ message: "Access filter must be one of: 'all', 'public'." }),
+      error: "Access filter must be one of: 'all', 'public'.",
     })
     .default('all'),
   sort: z
     .enum(['distance'], {
-      errorMap: () => ({ message: "Sort option must be 'distance'." }),
+      error: "Sort option must be 'distance'.",
     })
     .optional(),
   mode: discoveryMode.optional(),
@@ -112,7 +112,7 @@ export type NearbyParkingQueryInput = z.infer<typeof nearbyParkingQuerySchema>;
 
 export const facilityIdParamSchema = z.object({
   id: z
-    .string({ required_error: 'Facility ID is required.' })
+    .string({ error: (issue) => issue.input === undefined ? 'Facility ID is required.' : undefined })
     .trim()
     .min(1, 'Facility ID cannot be empty.'),
 });

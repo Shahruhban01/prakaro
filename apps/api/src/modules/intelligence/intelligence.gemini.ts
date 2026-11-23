@@ -1,4 +1,5 @@
 import { GoogleGenAI, type HttpOptions } from '@google/genai';
+import { z } from 'zod';
 import { aiInputSchema, responseJsonSchema } from './intelligence.schemas';
 
 export const PROMPT_VERSION = 'parking-verification-v1';
@@ -101,15 +102,15 @@ export class OpenRouterParkingProvider implements GeminiProvider {
       signal,
     });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`OpenRouter API error ${res.status}: ${errText}`);
-    }
+    if (!res.ok) throw new Error(`OpenRouter API error ${res.status}`);
 
-    const json = (await res.json()) as any;
+    const json = z.object({
+      choices: z.array(z.object({ message: z.object({ content: z.string().nullish() }).optional() })).optional(),
+      usage: z.object({ prompt_tokens: z.number().optional(), completion_tokens: z.number().optional() }).optional(),
+    }).parse(await res.json());
     const choice = json.choices?.[0];
     return {
-      text: choice?.message?.content,
+      text: choice?.message?.content ?? undefined,
       inputTokens: json.usage?.prompt_tokens,
       outputTokens: json.usage?.completion_tokens,
       providerUsed: `openrouter:${this.model}`,
@@ -138,13 +139,16 @@ export class MultiProviderParkingProvider implements GeminiProvider {
 
 export async function discoverGeminiModels(apiKey: string): Promise<string[]> {
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+      headers: { 'x-goog-api-key': apiKey }, signal: AbortSignal.timeout(5000),
+    });
     if (!res.ok) return [];
-    const data = (await res.json()) as any;
-    if (!data.models || !Array.isArray(data.models)) return [];
-    return data.models
-      .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-      .map((m: any) => m.name.replace('models/', ''));
+    const data = z.object({ models: z.array(z.object({
+      name: z.string(), supportedGenerationMethods: z.array(z.string()).optional(),
+    })).optional() }).parse(await res.json());
+    return (data.models ?? [])
+      .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
+      .map((model) => model.name.replace('models/', ''));
   } catch {
     return [];
   }
@@ -155,25 +159,31 @@ export async function smokeTestGeminiModel(
   model: string,
 ): Promise<{ ok: boolean; message: string; text?: string }> {
   try {
+    if (!/^[a-z0-9][a-z0-9.-]{0,99}$/.test(model)) return { ok: false, message: 'Invalid model identifier.' };
     const body = {
       contents: [{ parts: [{ text: 'Respond with valid JSON: {"status": "ok", "facilityClassification": "LIKELY_PARKING"}' }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     };
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
     });
-    const data = (await res.json()) as any;
-    if (data.candidates && data.candidates[0]) {
+    if (!res.ok) return { ok: false, message: `Gemini API returned HTTP ${res.status}.` };
+    const data = z.object({ candidates: z.array(z.object({
+      content: z.object({ parts: z.array(z.object({ text: z.string().optional() })) }).optional(),
+    })).optional() }).parse(await res.json());
+    const text = data.candidates?.[0]?.content?.parts.find((part) => part.text?.trim())?.text?.trim();
+    if (text) {
       return {
         ok: true,
         message: 'Synthetic generation smoke test passed successfully.',
-        text: data.candidates[0].content.parts[0].text.trim(),
+        text,
       };
     }
-    return { ok: false, message: data.error?.message || 'Model did not return candidates' };
-  } catch (err: any) {
-    return { ok: false, message: err.message || 'Network error during smoke test' };
+    return { ok: false, message: 'Model did not return candidate text.' };
+  } catch {
+    return { ok: false, message: 'Gemini request failed or returned an invalid response.' };
   }
 }

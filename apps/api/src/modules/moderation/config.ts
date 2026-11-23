@@ -1,6 +1,6 @@
 import { z } from 'zod';
 export const roles = z.enum(['SUPER_ADMIN','ADMIN','MODERATION_ADMIN','MODERATION_MANAGER','SUPERVISOR','QA_REVIEWER','MODERATOR','VIEWER']);
-export const fields = z.enum(['category','source','status','access','pricing','evidence','ai','demand','priority','region','classification']);
+export const fields = z.enum(['category','reportCategory','source','status','access','pricing','evidence','ai','demand','priority','region','classification']);
 type Clause = { field: z.infer<typeof fields>; value: string } | { op: 'AND'|'OR'; children: Clause[] };
 function clause(depth:number): z.ZodType<Clause> {
   const leaf = z.object({ field:fields, value:z.string().min(1).max(80) }).strict();
@@ -13,7 +13,7 @@ export function matches(rule:Clause, facts:Record<string,string|number>):boolean
 }
 export const question = z.object({ key:z.string().regex(/^[a-z][a-z0-9_]{0,39}$/), label:z.string().min(1).max(120), type:z.enum(['SELECT','MULTI','BOOLEAN','TEXT','NUMBER','DATE','EVIDENCE','REASON','NOTES']), required:z.boolean(), options:z.array(z.string().min(1).max(80)).max(24).default([]), when:z.object({key:z.string(),equals:z.string()}).strict().optional() }).strict();
 export const configSchema=z.object({
- rule:ruleSchema, columns:z.array(z.enum(['code','category','priority','status','owner','createdAt','trigger'])).min(1).max(7),
+ reviewPolicy:z.string().max(5000).optional(), rule:ruleSchema, columns:z.array(z.enum(['code','category','priority','status','owner','createdAt','trigger'])).min(1).max(7),
  form:z.array(question).max(24), slaHours:z.number().int().min(1).max(8760), qaPercent:z.number().int().min(0).max(100)
 }).strict().superRefine(({form},ctx)=>{const seen=new Set<string>(); for(const q of form){if(seen.has(q.key)||(q.when&&!seen.has(q.when.key))||(['SELECT','MULTI'].includes(q.type)&&!q.options.length))ctx.addIssue({code:'custom',message:'Invalid question, choices or dependency'});seen.add(q.key)}});
 export const queueInput=z.object({name:z.string().trim().min(1).max(100),description:z.string().max(500).default(''),kind:z.enum(['GENERAL','AI','ACCESS','REPORT','REVERIFY','ESCALATION','QA']),priority:z.number().int().min(0).max(100),capacity:z.number().int().min(1).max(10000),config:configSchema}).strict();
@@ -26,6 +26,7 @@ export function validateAnswers(form:z.infer<typeof question>[], answers:Record<
  case 'EVIDENCE':if(typeof a!=='string'||!evidenceIds.includes(a))return false;break;
  case 'BOOLEAN':if(!['YES','NO','UNKNOWN'].includes(String(a)))return false;break;
  case 'SELECT':if(!q.options.includes(String(a)))return false;break;
+ case 'REASON':if(typeof a!=='string'||a.length>1000||(q.options.length&&!q.options.includes(a)))return false;break;
  default:if(typeof a!=='string'||a.length>1000)return false;
  }}return Object.keys(answers).every(k=>permitted.has(k));
 }

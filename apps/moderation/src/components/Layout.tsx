@@ -1,204 +1,237 @@
-import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
+  Activity,
+  Bell,
+  Building2,
+  ClipboardList,
+  Layers3,
   LayoutDashboard,
-  Layers,
-  FileCheck2,
-  ListTodo,
-  ShieldCheck,
-  AlertTriangle,
-  Users,
-  BarChart3,
-  Sparkles,
-  ShieldAlert,
-  History,
-  LogOut,
-  ParkingCircle,
   Menu,
+  ParkingCircle,
+  ShieldCheck,
+  UsersRound,
+  Workflow,
   X,
-} from 'lucide-react';
-import type { Actor } from '../api';
-import { useData, api } from '../api';
-import axios from 'axios';
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
+import { api, useData, type Actor } from "../api";
+import { useAttendanceControl } from "../attendanceApi";
+import { GlobalAuxControl } from "./GlobalAuxControl";
 
-export const Layout: React.FC = () => {
-  const { data: session, isLoading, isError } = useData<Actor>('/session');
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+export function Layout() {
+  const session = useData<Actor>("/session");
+  const attendance=useAttendanceControl(session.data);
+  const [logoutError,setLogoutError]=useState<string>();
+  const [signingOut,setSigningOut]=useState(false);
+  const [sidebar, setSidebar] = useState(false);
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      await Promise.allSettled([
-        axios.post('/api/moderator-auth/sign-out', {}, { headers: { 'X-Prakaro-Console': '1' }, withCredentials: true }),
-        axios.post('/api/super-admin-auth/sign-out', {}, { headers: { 'X-Prakaro-Console': '1' }, withCredentials: true }),
-        axios.post('/api/auth/sign-out', {}, { headers: { 'X-Prakaro-Console': '1' }, withCredentials: true }),
-      ]);
-    } catch {
-      // ignore
-    }
-    sessionStorage.removeItem('prakaro_auth_token');
-    delete api.defaults.headers.common['Authorization'];
-    navigate('/login');
-  };
-
-  if (isLoading) {
+  const sessionDenied = session.isError && axios.isAxiosError(session.error) &&
+    [401, 403].includes(session.error.response?.status ?? 0);
+  const needsLogin = attendance.expired || sessionDenied;
+  useEffect(() => {
+    if (!needsLogin) return;
+    sessionStorage.removeItem("prakaro_auth_token");
+    delete api.defaults.headers.common.Authorization;
+    queryClient.clear();
+    navigate("/login", { replace: true });
+  }, [needsLogin, navigate, queryClient]);
+  async function logout() {
+    if(signingOut)return;
+    setSigningOut(true);
+    setLogoutError(undefined);
+    try{
+      const domain=session.data?.superAdmin?'super-admin-auth':'moderator-auth';
+      await axios.post('/api/'+domain+'/sign-out',{},{headers:{'X-Prakaro-Console':'1'},timeout:5000});
+    }catch(error){
+      if(!axios.isAxiosError(error)||error.response?.status!==401){
+        setLogoutError(axios.isAxiosError(error)?error.response?.data?.error?.message??'Sign-out failed. Try again.':'Sign-out failed. Try again.');
+        return;
+      }
+    }finally{setSigningOut(false);}
+    sessionStorage.removeItem("prakaro_auth_token");
+    delete api.defaults.headers.common.Authorization;
+    queryClient.clear();
+    navigate("/login", { replace: true });
+  }
+  if (needsLogin) return <main className="workspace-loading" role="status">Session ended. Returning to sign-in…</main>;
+  if (session.isLoading)
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-slate-500">Loading moderation workspace...</p>
-        </div>
-      </div>
+      <main className="workspace-loading" role="status">
+        Loading workspace…
+      </main>
     );
-  }
-
-  if (isError || !session) {
-    navigate('/login');
-    return null;
-  }
-
-  const isSuperAdmin = session.superAdmin === true || session.role === 'SUPER_ADMIN';
-  const isModAdmin = session.admin || isSuperAdmin;
-  const isQA = session.role === 'QA_REVIEWER' || isModAdmin;
-  const isSupervisor =
-    session.role === 'SUPERVISOR' || session.role === 'MODERATION_MANAGER' || isModAdmin;
-  const isReviewer = [
-    'MODERATOR',
-    'SUPERVISOR',
-    'MODERATION_MANAGER',
-    'QA_REVIEWER',
-    'ADMIN',
-    'MODERATION_ADMIN',
-    'SUPER_ADMIN',
-  ].includes(session.role);
-
-  const navItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/queues', label: 'Queues', icon: Layers },
-    ...(isReviewer ? [{ to: '/cases', label: 'Cases', icon: FileCheck2 }] : []),
-    ...(isReviewer ? [{ to: '/my-tasks', label: 'My Tasks', icon: ListTodo }] : []),
-    ...(isQA ? [{ to: '/qa', label: 'Quality Assurance', icon: ShieldCheck }] : []),
-    ...(isSupervisor ? [{ to: '/escalations', label: 'Escalations', icon: AlertTriangle }] : []),
-    ...(isModAdmin ? [{ to: '/moderators', label: 'Moderators', icon: Users }] : []),
-    ...(isModAdmin ? [{ to: '/analytics', label: 'Analytics', icon: BarChart3 }] : []),
-    ...(isSuperAdmin ? [{ to: '/settings/ai', label: 'AI Providers', icon: Sparkles }] : []),
-    ...(isModAdmin ? [{ to: '/settings/permissions', label: 'Permissions', icon: ShieldAlert }] : []),
-    ...(isSuperAdmin ? [{ to: '/audit-log', label: 'Audit Trail', icon: History }] : []),
+  const actor = session.data;
+  if (!actor)
+    return (
+      <main className="workspace-loading">
+        <p>Workspace unavailable.</p>
+        <button onClick={() => session.refetch()}>Retry</button>
+      </main>
+    );
+  const director = ["ADMIN", "MODERATION_ADMIN"].includes(actor.role);
+  const leader = [
+    "MANAGER",
+    "MODERATION_MANAGER",
+    "SUPERVISOR",
+    "MOD_SUPERVISOR",
+    "QA_SUPERVISOR",
+  ].includes(actor.role);
+  const groups = [
+    {
+      label: "Overview",
+      items: [
+        {
+          to: "/dashboard",
+          label: actor.superAdmin ? "Global dashboard" : "Dashboard",
+          icon: LayoutDashboard,
+        },
+        ...(!actor.superAdmin?[{to:"/my-attendance",label:"My attendance",icon:Activity}]:[]),
+        ...(actor.superAdmin||director||leader?[{to:"/workforce/aux",label:"Workforce AUX",icon:UsersRound}]:[]),
+        { to: "/operations/schedule", label: "Workforce schedule", icon: UsersRound },
+        ...(actor.superAdmin || director || leader ? [{ to: "/operations/overview", label: "Executive operations", icon: LayoutDashboard }] : []),
+        { to: actor.superAdmin || director || leader ? "/analytics" : "/analytics/my-performance",
+          label: actor.superAdmin || director || leader ? "Performance" : "My performance", icon: Activity },
+      ],
+    },
+    {
+      label: "Organization",
+      items: [
+        ...(actor.superAdmin || director
+          ? [{ to: "/organizations", label: "Organizations", icon: Building2 }]
+          : []),
+        ...(actor.superAdmin || director || leader
+          ? [
+              { to: "/lobs", label: "Lines of business", icon: Layers3 },
+              {
+                to: "/staff",
+                label: leader ? "Team members" : "Employees",
+                icon: UsersRound,
+              },
+              {
+                to: "/teams",
+                label: leader ? "My teams" : "Teams",
+                icon: Workflow,
+              },
+            ]
+          : []),
+      ],
+    },
+    {
+      label: "Operations",
+      items: [
+        ...(actor.role === "MODERATOR"
+          ? [{to:"/my-queues",label:"My Subscribed Queues",icon:ClipboardList},{to:"/available-queues",label:"Available Queues",icon:Layers3}]
+          : [{to:"/queues",label:"Queues",icon:Layers3}]),
+        { to: "/qa", label: "Quality", icon: ShieldCheck },
+        { to: "/policies", label: "Policies", icon: ClipboardList },
+        { to: "/clarifications", label: "Clarifications", icon: Workflow },
+        ...(actor.superAdmin || leader
+          ? [
+              { to: "/escalations", label: "Escalations", icon: Workflow },
+            ]
+          : []),
+      ],
+    },
+    {
+      label: "Platform",
+      items: actor.superAdmin
+        ? [
+            { to: "/settings/ai", label: "AI providers", icon: Activity },
+            {
+              to: "/settings/permissions",
+              label: "Permissions",
+              icon: ShieldCheck,
+            },
+            { to: "/audit-log", label: "Audit log", icon: ClipboardList },
+          ]
+        : [],
+    },
   ];
-
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-slate-900/40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+    <div className="workforce-shell">
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform md:static md:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        id="workforce-sidebar"
+        className={
+          sidebar ? "workforce-sidebar sidebar-open" : "workforce-sidebar"
+        }
       >
-        {/* Brand header */}
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
-              <ParkingCircle className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-sm font-bold tracking-tight text-slate-900 block leading-tight">
-                Prakaro
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 block">
-                Trust & Safety
-              </span>
-            </div>
+        <div className="workspace-brand">
+          <ParkingCircle size={27} />
+          <div>
+            <strong>Prakaro</strong>
+            <small>Moderation operations</small>
           </div>
           <button
-            type="button"
-            className="md:hidden text-slate-500 hover:text-slate-800"
-            onClick={() => setSidebarOpen(false)}
+            className="mobile-menu"
+            aria-label="Close navigation"
+            onClick={() => setSidebar(false)}
           >
-            <X className="h-5 w-5" />
+            <X size={18} />
           </button>
         </div>
-
-        {/* Navigation items */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`
-                }
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        {/* User footer */}
-        <div className="border-t border-slate-200 p-3.5 bg-slate-50/50">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0 pr-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-slate-900 truncate">Staff Member</span>
-                <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold uppercase text-blue-700">
-                  {session.role}
-                </span>
+        <nav aria-label="Workspace navigation">
+          {groups
+            .filter((group) => group.items.length)
+            .map((group) => (
+              <div key={group.label} className="nav-group">
+                <span>{group.label}</span>
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <NavLink key={to} to={to} onClick={() => setSidebar(false)}>
+                    <Icon size={16} />
+                    {label}
+                  </NavLink>
+                ))}
               </div>
-              <p className="text-[11px] text-slate-500 truncate font-mono">{session.userId}</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-              title="Sign Out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+            ))}
+        </nav>
       </aside>
-
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar for mobile and alerts */}
-        <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
-          <button
-            type="button"
-            className="md:hidden p-1 text-slate-600"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-medium text-slate-600">Operations Console Live</span>
+      <div className="workspace-body">
+        <header className="workspace-header">
+          <div className="header-context">
+            <button
+              aria-label="Open navigation"
+              aria-expanded={sidebar}
+              aria-controls="workforce-sidebar"
+              className="mobile-menu"
+              onClick={() => setSidebar(!sidebar)}
+            >
+              <Menu size={19} />
+            </button>
+            <span>{actor.organization ?? "Platform"}</span>
+            {actor.lob && <small>{actor.lob}</small>}
           </div>
-          <div className="text-xs font-mono text-slate-500">
-            Node: Fastify | DB: MySQL | Auth: Better Auth
+          <div className="header-actions">
+            <GlobalAuxControl state={attendance.state} onPunch={attendance.punch} />
+            <details>
+              <summary aria-label="Notifications">
+                <Bell size={17} />
+              </summary>
+              <div className="header-popover">
+                Notifications are unavailable.
+              </div>
+            </details>
+            <details>
+              <summary aria-label="Account menu">
+                <span className="avatar">
+                  {(actor.name ?? actor.role).slice(0, 2).toUpperCase()}
+                </span>
+              </summary>
+              <div className="header-popover">
+                <strong>{actor.name}</strong>
+                <p>{actor.role.replaceAll("_", " ")}</p>
+                <button disabled={signingOut} onClick={logout}>{signingOut?"Signing out…":"Sign out"}</button>
+                {logoutError&&<p role="alert">{logoutError}</p>}
+              </div>
+            </details>
           </div>
         </header>
-
-        {/* Content View */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
-          <Outlet />
+        <main className="workspace-main">
+          <Outlet context={attendance.snapshot} />
         </main>
       </div>
     </div>
   );
-};
+}

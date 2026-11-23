@@ -266,7 +266,7 @@ class ParkingMapState {
     final useIndependentFilters = verificationAvailable && discoverySettings.filteringEnabled;
     final filtered = locations.where((loc) {
       final verification = loc.verification;
-      if (mode == ParkingDiscoveryMode.verifiedOnly && verification?.isApproved != true) {
+      if (mode == ParkingDiscoveryMode.verifiedOnly && verification?.isVerified != true) {
         return false;
       }
       final independentPrice = useIndependentFilters ? verification?.pricing : null;

@@ -1,0 +1,7 @@
+# Phase 9 workforce and attendance
+
+The existing directory remains the identity source. Employee work-status links open the scoped live workforce page. The live page displays organization and LOB scope, team membership, active employee status, current shift, subscriptions, current queue, reservation, AUX elapsed seconds and heartbeat. It uses the existing server thresholds and refreshes every twenty seconds. A disconnected client may still have an open attendance session.
+
+Attendance reporting matches recorded organization and LOB at the time of the shift. It intersects actual attendance with the scheduled occurrence and unions overlapping sessions. Open sessions stop at the observed time, auth expiry or the existing inactivity cutoff. An employee without recorded attendance is absent only after the full attendance window and grace period. Before the shift is due the status is Not started. Unresolved attendance is Unknown. Approved exceptions appear as Excused and week-offs as Off.
+
+Coverage displays scheduled, attended, missed, late and early counts. Hours reflect overlap with the reporting window. Schedule adherence divides recorded attended seconds by scheduled seconds in measured shifts. Unknown, future, excused and week-off rows are outside the denominator. AUX uses the Phase 6 first-started-interval ownership logic. Utilization divides Moderating by recorded AUX excluding Offline. Case AHT is persisted handling seconds divided by eligible completions.

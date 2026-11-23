@@ -12,13 +12,11 @@ import type { ParkingFacility } from '../parking/parking.types';
 export type Tx = Prisma.TransactionClient;
 
 export async function increment(tx: Tx, key: string, expiresAt?: Date) {
-  return (
-    await tx.moderationCounter.upsert({
-      where: { key },
-      create: { key, count: 1, expiresAt },
-      update: { count: { increment: 1 } },
-    })
-  ).count;
+  await tx.$executeRaw`INSERT INTO moderation_counter (\`key\`, count, expiresAt)
+    VALUES (${key}, 1, ${expiresAt ?? null})
+    ON DUPLICATE KEY UPDATE count = count + 1`;
+  return (await tx.moderationCounter.findUniqueOrThrow({ where: { key }, select: { count: true } }))
+    .count;
 }
 
 export async function audit(
@@ -60,17 +58,31 @@ export async function route(
   if (existing) return existing;
 
   const queues = await tx.moderationQueue.findMany({
-    where: { status: 'ACTIVE' },
+    where: {
+      status: 'ACTIVE',
+      OR: [
+        { organizationId: { not: null }, organization: { active: true }, intakeEnabled: true },
+        { organizationId: null },
+      ],
+    },
     orderBy: [{ priority: 'desc' }, { id: 'asc' }],
     take: 100,
   });
 
   const eligible = [];
-  for (const q of queues) {
+  for (const q of [
+    ...queues.filter((q) => q.organizationId),
+    ...queues.filter((q) => !q.organizationId),
+  ]) {
     const conf = configSchema.parse(q.config);
     if (!matches(conf.rule, { ...facts, category, source: trigger, status: 'QUEUED' })) continue;
-    const count = await tx.moderationTask.count({ where: { queueId: q.id, case: { activeKey: { not: null } } } });
-    if (count < q.capacity) eligible.push({ q, conf });
+    const count = await tx.moderationTask.count({
+      where: { queueId: q.id, case: { activeKey: { not: null } } },
+    });
+    if (count < q.capacity) {
+      eligible.push({ q, conf });
+      break;
+    }
   }
 
   if (!eligible.length) return;
@@ -103,7 +115,15 @@ export async function route(
     },
   });
 
-  await audit(tx, 'system', 'CASE_ROUTED', record.id, { event, queues: eligible.map(({ q }) => ({ id: q.id, version: q.version })) }, undefined, 'SYSTEM');
+  await audit(
+    tx,
+    'system',
+    'CASE_ROUTED',
+    record.id,
+    { event, queues: eligible.map(({ q }) => ({ id: q.id, version: q.version })) },
+    undefined,
+    'SYSTEM',
+  );
   return record;
 }
 
@@ -147,7 +167,7 @@ export async function admit(userId: string, eventId: string, items: ParkingFacil
               openingStatus: item.openingStatus,
               hourlyRate: item.hourlyRate,
               currency: item.currency,
-              parkingOptions: item.parkingOptions,
+              parkingOptions: { ...item.parkingOptions },
             },
           },
           update: {
@@ -161,7 +181,7 @@ export async function admit(userId: string, eventId: string, items: ParkingFacil
               openingStatus: item.openingStatus,
               hourlyRate: item.hourlyRate,
               currency: item.currency,
-              parkingOptions: item.parkingOptions,
+              parkingOptions: { ...item.parkingOptions },
             },
           },
         });
@@ -173,7 +193,8 @@ export async function admit(userId: string, eventId: string, items: ParkingFacil
           update: { demand: { increment: 1 } },
         });
 
-        if (created >= 2 || item.verification?.facilityStatus === 'INDEPENDENTLY_VERIFIED') continue;
+        if (created >= 2 || item.verification?.facilityStatus === 'INDEPENDENTLY_VERIFIED')
+          continue;
 
         const active = await tx.moderationCase.findUnique({
           where: { activeKey: facility.id + ':NEW_FACILITY_VERIFICATION' },
@@ -206,7 +227,12 @@ export async function admit(userId: string, eventId: string, items: ParkingFacil
 
 let pending = 0;
 export function observeSearch(req: FastifyRequest, items: ParkingFacility[]) {
-  if (process.env.MODERATION_INTAKE_ENABLED !== 'true' || env.NODE_ENV === 'test' || pending >= 4 || !items.length)
+  if (
+    process.env.MODERATION_INTAKE_ENABLED !== 'true' ||
+    env.NODE_ENV === 'test' ||
+    pending >= 4 ||
+    !items.length
+  )
     return;
   const id = z.string().uuid().safeParse(req.headers['x-prakaro-search']);
   if (!id.success || !req.headers.authorization) return;
