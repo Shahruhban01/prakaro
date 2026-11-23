@@ -482,26 +482,69 @@ export function registerQueueOperations(app: FastifyInstance, resolve: typeof st
   });
   app.get('/queues/:id/cases/:caseId', async (req) => {
     const actor = await resolve(req),
-      params = z.object({ id: UUID, caseId: UUID }).parse(req.params);
+      params = z.object({ id: UUID, caseId: z.string().min(1) }).parse(req.params);
     return prisma.$transaction(async (tx) => {
       const queue = await accessibleQueue(tx, actor, params.id);
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.caseId);
       const item = await tx.moderationCase.findFirst({
-        where: { id: params.caseId, tasks: { some: { queueId: queue.id } } },
+        where: {
+          ...(isUuid ? { id: params.caseId } : { code: params.caseId }),
+          tasks: { some: { queueId: queue.id } },
+        },
         select: {
           ...caseFields,
           facilityId: true,
           metadata: true,
-          tasks: { where: { queueId: queue.id }, select: { queueVersion: true, form: true } },
+          tasks: {
+            where: { queueId: queue.id },
+            select: {
+              queueId: true,
+              queueVersion: true,
+              form: true,
+              queue: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  config: true,
+                },
+              },
+            },
+          },
           admission: {
             select: {
               facility: {
                 select: {
+                  id: true,
+                  reviewRevision: true,
+                  displayName: true,
+                  formattedAddress: true,
                   googlePlaceId: true,
-                  evidence: {
-                    where: { approvedAt: { lte: new Date() }, expiresAt: { gt: new Date() } },
-                    select: { source: true, finding: true, reference: true },
-                    take: 12,
+                  latitude: true,
+                  longitude: true,
+                  placeMetadata: true,
+                  evidence: true,
+                  labels: {
+                    orderBy: { reviewedAt: 'desc' },
+                    take: 5,
+                    select: { reviewedAt: true, decision: true, expiresAt: true },
                   },
+                },
+              },
+            },
+          },
+          reviews: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            select: {
+              id: true,
+              action: true,
+              reason: true,
+              createdAt: true,
+              reviewer: {
+                select: {
+                  name: true,
+                  email: true,
                 },
               },
             },
@@ -513,7 +556,29 @@ export function registerQueueOperations(app: FastifyInstance, resolve: typeof st
       const report = z
         .object({ category: z.string().max(40), notes: z.string().max(500).nullable().optional() })
         .safeParse(metadata);
-      return { ...safe, report: item.trigger === 'REPORT' && report.success ? report.data : null };
+
+      let qaSample: { id: string; status: string } | null = null;
+      try {
+        const sample = await tx.qaSample.findFirst({
+          where: { decision: { caseId: item.id } },
+          select: { id: true, status: true },
+        });
+        if (sample) qaSample = { id: sample.id, status: sample.status ?? 'PENDING' };
+      } catch {
+        // qa sample table may be unpopulated
+      }
+
+      return {
+        ...safe,
+        metadata,
+        report: item.trigger === 'REPORT' && report.success ? report.data : null,
+        queue: {
+          id: queue.id,
+          name: queue.name,
+          code: queue.code,
+        },
+        qaSample,
+      };
     });
   });
 

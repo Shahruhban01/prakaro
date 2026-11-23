@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Building2, FileText, ImageOff, Maximize2 } from "lucide-react";
+import { Building2, Check, Compass, Copy, ExternalLink, FileText, ImageOff, MapPin, Maximize2 } from "lucide-react";
 import { label, type Attachment, type Reservation } from "./workspaceContract";
 
 function AttachmentImage({ attachment, expanded = false }: { attachment: Attachment; expanded?: boolean }) {
@@ -52,6 +52,45 @@ export function CaseEvidencePanel({ reservation, serverNow }: { reservation: Res
   const facility = item.admission?.facility;
   const report = item.metadata?.report;
   const evidence = facility?.evidence ?? [];
+
+  const [copied, setCopied] = useState(false);
+
+  // Extract place ID from all possible candidate locations
+  const googlePlaceId =
+    facility?.googlePlaceId ||
+    item.metadata?.report?.googlePlaceId ||
+    (item.metadata as any)?.googlePlaceId ||
+    (facility?.id && facility.id.startsWith("ChIJ") ? facility.id : null);
+
+  const lat = facility?.latitude;
+  const lng = facility?.longitude;
+  const facilityName = facility?.displayName || "Parking Facility";
+  const facilityAddress = facility?.formattedAddress;
+
+  const mapsSearchUrl = googlePlaceId
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facilityName)}&query_place_id=${googlePlaceId}`
+    : lat != null && lng != null
+      ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+      : facilityAddress
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facilityAddress)}`
+        : null;
+
+  const mapsDirectUrl = googlePlaceId
+    ? `https://www.google.com/maps/place/?q=place_id:${googlePlaceId}`
+    : null;
+
+  const streetViewUrl = lat != null && lng != null
+    ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`
+    : null;
+
+  const handleCopyPlaceId = () => {
+    if (googlePlaceId) {
+      navigator.clipboard.writeText(googlePlaceId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return <div className="mw-case-details">
     <section className="mw-panel" aria-labelledby="facility-heading">
       <div className="mw-panel-heading"><Building2 size={18} /><h2 id="facility-heading">Facility context</h2></div>
@@ -61,8 +100,75 @@ export function CaseEvidencePanel({ reservation, serverNow }: { reservation: Res
           <div><dt>Address</dt><dd>{facility?.formattedAddress || "Not provided"}</dd></div>
           <div><dt>Source</dt><dd>{label(item.trigger) || "Unavailable"}</dd></div>
           <div><dt>Priority</dt><dd>{item.priority}</dd></div>
+          {googlePlaceId && (
+            <div className="mw-fact-full">
+              <dt>Google Place ID</dt>
+              <dd className="mw-place-id-row">
+                <code>{googlePlaceId}</code>
+                <button
+                  type="button"
+                  className="mw-copy-btn"
+                  onClick={handleCopyPlaceId}
+                  title="Copy Place ID"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  <span>{copied ? "Copied" : "Copy"}</span>
+                </button>
+              </dd>
+            </div>
+          )}
+          {lat != null && lng != null && (
+            <div>
+              <dt>Coordinates</dt>
+              <dd>{lat.toFixed(6)}, {lng.toFixed(6)}</dd>
+            </div>
+          )}
         </dl>
-        <p className="mw-muted">Facility context may come from a listing. Independent evidence is shown below.</p>
+
+        {/* Actionable Map Review Links for Moderators */}
+        <div className="mw-maps-actions" aria-label="Location Verification Links">
+          {mapsSearchUrl && (
+            <a
+              href={mapsSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mw-map-link mw-primary-map-link"
+              title="Open parking location on Google Maps in a new tab"
+            >
+              <MapPin size={15} />
+              <span>Open in Google Maps</span>
+              <ExternalLink size={13} />
+            </a>
+          )}
+          {mapsDirectUrl && mapsDirectUrl !== mapsSearchUrl && (
+            <a
+              href={mapsDirectUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mw-map-link"
+              title="Direct Google Place link"
+            >
+              <Compass size={15} />
+              <span>Direct Place View</span>
+              <ExternalLink size={13} />
+            </a>
+          )}
+          {streetViewUrl && (
+            <a
+              href={streetViewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mw-map-link"
+              title="Open Google Street View / 360 panorama"
+            >
+              <Maximize2 size={14} />
+              <span>Street View</span>
+              <ExternalLink size={13} />
+            </a>
+          )}
+        </div>
+
+        <p className="mw-muted">Use the Google Maps link above to inspect real-world satellite imagery, street view, and business status.</p>
       </div>
     </section>
     <section className="mw-panel" aria-labelledby="evidence-heading">

@@ -32,12 +32,16 @@ export type Reservation = {
         id: string;
         displayName: string | null;
         formattedAddress?: string | null;
+        googlePlaceId?: string | null;
+        latitude?: number | null;
+        longitude?: number | null;
+        placeMetadata?: unknown;
         evidence: Evidence[];
         labels?: { reviewedAt: string; decision: string; expiresAt: string | null }[];
       };
     };
     tasks?: { queueId: string; queueVersion: number; form: unknown }[];
-    metadata?: { report?: { category?: unknown; notes?: unknown } };
+    metadata?: { report?: { category?: unknown; notes?: unknown; googlePlaceId?: string; reportedBy?: string; reportedAt?: string }; [key: string]: unknown };
     attachments?: Attachment[];
   };
 };
@@ -92,8 +96,8 @@ export function policyFor(reservation: Reservation) {
   return parsed.success ? { ...parsed.data, version: task?.queueVersion, pinned: undefined } : null;
 }
 
-export const label = (value: string) =>
-  value.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
+export const label = (value?: string | null) =>
+  value ? value.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase()) : "";
 
 export function activeQuestions(questions: Question[], rawAnswers: Record<string, unknown>) {
   const answers: Record<string, unknown> = {};

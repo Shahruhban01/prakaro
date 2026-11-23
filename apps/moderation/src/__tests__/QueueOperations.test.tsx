@@ -10,7 +10,7 @@ import {
 const fake = vi.hoisted(() => ({ get: vi.fn(), mutate: vi.fn() }));
 vi.mock("../api", () => ({
   api: { get: fake.get },
-  useData: () => ({ data: { userId: "moderator", lob: "Test LOB" } }),
+  useData: () => ({ data: { userId: "moderator", lob: "Test LOB", role: "QA_REVIEWER" } }),
   useAction: () => ({ mutate: fake.mutate, isPending: false }),
   errorText: () => "Queue access denied.",
   canConfigureQueue: () => false,
@@ -64,12 +64,15 @@ it("offers self-subscription on the available queue list", async () => {
   });
   expect(screen.getByText("Unavailable")).toBeTruthy();
 });
-it("shows Moderate, View and unsubscribe for a subscribed queue", async () => {
+it("shows Moderate, View, QA and unsubscribe for a subscribed queue", async () => {
   fake.get.mockResolvedValue({ data: [{ ...queue, subscribed: true }] });
   mount(<QueueWorklist subscribed />, "/my-queues");
   expect(await screen.findByRole("link", { name: "Moderate" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "View" }).getAttribute("href")).toBe(
     "/queues/test/cases",
+  );
+  expect(screen.getByRole("link", { name: "QA" }).getAttribute("href")).toBe(
+    "/qa?queueId=test",
   );
   fireEvent.click(screen.getByRole("button", { name: "Unsubscribe" }));
   expect(fake.mutate).toHaveBeenCalledWith({
@@ -88,9 +91,13 @@ it("displays case evidence without mutation actions", async () => {
     },
   });
   mount(<QueueCaseView />, "/queues/test/cases/fixture");
-  expect(await screen.findByText("Read-only view")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /claim|submit/i })).toBeNull();
+  expect((await screen.findAllByText(/Read-only view/i)).length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: /Submit & Leave/i })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Submit → Next/i })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Submit & Leave/i }));
   expect(fake.mutate).not.toHaveBeenCalled();
+  expect((await screen.findAllByText(/actions will not take any effect/i)).length).toBeGreaterThan(1);
+  expect(screen.getByText("Notice: Action Ignored")).toBeTruthy();
 });
 it("denies Moderate when a queue cannot be read", async () => {
   fake.get.mockRejectedValue(new Error("403"));

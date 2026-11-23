@@ -37,6 +37,7 @@ export const App: React.FC = () => {
         <Route path="/queues/:id/settings" element={<QueueSettings />} />
         <Route path="/queues/:id/cases" element={<QueueCases />} />
         <Route path="/queues/:id/cases/:caseId" element={<QueueCaseView />} />
+        <Route path="/cases/:caseId" element={<QueueCaseView />} />
         <Route path="/queues/:id/moderate" element={<ModeratePrerequisites />} />
         <Route path="/my-queues" element={<QueueWorklist subscribed />} />
         <Route path="/available-queues" element={<QueueWorklist subscribed={false} />} />

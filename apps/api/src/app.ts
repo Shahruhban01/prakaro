@@ -9,7 +9,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { fromNodeHeaders } from 'better-auth/node';
 import { env } from './config/env';
-import { auth, moderatorAuth, superAdminAuth } from './config/auth';
+import { auth, isAllowedConsoleOrigin, moderatorAuth, superAdminAuth, trustedOrigins } from './config/auth';
 import { AppError } from './common/errors/app-error';
 import { replyToPoolTimeout } from './common/errors/database-unavailable';
 import { prisma } from './common/database/prisma';
@@ -52,7 +52,7 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
     maxConcurrentReports = env.NODE_ENV === 'production' ? env.REPORT_MAX_CONCURRENT : 0,
     ...fastifyOpts } = opts;
   const authOrigin = new URL(env.BETTER_AUTH_URL).origin;
-  const consoleOrigin = new URL(env.MODERATION_ORIGIN).origin;
+
 
   const app = Fastify({
     logger: { level: env.NODE_ENV === 'test' ? 'silent' : 'info' },
@@ -101,7 +101,7 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
 
   // Sensible CORS configuration
   app.register(cors, {
-    origin: [...new Set([authOrigin, consoleOrigin])],
+    origin: trustedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Prakaro-Console', 'X-Prakaro-Search'],
@@ -157,7 +157,7 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
           const moderatorRequest=pathPrefix==='/api/moderator-auth'&&request.method==='POST';
           if(pathPrefix!=='/api/auth'&&request.method==='POST'&&url.pathname===pathPrefix+'/sign-out'){
             const origin=request.headers.origin;
-            if(origin ? origin!==consoleOrigin||request.headers['x-prakaro-console']!=='1' : !request.headers.authorization?.startsWith('Bearer ')&&Boolean(request.headers.cookie)){
+            if(origin ? !isAllowedConsoleOrigin(origin)||request.headers['x-prakaro-console']!=='1' : !request.headers.authorization?.startsWith('Bearer ')&&Boolean(request.headers.cookie)){
               return reply.status(403).send({error:{code:'FORBIDDEN',message:'Invalid console origin.'}});
             }
             const current=moderatorRequest ? await moderatorAuth.api.getSession({headers,query:{disableCookieCache:true}}) : null;

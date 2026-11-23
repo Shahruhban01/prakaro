@@ -56,8 +56,13 @@ export type Range = z.infer<typeof rangeInput>;
 export async function organizationFor(db: Database, actor: AnalyticsActor, organizationId?: string) {
   if (!actor.superAdmin && organizationId && actor.organizationId !== organizationId) throw new ForbiddenError();
   const id = organizationId ?? actor.organizationId;
-  const row = id ? await db.organization.findUnique({ where: { id }, select: { id: true, name: true, reportingTimezone: true, active: true } }) : null;
-  if (id && !row?.active) throw new ForbiddenError();
+  if (!id) return null;
+  const row = await db.organization.findUnique({ where: { id }, select: { id: true, name: true, reportingTimezone: true, active: true } });
+  if (!row) {
+    if (actor.superAdmin) return null;
+    throw new ForbiddenError('Organization not found.');
+  }
+  if (!row.active) throw new ForbiddenError('Organization is inactive.');
   return row;
 }
 

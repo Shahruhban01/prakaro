@@ -55,7 +55,10 @@ export async function analyticsScope(db: Database, actor: AnalyticsActor, filter
   function selected<T extends { id: string }>(values: T[], id: string | undefined) {
     if (!id) return undefined;
     const value = values.find((item) => item.id === id);
-    if (!value) throw new ForbiddenError('The requested analytics resource is outside your scope.');
+    if (!value) {
+      if (all) return undefined;
+      throw new ForbiddenError('The requested analytics resource is outside your scope.');
+    }
     return value;
   }
   const organization = selected(organizations, filters.organizationId);

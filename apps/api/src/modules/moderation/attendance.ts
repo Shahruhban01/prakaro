@@ -137,11 +137,16 @@ export async function applyAux(identity: AttendanceIdentity, command: AuxCommand
     let current = existing ? await reconcile(tx, existing, now, employee, locked) : null;
     if (current && current.authSessionId !== identity.authSessionId) {
       if (command.type === 'LOGOUT') return null; // This device owns no attendance to close.
-      throw new AppError(
-        409,
-        'ATTENDANCE_DEVICE_CONFLICT',
-        'Attendance belongs to another sign-in. Sign out there or wait for its inactivity window.',
-      );
+      if (!locked) {
+        await end(tx, current, now, 'SESSION_EXPIRED');
+        current = null;
+      } else {
+        throw new AppError(
+          409,
+          'ATTENDANCE_DEVICE_CONFLICT',
+          'Attendance belongs to another sign-in with an active case reservation.',
+        );
+      }
     }
     if (command.type === 'LOGOUT') {
       if (locked) throw activeCaseError();

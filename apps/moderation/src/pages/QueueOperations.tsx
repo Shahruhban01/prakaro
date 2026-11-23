@@ -1,7 +1,23 @@
 import { ModerateWorkspace } from '../components/continuous/ModerateWorkspace';
+import { CaseEvidencePanel } from '../components/continuous/CaseEvidencePanel';
+import { DecisionForm } from '../components/continuous/DecisionForm';
+import { policyFor, type Reservation } from '../components/continuous/workspaceContract';
+import { CaseClarification } from '../components/policy/Clarifications';
+import { reporterExplanation } from '../components/policy/policyApi';
+import '../components/continuous/workspace.css';
 import type { AuxSnapshot } from '../attendanceApi';
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import {
+  ArrowRight,
+  Clock3,
+  Eye,
+  Info,
+  LockKeyhole,
+  Radio,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -23,6 +39,14 @@ import {
 import { formatAht } from "../components/GlobalAuxControl";
 import { PinnedPolicyReference } from "../components/policy/PolicyReference";
 import { usePolicyQuery, type PinnedPolicy } from "../components/policy/policyApi";
+
+const isQaEligible = (actor?: Actor | null) =>
+  Boolean(
+    actor?.superAdmin ||
+      ["ADMIN", "MODERATION_ADMIN", "QA_REVIEWER", "QA_SUPERVISOR", "QA_AUDITOR", "TEAM_LEAD"].includes(
+        actor?.role ?? "",
+      ),
+  );
 type Metrics = {
   pending: number;
   inProgress: number;
@@ -109,6 +133,8 @@ function ErrorPanel({
 export function QueueWorklist({ subscribed }: { subscribed: boolean }) {
   const [params, setParams] = useSearchParams();
   const { state } = useLocation();
+  const actor = useData<Actor>("/session").data;
+  const canQa = isQaEligible(actor);
   const completed = subscribed && typeof state?.moderationCompleted === "number" ? state.moderationCompleted : null;
   const page = Math.min(
     10000,
@@ -164,6 +190,15 @@ export function QueueWorklist({ subscribed }: { subscribed: boolean }) {
                 >
                   View
                 </Link>
+                {canQa && (
+                  <Link
+                    className="wf-breadcrumb"
+                    to={"/qa?queueId=" + queue.id}
+                    title="QA: Review submitted cases for this queue"
+                  >
+                    QA
+                  </Link>
+                )}
                 <button
                   disabled={action.isPending}
                   onClick={() =>
@@ -250,6 +285,11 @@ export function QueueOverview() {
           <Link className="wf-primary" to={"/queues/" + id + "/cases"}>
             View cases
           </Link>
+          {isQaEligible(actor) && (
+            <Link className="wf-breadcrumb" to={"/qa?queueId=" + id} title="QA: Review submitted cases for this queue">
+              QA
+            </Link>
+          )}
           {canConfigureQueue(actor, item) && (
             <Link className="wf-breadcrumb" to={"/queues/" + id + "/settings"}>
               Configure queue
@@ -340,6 +380,8 @@ export function QueueOverview() {
 export function QueueCases() {
   const { id } = useParams(),
     [params, setParams] = useSearchParams();
+  const actor = useData<Actor>("/session").data;
+  const canQa = isQaEligible(actor);
   const query = useLive<{
     items: Case[];
     total: number;
@@ -359,7 +401,17 @@ export function QueueCases() {
         Queue overview
       </Link>
       <div className="wf-heading">
-        <h1>Queue cases</h1>
+        <div>
+          <h1>Queue cases</h1>
+          <p>Inspect incoming, in-review, and submitted cases for this queue.</p>
+        </div>
+        {canQa && (
+          <div className="wf-actions">
+            <Link className="wf-primary" to={"/qa?queueId=" + id}>
+              QA Reviews
+            </Link>
+          </div>
+        )}
       </div>
       <section className="wf-panel">
         <div className="wf-form">
@@ -443,6 +495,7 @@ export function QueueCases() {
                   <th>Status</th>
                   <th>Source</th>
                   <th>Arrived</th>
+                  {canQa && <th>QA</th>}
                 </tr>
               </thead>
               <tbody>
@@ -457,6 +510,16 @@ export function QueueCases() {
                     <td>{label(row.status)}</td>
                     <td>{label(row.trigger)}</td>
                     <td>{new Date(row.createdAt).toLocaleString()}</td>
+                    {canQa && (
+                      <td>
+                        <Link
+                          to={"/qa?queueId=" + id}
+                          style={{ color: '#2563eb', fontWeight: 600, fontSize: '0.85rem' }}
+                        >
+                          Review in QA
+                        </Link>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -491,82 +554,210 @@ export function QueueCases() {
   );
 }
 export function QueueCaseView() {
-  const { id, caseId } = useParams(),
-    query = useLive<CaseDetail>("/queues/" + id + "/cases/" + caseId);
+  const { id, caseId } = useParams();
+  const navigate = useNavigate();
   const actor = useData<Actor>("/session").data;
+  const canQa = isQaEligible(actor);
+
+  const url = id ? "/queues/" + id + "/cases/" + caseId : "/cases/" + caseId;
+  const query = useLive<any>(url);
+
+  const effectiveQueueId = id ?? query.data?.tasks?.[0]?.queueId;
   const policies = usePolicyQuery<{ rows: { version: PinnedPolicy | null }[] }>(
-    actor?.userId ?? "", "/policies/effective", { queueId: id }, Boolean(id && actor?.organizationId),
+    actor?.userId ?? "",
+    "/policies/effective",
+    { queueId: effectiveQueueId },
+    Boolean(effectiveQueueId && actor?.organizationId),
   );
   const guidance = policies.data?.rows[0]?.version;
+  const [viewNotice, setViewNotice] = useState<string | null>(null);
+
   if (query.error)
     return <ErrorPanel error={query.error} retry={query.refetch} />;
   if (!query.data) return <p role="status">Loading case…</p>;
+
   const item = query.data;
+  const queueId = effectiveQueueId || "queue-view";
+  const queueName = item.queue?.name || item.tasks?.[0]?.queue?.name || "Moderation queue";
+
+  const viewReservation: Reservation = {
+    id: "view-" + item.id,
+    queueId: queueId,
+    reservedAt: item.createdAt,
+    leaseExpiresAt: item.createdAt,
+    pinnedPolicy: guidance ?? item.tasks?.[0]?.form?.pinnedPolicy ?? null,
+    case: {
+      code: item.code,
+      status: item.status || "QUEUED",
+      category: item.category || "REPORT",
+      trigger: item.trigger || "REPORT",
+      priority: item.priority ?? 50,
+      createdAt: item.createdAt,
+      admission: item.admission ?? (item.facilityDetails ? { facility: item.facilityDetails } : undefined),
+      tasks: item.tasks,
+      metadata: item.metadata ?? (item.userReport ? { report: item.userReport } : (item.report ? { report: item.report } : {})),
+      attachments: item.attachments ?? [],
+    },
+  };
+
+  const policy = policyFor(viewReservation) || (guidance ? {
+    version: guidance.number,
+    form: [],
+    reviewPolicy: undefined,
+    pinned: guidance,
+  } : null) || (item.tasks?.[0]?.form ? {
+    version: item.tasks[0]?.queueVersion,
+    form: Array.isArray(item.tasks[0]?.form?.form) ? item.tasks[0].form.form : [],
+    reviewPolicy: item.tasks[0]?.form?.reviewPolicy,
+  } : null);
+
+  const evidence = (viewReservation.case.admission?.facility?.evidence ?? []).filter(
+    (e: any) => !e.expiresAt || Date.parse(e.expiresAt) > Date.now(),
+  );
+
+  const handleSimulatedSubmit = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    setViewNotice("View mode only: actions will not take any effect on case data. This is a read-only inspection.");
+  };
+
   return (
-    <>
-      <Link className="wf-breadcrumb" to={"/queues/" + id + "/cases"}>
-        Queue cases
-      </Link>
-      <div className="wf-heading">
+    <div className="mw-workspace">
+      <section className="mw-case-header" aria-labelledby="case-heading">
         <div>
-          <h1>{item.code}</h1>
-          <p>
-            {label(item.status)} · {label(item.category)}
-          </p>
+          <p className="mw-overline">{queueName}</p>
+          <h1 id="case-heading">{item.code}</h1>
+          <p className="mw-muted">{label(item.category || item.trigger || "Case")}</p>
         </div>
-        <span className="wf-badge">Read-only view</span>
+        <div className="mw-header-metrics">
+          <div className="mw-handling">
+            <span><Eye size={15} /> Case handling</span>
+            <strong role="timer" aria-label="Case handling seconds" data-testid="case-timer">View mode</strong>
+          </div>
+          <div>
+            <span>Status: <strong>{label(item.status)}</strong></span>
+            <span className="mw-pill">{item.status?.replaceAll("_", " ")}</span>
+          </div>
+          <div>
+            <span><Radio size={15} /> Connected</span>
+            <span className="mw-lease-warning"><LockKeyhole size={14} /> Read-only view</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="mw-announcement" role="status">
+        Read-only view · Complete moderation workspace parity. Form inputs and submit options are active for inspection, but actions will not take any effect.
       </div>
-      <div className="wf-dashboard-grid">
-        <section className="wf-panel">
-          {item.report && (
-            <div className="pb-4">
-              <h2>User report</h2>
-              <p>{label(item.report.category)}</p>
-              {item.report.notes && (
-                <p className="whitespace-pre-wrap">{item.report.notes}</p>
+
+      {viewNotice && (
+        <div className="mw-alert" role="alert">
+          <ShieldAlert size={18} />
+          <div>
+            <strong>Notice: Action Ignored</strong>
+            <p>{viewNotice}</p>
+          </div>
+        </div>
+      )}
+
+      {canQa && item.qaSample?.id && (
+        <div className="mw-alert" style={{ background: '#f0f9ff', borderColor: '#bae6fd', color: '#0369a1' }}>
+          <ShieldCheck size={18} />
+          <div>
+            <strong>Sampled for QA Review</strong>
+            <p>
+              This case was sampled for quality audit.{" "}
+              <Link to={`/qa/reviews/${item.qaSample.id}`} style={{ fontWeight: 600, textDecoration: 'underline' }}>
+                Open in QA Review Workspace →
+              </Link>
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <DecisionForm
+          key={viewReservation.id}
+          policy={policy}
+          evidence={evidence}
+          frozen={false}
+          clarification={(policy as any)?.pinned && <CaseClarification reservationId={viewReservation.id} expired={true} />}
+          hasReporterExplanation={viewReservation.case.trigger === "REPORT" && reporterExplanation(viewReservation.case.metadata)}
+          context={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <CaseEvidencePanel reservation={viewReservation} serverNow={Date.now()} />
+              {item.reviews && item.reviews.length > 0 && (
+                <section className="mw-panel" aria-labelledby="submitted-reviews-heading">
+                  <div className="mw-panel-heading">
+                    <Clock3 size={18} />
+                    <h2 id="submitted-reviews-heading">Submitted reviews ({item.reviews.length})</h2>
+                  </div>
+                  <div className="mw-body">
+                    {item.reviews.map((rev: any, idx: number) => (
+                      <div key={rev.id || idx} style={{ borderBottom: idx < item.reviews.length - 1 ? '1px solid #e2e8f0' : 'none', padding: '0.6rem 0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="mw-pill" style={{ fontWeight: 700, background: rev.action === 'APPROVE' ? '#dcfce7' : rev.action === 'REJECT' ? '#fee2e2' : '#fef9c3', color: rev.action === 'APPROVE' ? '#166534' : rev.action === 'REJECT' ? '#991b1b' : '#854d0e' }}>
+                            {rev.action}
+                          </span>
+                          <span className="mw-muted" style={{ fontSize: '0.8rem' }}>
+                            {rev.createdAt ? new Date(rev.createdAt).toLocaleString() : ''}
+                          </span>
+                        </div>
+                        {rev.reviewer && (
+                          <p style={{ fontSize: '0.85rem', marginTop: '0.35rem', color: '#475569' }}>
+                            Moderator: <strong>{rev.reviewer.name || rev.reviewer.email}</strong>
+                          </p>
+                        )}
+                        {rev.reason && (
+                          <p style={{ fontSize: '0.85rem', marginTop: '0.25rem', fontStyle: 'italic', color: '#1e293b' }}>
+                            "{rev.reason}"
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
             </div>
-          )}
-          <h2>Independent evidence</h2>
-          {item.admission.facility.evidence.length ? (
-            item.admission.facility.evidence.map((e, i) => (
-              <div className="border-b py-2" key={i}>
-                <strong>{label(e.finding)}</strong>
-                <p>
-                  {label(e.source)} · {e.reference}
-                </p>
+          }
+        >
+          {() => (
+            <footer className="mw-action-bar" aria-label="Moderation actions">
+              <button
+                type="button"
+                className="mw-release"
+                onClick={() => {
+                  if (id) navigate(`/queues/${id}/cases`);
+                  else navigate(-1);
+                }}
+              >
+                ← Back to Queue
+              </button>
+              <div className="mw-actions mw-submit-buttons">
+                <button
+                  type="button"
+                  onClick={handleSimulatedSubmit}
+                  title="View mode only — actions take no effect"
+                >
+                  Submit &amp; Leave
+                </button>
+                <button
+                  type="button"
+                  className="mw-primary"
+                  id="mw-submit"
+                  onClick={handleSimulatedSubmit}
+                  title="View mode only — actions take no effect"
+                >
+                  Submit → Next <ArrowRight size={16} />
+                </button>
               </div>
-            ))
-          ) : (
-            <p>No current independent evidence.</p>
+            </footer>
           )}
-        </section>
-        <section className="wf-panel">
-          <h2>Review form</h2>
-          {guidance && <div className="policy-stack"><p>Current queue guidance for your line of business</p>
-            <PinnedPolicyReference policy={guidance} /></div>}
-          {!guidance && <>
-          {item.tasks[0]?.form.reviewPolicy && (
-            <p className="whitespace-pre-wrap pb-3">
-              {item.tasks[0].form.reviewPolicy}
-            </p>
-          )}
-          {item.tasks[0]?.form.form.length ? (
-            <ul>
-              {item.tasks[0].form.form.map((q) => (
-                <li className="py-2" key={q.key}>
-                  {q.label}
-                  {q.required ? " (required)" : ""}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No review questions configured.</p>
-          )}
-          </>}
-        </section>
+        </DecisionForm>
+        <details className="mw-shortcuts">
+          <summary>Keyboard shortcuts</summary>
+          <p>Alt + Shift + D focuses the decision. T focuses tag search. P opens the policy. S focuses Submit → Next.</p>
+        </details>
       </div>
-    </>
+    </div>
   );
 }
 export function ModeratePrerequisites() {

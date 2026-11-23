@@ -19,7 +19,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 import { hashPassword } from 'better-auth/crypto';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { auth, moderatorAuth, superAdminAuth } from '../../config/auth';
+import { auth, isAllowedConsoleOrigin, moderatorAuth, superAdminAuth } from '../../config/auth';
 import { env } from '../../config/env';
 import { prisma } from '../../common/database/prisma';
 import { AppError, ForbiddenError, UnauthorizedError } from '../../common/errors/app-error';
@@ -141,7 +141,7 @@ export async function staff(req: FastifyRequest) {
       email: mod.email,
       name: mod.name,
       role: mod.role,
-      admin: false,
+      admin: ['ADMIN', 'MODERATION_ADMIN'].includes(mod.role),
       superAdmin: false,
       queues: allowedQueues.map((queue) => queue.id),
       requiresTeam,
@@ -209,10 +209,10 @@ export async function moderationRoutes(app: FastifyInstance) {
       req.method !== 'HEAD' &&
       (!req.headers.authorization || req.headers.origin)
     ) {
-      const allowed = new URL(process.env.MODERATION_ORIGIN ?? env.BETTER_AUTH_URL).origin;
+
       if (
         req.headers.origin
-          ? req.headers.origin !== allowed || req.headers['x-prakaro-console'] !== '1'
+          ? !isAllowedConsoleOrigin(req.headers.origin) || req.headers['x-prakaro-console'] !== '1'
           : !req.headers.authorization?.startsWith('Bearer ')
       ) {
         throw new ForbiddenError();
@@ -248,10 +248,12 @@ export async function moderationRoutes(app: FastifyInstance) {
     }
     if (error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number' &&
       error.statusCode >= 400 && error.statusCode < 500) {
-      return reply.status(error.statusCode).send({ error: {
-        code: 'code' in error && typeof error.code === 'string' ? error.code : 'INVALID_REQUEST',
-        message: 'The request could not be processed.',
-      } });
+      return reply.status(error.statusCode).send({
+        error: {
+          code: 'code' in error && typeof error.code === 'string' ? error.code : 'INVALID_REQUEST',
+          message: 'The request could not be processed.',
+        }
+      });
     }
     req.log.error({ event: 'http.failure', route: req.routeOptions.url, errorName: error instanceof Error ? error.name : 'Unknown' },
       'Moderation request failed');
@@ -322,9 +324,9 @@ export async function moderationRoutes(app: FastifyInstance) {
           const code =
             customCode ??
             'QUEUE-' +
-              data.kind +
-              '-' +
-              String(await increment(tx, 'queue-sequence')).padStart(3, '0');
+            data.kind +
+            '-' +
+            String(await increment(tx, 'queue-sequence')).padStart(3, '0');
           const queue = await tx.moderationQueue.create({
             data: { ...data, organizationId, code, createdBy: actor.userId },
           });
@@ -661,8 +663,8 @@ export async function moderationRoutes(app: FastifyInstance) {
       ...(p.mine === 'true' ? { owner: a.userId } : {}),
       ...(p.search
         ? {
-            OR: [{ code: { contains: p.search } }, { facilityId: { contains: p.search } }],
-          }
+          OR: [{ code: { contains: p.search } }, { facilityId: { contains: p.search } }],
+        }
         : {}),
     };
 

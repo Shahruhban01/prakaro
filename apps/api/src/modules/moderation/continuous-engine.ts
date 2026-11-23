@@ -34,6 +34,9 @@ export const caseInclude = {
           displayName: true,
           formattedAddress: true,
           googlePlaceId: true,
+          latitude: true,
+          longitude: true,
+          placeMetadata: true,
           evidence: true,
           labels: {
             orderBy: { reviewedAt: 'desc' },

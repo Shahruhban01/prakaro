@@ -4,15 +4,20 @@ import { bearer } from 'better-auth/plugins';
 import { prisma } from '../common/database/prisma';
 import { env } from './env';
 
-const trustedOrigins = [
+export const trustedOrigins = [
   ...(process.env.MODERATION_ORIGIN ? [new URL(process.env.MODERATION_ORIGIN).origin] : []),
   new URL(env.BETTER_AUTH_URL).origin,
-  ...(env.NODE_ENV === 'production' ? [] : ['http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://10.0.2.2:3000',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173']),
 ];
+
+export function isAllowedConsoleOrigin(origin?: string): boolean {
+  if (!origin) return false;
+  return trustedOrigins.includes(origin);
+}
 
 const sessionCookie = {
   useSecureCookies: env.NODE_ENV === 'production' || env.BETTER_AUTH_URL.startsWith('https:'),

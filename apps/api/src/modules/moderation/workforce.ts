@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { prisma } from '../../common/database/prisma';
 import { AppError, ForbiddenError } from '../../common/errors/app-error';
 import { replyToPoolTimeout } from '../../common/errors/database-unavailable';
-import { env } from '../../config/env';
+import { isAllowedConsoleOrigin } from '../../config/auth';
 import { staff } from './routes';
 
 const uid = z.string().uuid();
@@ -182,10 +182,10 @@ function roleChange(a: Actor, id: string | undefined, ...roles: string[]) {
 export async function workforceRoutes(app: FastifyInstance) {
   app.addHook('onRequest', async (req) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return;
-    const origin = new URL(env.MODERATION_ORIGIN || env.BETTER_AUTH_URL).origin;
+
     if (
       req.headers.origin
-        ? req.headers.origin !== origin || req.headers['x-prakaro-console'] !== '1'
+        ? !isAllowedConsoleOrigin(req.headers.origin) || req.headers['x-prakaro-console'] !== '1'
         : !req.headers.authorization?.startsWith('Bearer ')
     )
       throw new ForbiddenError();
