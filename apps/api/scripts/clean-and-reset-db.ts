@@ -2,36 +2,101 @@ import { hashPassword } from 'better-auth/crypto';
 import { prisma } from '../src/common/database/prisma';
 
 async function main() {
-  console.log('--- PRAKARO CLEAN SLATE & FRESH SEED ---');
+  console.log('=====================================================');
+  console.log('       PRAKARO FRESH SLATE & PRODUCTION SEED         ');
+  console.log('=====================================================');
 
-  // 1. Purge test moderation submissions, tasks, cases, admissions, evidence, runs
-  console.log('1. Clearing all testing inserts and test cases...');
-  await prisma.$executeRawUnsafe('DELETE FROM moderation_submission');
-  await prisma.$executeRawUnsafe('DELETE FROM moderation_task');
-  await prisma.$executeRawUnsafe('DELETE FROM moderation_case');
-  await prisma.$executeRawUnsafe('DELETE FROM parking_human_label');
-  await prisma.$executeRawUnsafe('DELETE FROM parking_evidence_reference');
-  await prisma.$executeRawUnsafe('DELETE FROM parking_verification_run');
-  await prisma.$executeRawUnsafe('DELETE FROM search_admission');
-  await prisma.$executeRawUnsafe('DELETE FROM parking_intelligence_case');
-  await prisma.$executeRawUnsafe('DELETE FROM moderation_audit');
-  await prisma.$executeRawUnsafe('DELETE FROM moderation_counter');
-  await prisma.$executeRawUnsafe('DELETE FROM moderation_membership');
-  await prisma.$executeRawUnsafe('DELETE FROM moderation_queue');
+  // 1. Purge all test cases, reservations, submissions, tasks, admissions, runs
+  console.log('\n[1/7] Wiping test cases, QA records, attendance, and queues...');
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0');
 
-  // 2. Clear old test accounts and sessions
-  console.log('2. Resetting administrative and moderator accounts...');
-  await prisma.$executeRawUnsafe('DELETE FROM moderator_sessions');
-  await prisma.$executeRawUnsafe('DELETE FROM moderator_accounts');
-  await prisma.$executeRawUnsafe('DELETE FROM moderator_verifications');
-  await prisma.$executeRawUnsafe('DELETE FROM moderators');
-  await prisma.$executeRawUnsafe('DELETE FROM super_admin_sessions');
-  await prisma.$executeRawUnsafe('DELETE FROM super_admin_accounts');
-  await prisma.$executeRawUnsafe('DELETE FROM super_admin_verifications');
-  await prisma.$executeRawUnsafe('DELETE FROM super_admins');
+  const tablesToTruncate = [
+    'qa_dispute',
+    'qa_correction',
+    'qa_assessment',
+    'qa_sample',
+    'qa_policy',
+    'moderation_decision_version',
+    'case_handling_record',
+    'moderation_case_reservation',
+    'moderation_submission',
+    'moderation_task',
+    'moderation_case',
+    'parking_human_label',
+    'parking_evidence_reference',
+    'parking_verification_version',
+    'parking_verification_run',
+    'parking_evaluation_metrics',
+    'parking_ai_daily_budget',
+    'search_admission',
+    'parking_intelligence_case',
+    'moderation_audit',
+    'moderation_counter',
+    'aux_transition_audit',
+    'aux_interval',
+    'attendance_session',
+    'moderation_work_session',
+    'workforce_alert_event',
+    'workforce_alert_rule',
+    'workforce_shift_assignment',
+    'workforce_shift',
+    'workforce_capacity_plan',
+    'workforce_team_links',
+    'workforce_teams',
+    'clarification_message',
+    'policy_clarification',
+    'policy_assignment',
+    'policy_version',
+    'moderation_policy',
+    'queue_subscription',
+    'queue_configuration_version',
+    'queue_lob_access',
+    'moderation_membership',
+    'moderation_queue',
+    'moderator_sessions',
+    'moderator_accounts',
+    'moderator_verifications',
+    'moderators',
+    'super_admin_sessions',
+    'super_admin_accounts',
+    'super_admin_verifications',
+    'super_admins',
+    'lobs',
+    'organizations',
+  ];
 
-  // 3. Seed Super Admin
-  console.log('3. Seeding Super Admin (admin@prakaro.app)...');
+  for (const table of tablesToTruncate) {
+    try {
+      await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\``);
+    } catch {
+      await prisma.$executeRawUnsafe(`DELETE FROM \`${table}\``);
+    }
+  }
+
+  // Clean out synthetic test drivers while preserving real users
+  try {
+    await prisma.$executeRawUnsafe(`
+      DELETE FROM account WHERE userId IN (
+        SELECT id FROM users WHERE email LIKE '%@example.test' OR email LIKE 'driver_test_%' OR email LIKE 'driver-%@prakaro.app'
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      DELETE FROM session WHERE userId IN (
+        SELECT id FROM users WHERE email LIKE '%@example.test' OR email LIKE 'driver_test_%' OR email LIKE 'driver-%@prakaro.app'
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      DELETE FROM users WHERE email LIKE '%@example.test' OR email LIKE 'driver_test_%' OR email LIKE 'driver-%@prakaro.app'
+    `);
+  } catch (err) {
+    console.warn('Note on user cleanup:', err);
+  }
+
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');
+  console.log('✓ All test records and historical cases cleared.');
+
+  // 2. Seed Super Admin
+  console.log('\n[2/7] Seeding Super Admin (admin@prakaro.app)...');
   const saHashed = await hashPassword('Admin123!');
   const sa = await prisma.superAdmin.create({
     data: {
@@ -50,9 +115,34 @@ async function main() {
       password: saHashed,
     },
   });
+  console.log('✓ Super Admin created.');
+
+  // 3. Seed Default Organization & Line of Business (LOB)
+  console.log('\n[3/7] Seeding Core Organization and Line of Business...');
+  const org = await prisma.organization.create({
+    data: {
+      code: 'PRAKARO_CORE_OPS',
+      name: 'Prakaro Core Operations',
+      description: 'Default organization for Prakaro trust & safety operations',
+      active: true,
+      createdBy: sa.id,
+    },
+  });
+
+  const lob = await prisma.lob.create({
+    data: {
+      code: 'PARKING_VERIFICATION',
+      name: 'Parking Verification Line',
+      description: 'Parking discovery and user problem report verification line of business',
+      active: true,
+      organizationId: org.id,
+      createdBy: sa.id,
+    },
+  });
+  console.log(`✓ Organization (${org.code}) and LOB (${lob.code}) created.`);
 
   // 4. Seed Standard Default Queues (Managed exclusively by Super Admin)
-  console.log('4. Seeding default queues and routing rules...');
+  console.log('\n[4/7] Seeding default queues with routing rules and forms...');
 
   // Queue 1: General Discovery Queue (source == SEARCH)
   const qGeneral = await prisma.moderationQueue.create({
@@ -65,6 +155,8 @@ async function main() {
       priority: 50,
       capacity: 1000,
       version: 1,
+      intakeEnabled: true,
+      organizationId: org.id,
       createdBy: sa.id,
       config: {
         rule: { field: 'source', value: 'SEARCH' },
@@ -109,6 +201,8 @@ async function main() {
       priority: 90,
       capacity: 500,
       version: 1,
+      intakeEnabled: true,
+      organizationId: org.id,
       createdBy: sa.id,
       config: {
         rule: { field: 'source', value: 'REPORT' },
@@ -146,6 +240,8 @@ async function main() {
       priority: 80,
       capacity: 200,
       version: 1,
+      intakeEnabled: true,
+      organizationId: org.id,
       createdBy: sa.id,
       config: {
         rule: { field: 'demand', value: '5' },
@@ -165,8 +261,18 @@ async function main() {
     },
   });
 
+  // Grant LOB access to all three queues
+  await prisma.queueLobAccess.createMany({
+    data: [
+      { queueId: qGeneral.id, lobId: lob.id, organizationId: org.id, actorId: sa.id, actorType: 'SUPER_ADMIN' },
+      { queueId: qReports.id, lobId: lob.id, organizationId: org.id, actorId: sa.id, actorType: 'SUPER_ADMIN' },
+      { queueId: qEscalation.id, lobId: lob.id, organizationId: org.id, actorId: sa.id, actorType: 'SUPER_ADMIN' },
+    ],
+  });
+  console.log('✓ Queues seeded and linked to PARKING_VERIFICATION line of business.');
+
   // 5. Seed Staff Accounts
-  console.log('5. Seeding staff accounts (Moderation Admin, Moderator, QA Reviewer)...');
+  console.log('\n[5/7] Seeding staff accounts (Admin, Moderator, QA Reviewer)...');
 
   // Moderation Admin: modadmin@prakaro.app / ModAdmin123!
   const maHashed = await hashPassword('ModAdmin123!');
@@ -176,6 +282,8 @@ async function main() {
       email: 'modadmin@prakaro.app',
       role: 'MODERATION_ADMIN',
       status: 'ACTIVE',
+      organizationId: org.id,
+      lobId: lob.id,
       emailVerified: true,
       invitedBy: sa.id,
     },
@@ -197,6 +305,8 @@ async function main() {
       email: 'moderator@prakaro.app',
       role: 'MODERATOR',
       status: 'ACTIVE',
+      organizationId: org.id,
+      lobId: lob.id,
       emailVerified: true,
       invitedBy: sa.id,
     },
@@ -218,6 +328,8 @@ async function main() {
       email: 'qa@prakaro.app',
       role: 'QA_REVIEWER',
       status: 'ACTIVE',
+      organizationId: org.id,
+      lobId: lob.id,
       emailVerified: true,
       invitedBy: sa.id,
     },
@@ -230,14 +342,23 @@ async function main() {
       password: qaHashed,
     },
   });
+  console.log('✓ Staff accounts created.');
 
-  // 6. Assign Queue Memberships
-  console.log('6. Assigning queue memberships...');
-  // Frontline moderator assigned to General and Reports queues
+  // 6. Assign Queue Memberships and Subscriptions
+  console.log('\n[6/7] Subscribing moderators to queues...');
+  // Frontline moderator assigned and subscribed to all active queues
   await prisma.moderationMembership.createMany({
     data: [
       { moderatorId: mod.id, queueId: qGeneral.id },
       { moderatorId: mod.id, queueId: qReports.id },
+      { moderatorId: mod.id, queueId: qEscalation.id },
+    ],
+  });
+  await prisma.queueSubscription.createMany({
+    data: [
+      { moderatorId: mod.id, queueId: qGeneral.id },
+      { moderatorId: mod.id, queueId: qReports.id },
+      { moderatorId: mod.id, queueId: qEscalation.id },
     ],
   });
 
@@ -252,19 +373,34 @@ async function main() {
       { moderatorId: qa.id, queueId: qEscalation.id },
     ],
   });
+  console.log('✓ Queue memberships and subscriptions configured.');
 
-  // 7. Verify clean case state
-  const caseCount = await prisma.moderationCase.count();
-  console.log(`\nVerification: Active moderation cases in database = ${caseCount} (Clean slate ready for real intake)`);
+  // 7. Verification & Status Check
+  console.log('\n[7/7] Validating database integrity...');
+  const [caseCount, taskCount, queueCount, modCount, saCount] = await Promise.all([
+    prisma.moderationCase.count(),
+    prisma.moderationTask.count(),
+    prisma.moderationQueue.count(),
+    prisma.moderator.count(),
+    prisma.superAdmin.count(),
+  ]);
 
-  console.log('\nFresh Demo Accounts Available:');
+  console.log('\n=====================================================');
+  console.log('             DATABASE RESET SUMMARY                  ');
   console.log('=====================================================');
+  console.log(`Active Moderation Cases:      ${caseCount} (Fresh clean slate)`);
+  console.log(`Active Moderation Tasks:      ${taskCount}`);
+  console.log(`Configured Production Queues: ${queueCount}`);
+  console.log(`Active Staff Moderators:      ${modCount}`);
+  console.log(`Active Super Administrators:  ${saCount}`);
+  console.log('-----------------------------------------------------');
+  console.log('Fresh Canonical Accounts Available for Testing:');
+  console.log('-----------------------------------------------------');
   console.log('Super Admin:       admin@prakaro.app     / Admin123!');
   console.log('Moderation Admin:  modadmin@prakaro.app  / ModAdmin123!');
   console.log('Frontline Mod:     moderator@prakaro.app / Moderator123!');
   console.log('QA Reviewer:       qa@prakaro.app        / QAReviewer123!');
-  console.log('=====================================================');
-  console.log('Ready for live discovery and user problem reporting.\n');
+  console.log('=====================================================\n');
 }
 
 main()

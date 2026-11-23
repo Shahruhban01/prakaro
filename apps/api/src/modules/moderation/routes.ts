@@ -27,6 +27,7 @@ import { replyToPoolTimeout } from '../../common/errors/database-unavailable';
 import { audit, increment, route } from './intake';
 import { queueInput, roles } from './config';
 import { smokeTestGeminiModel } from '../intelligence/intelligence.gemini';
+import { currentEvidence } from '../intelligence/intelligence.discovery';
 
 const fail = (message: string) => new AppError(409, 'MODERATION_CONFLICT', message);
 const id = (req: FastifyRequest) => z.object({ id: z.string().uuid() }).parse(req.params).id;
@@ -700,6 +701,79 @@ export async function moderationRoutes(app: FastifyInstance) {
       total,
       totalPages: Math.ceil(total / 20) || 1,
       items,
+    };
+  });
+
+  // Case Details (supports UUID or human-readable case code like CASE-2026-000001)
+  app.get('/cases/:id', async (req) => {
+    const a = await staff(req);
+    const paramId = (req.params as { id: string }).id;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paramId);
+    const c = await prisma.moderationCase.findFirstOrThrow({
+      where: {
+        ...(isUuid ? { id: paramId } : { code: paramId }),
+        ...scope(a),
+      },
+      include: {
+        tasks: {
+          include: {
+            queue: true,
+          },
+        },
+        admission: {
+          include: {
+            facility: {
+              include: {
+                evidence: true,
+                runs: {
+                  orderBy: { createdAt: 'desc' },
+                  take: 5,
+                  include: { version: true },
+                },
+                labels: {
+                  orderBy: { reviewedAt: 'desc' },
+                  take: 5,
+                },
+              },
+            },
+          },
+        },
+        reviews: { orderBy: { createdAt: 'desc' } },
+        reservations: {
+          where: { status: 'ACTIVE', leaseExpiresAt: { gt: new Date() } },
+          take: 1,
+        },
+      },
+    });
+
+    const [evidence, runs, labels] = await Promise.all([
+      prisma.parkingEvidenceReference.findMany({
+        where: { caseId: c.facilityId, ...currentEvidence(new Date()).where },
+        orderBy: { id: 'asc' },
+      }),
+      prisma.parkingVerificationRun.findMany({
+        where: { caseId: c.facilityId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        include: { version: true },
+      }),
+      prisma.parkingHumanLabel.findMany({
+        where: { caseId: c.facilityId },
+        orderBy: { reviewedAt: 'desc' },
+        take: 5,
+      }),
+    ]);
+
+    const facilityDetails = (c as any).admission?.facility ?? (c.metadata as any)?.facilityDetails ?? null;
+    const userReport = (c.metadata as any)?.report ?? (c.metadata as any)?.userReport ?? null;
+
+    return {
+      ...c,
+      evidence,
+      runs,
+      labels,
+      facilityDetails,
+      userReport,
     };
   });
 

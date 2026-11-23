@@ -88,27 +88,38 @@ export const CaseWorkbench: React.FC = () => {
   const aiRuns = (c as any).runs || c.admission?.facility?.runs || [];
 
   // Facility and metadata details
+  const meta = c.facilityDetails?.placeMetadata || c.admission?.facility?.placeMetadata || (c.metadata as any);
+  const report = c.userReport || c.facilityDetails?.userReport || (c.metadata as any)?.report;
   const googlePlaceId =
     c.facilityDetails?.googlePlaceId ||
     c.admission?.facility?.googlePlaceId ||
+    (c.metadata as any)?.placeId ||
+    (c.metadata as any)?.googlePlaceId ||
+    report?.googlePlaceId ||
+    report?.placeId ||
     c.facilityId;
   const facilityName =
     c.facilityDetails?.displayName ||
     c.admission?.facility?.displayName ||
+    (c.metadata as any)?.facilityName ||
+    (c.metadata as any)?.displayName ||
+    report?.facilityName ||
     'Parking Facility';
   const facilityAddress =
     c.facilityDetails?.formattedAddress ||
     c.admission?.facility?.formattedAddress ||
+    (c.metadata as any)?.formattedAddress ||
+    (c.metadata as any)?.address ||
+    report?.address ||
     'Address not recorded';
-  const lat = c.facilityDetails?.latitude ?? c.admission?.facility?.latitude ?? null;
-  const lng = c.facilityDetails?.longitude ?? c.admission?.facility?.longitude ?? null;
+  const lat = c.facilityDetails?.latitude ?? c.admission?.facility?.latitude ?? (c.metadata as any)?.latitude ?? null;
+  const lng = c.facilityDetails?.longitude ?? c.admission?.facility?.longitude ?? (c.metadata as any)?.longitude ?? null;
   const mapsUrl =
     c.facilityDetails?.googleMapsUrl ||
+    (c.metadata as any)?.googleMapsUrl ||
     (googlePlaceId
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facilityName)}&query_place_id=${googlePlaceId}`
       : null);
-  const report = c.userReport || c.facilityDetails?.userReport;
-  const meta = c.facilityDetails?.placeMetadata || c.admission?.facility?.placeMetadata;
 
   // Fallback verification checklist if queue has no custom question schema
   const defaultQuestions = [
